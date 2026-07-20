@@ -51,6 +51,14 @@ engine. Read this file completely before touching code. Then read:
   plan Appendix B should exist in code (empty/loading/denied/fault states included).
 - **Before you finish**: run `cd /Users/stevekinney/Developer/weft-console && bun run typecheck && bun run lint && bun test`
   and fix everything yours. Do not skip/disable tests; do not bump timeouts; fix root causes.
+- **Cinder bugs/gaps get filed upstream, never patched locally.** If a Cinder component has a bug,
+  a missing prop/state you need, a styling defect vs the design reference, or an a11y problem:
+  do NOT fork, wrap-to-restyle, or monkey-patch it. File an issue instead:
+  `gh issue create --repo stevekinney/cinder --title "…" --body "…"` with a minimal repro or spec
+  and a pointer to the design reference. First run
+  `gh issue list --repo stevekinney/cinder --search "<keywords>" --state all` to avoid duplicates.
+  Then ship the console using the component as-is (degraded-but-correct) or a minimal app-local
+  composition, and record the issue URL in your final report.
 
 ## Shared contracts (frozen after the Foundation phase)
 
