@@ -51,6 +51,17 @@ engine. Read this file completely before touching code. Then read:
   plan Appendix B should exist in code (empty/loading/denied/fault states included).
 - **Before you finish**: run `cd /Users/stevekinney/Developer/weft-console && bun run typecheck && bun run lint && bun test`
   and fix everything yours. Do not skip/disable tests; do not bump timeouts; fix root causes.
+- **Responsive is not optional.** The `.dc.html` references are desktop mocks; every surface you
+  ship must also be correct at 375px (mobile) and 768px (tablet), verified by actually resizing.
+  Binding rules: no page-level horizontal scroll ever — wide tables/timelines/code scroll inside
+  their own `overflow-x:auto` container; grid/stat layouts use `repeat(auto-fit, minmax(…))` or
+  collapse to one column; two-panel layouts (list+detail) stack vertically below 900px; the
+  sidebar collapses to a drawer below 1024px with panel width `min(280px, 85vw)` — never
+  full-bleed, no dead space, engine pill and badges intact; topbar condenses (icon-only ⌘K,
+  overflow menu for secondary controls); drawers/slide-overs become full-width sheets ≤640px;
+  interactive targets ≥40px on touch; test with the dev server at all three widths before
+  reporting done. Density stays: this is an operator console, not a marketing site — compress
+  chrome, never information hierarchy.
 - **Cinder bugs/gaps get filed upstream, never patched locally.** If a Cinder component has a bug,
   a missing prop/state you need, a styling defect vs the design reference, or an a11y problem:
   do NOT fork, wrap-to-restyle, or monkey-patch it. File an issue instead:
