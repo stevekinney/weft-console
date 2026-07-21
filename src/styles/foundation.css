@@ -92,28 +92,6 @@
   flex: none;
 }
 
-.weft-shell-brand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.weft-shell-brand__mark {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: var(--cinder-accent);
-  color: var(--cinder-accent-contrast);
-}
-
-.weft-shell-brand__name {
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  font-size: 13px;
-}
-
 .weft-shell-nav-item {
   display: flex;
   align-items: center;

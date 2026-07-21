@@ -25,7 +25,6 @@
     Building2,
     CalendarClock,
     ChevronRight,
-    GitMerge,
     LayoutDashboard,
     ServerCog,
     Settings,
@@ -152,12 +151,6 @@
 </script>
 
 <Sidebar label="Weft Console" bind:collapsed class="weft-shell-sidebar">
-  {#snippet brand()}
-    <div class="weft-shell-brand">
-      <span class="weft-shell-brand__mark" aria-hidden="true"><GitMerge size={15} /></span>
-      <span class="weft-shell-brand__name">Weft</span>
-    </div>
-  {/snippet}
   {#snippet navigation()}
     <SideNavigation ariaLabel="Domains">
       {#each navEntries as entry (entry.path)}
