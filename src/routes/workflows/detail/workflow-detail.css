@@ -131,7 +131,7 @@
   scrollbar-width: thin;
 }
 
-.weft-workflow-detail__tab-scroll :global(.cinder-tab-list) {
+.weft-workflow-detail__tab-scroll .cinder-tab-list {
   flex-wrap: nowrap;
   white-space: nowrap;
 }
