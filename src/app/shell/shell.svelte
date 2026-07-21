@@ -22,7 +22,7 @@
   import { provideClient } from '../../lib/client.ts';
   import type { Principal } from '../../lib/scopes.svelte.ts';
   import { providePrincipalStore } from '../../lib/scopes.svelte.ts';
-  import { EngineStatusController } from '../engine-status.svelte.ts';
+  import { EngineStatusController, provideFleetEventSource } from '../engine-status.svelte.ts';
   import { NotificationStore } from '../notifications.svelte.ts';
   import { ThemeStore } from '../theme.svelte.ts';
   import AuthModeBanner from './auth-mode-banner.svelte';
@@ -56,6 +56,10 @@
   const theme = new ThemeStore();
   const notifications = new NotificationStore();
   const engineStatus = new EngineStatusController(initialClient, notifications);
+  // Additive Track B workaround — see `engine-status.svelte.ts`'s
+  // `provideFleetEventSource()` doc: shares the ONE fleet SSE connection with
+  // route components instead of each opening its own.
+  provideFleetEventSource(engineStatus.fleetSource);
 
   $effect(() => {
     return () => engineStatus.dispose();

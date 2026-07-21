@@ -40,6 +40,18 @@ const devServerTarget = process.env['WEFT_API_BASE_URL'] ?? 'http://localhost:72
 // health routes stay root-relative (see plan §0 / Appendix A). Both groups —
 // plus WebSocket upgrades and unbuffered SSE — must proxy through in dev so
 // realtime behavior matches production.
+//
+// `/jsonrpc` and `/mcp` are root-relative too (never under `/api` — see
+// `weft/src/client/http-operations.ts`'s `httpClientCatalogTransport`,
+// which builds its endpoint as `${baseUrl}/jsonrpc` with no `/v1`/`/api`
+// segment, and `weft/src/mcp/http.ts`'s canonical `/mcp` path) but were
+// missing here, so `client.operations[...]`/`client.call(...)` (every
+// operation without an ergonomic `HttpClient` method — registry, metrics,
+// recover-all, workers, task queues, diagnostics, …) and the System →
+// Discovery → MCP "Test session" panel 404'd in dev even though the same
+// requests work in a real `serve()`-mounted deployment. Confirmed via a
+// live browser repro (`POST http://localhost:5173/jsonrpc` → 404) while
+// building Track E2's System surfaces.
 const proxiedApiPaths = [
   '/api',
   '/v1',
@@ -47,6 +59,8 @@ const proxiedApiPaths = [
   '/openrpc.json',
   '/asyncapi.json',
   '/.well-known',
+  '/jsonrpc',
+  '/mcp',
 ];
 
 export default defineConfig({

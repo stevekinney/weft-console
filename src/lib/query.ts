@@ -109,12 +109,27 @@ function shouldRetryQuery(failureCount: number, error: unknown): boolean {
  *     (`showFault`) — call sites needing a different/additional treatment
  *     pass their own `onError` to `createMutation`, which runs alongside
  *     this default (TanStack Query calls both).
+ *   - `notifyOnChangeProps: 'all'` disables TanStack Query's default
+ *     "tracked properties" optimization, which only notifies subscribers
+ *     when a result property that was actually READ on the previous render
+ *     changes. Several route components derive booleans like `isLoading`
+ *     from short-circuited expressions (`scopeGranted && query.isPending`)
+ *     — once the left side goes false, the right side stops being read, so
+ *     the tracked-properties set silently drops `isPending` and a later
+ *     settle never notifies the component (confirmed empirically: the
+ *     dashboard's critical-alerts band hangs on its loading skeleton
+ *     forever after a query resolves, and stops hanging the moment
+ *     anything else in the component unconditionally reads the same
+ *     property). `'all'` trades a small amount of over-notification for
+ *     correctness independent of which properties a given render happens
+ *     to touch.
  */
 export function createQueryClient(): QueryClient {
   const client = new QueryClient({
     defaultOptions: {
       queries: {
         retry: shouldRetryQuery,
+        notifyOnChangeProps: 'all',
       },
       mutations: {
         onError: (error) => {

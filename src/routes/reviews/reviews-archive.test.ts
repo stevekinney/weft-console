@@ -1,0 +1,74 @@
+/**
+ * Component tests for `ReviewsArchive` (plan §9.5, Track D — Appendix B
+ * "… / archive"). Fakes the `createQuery` store contract directly (a plain
+ * object with `subscribe`) rather than booting TanStack Query — this
+ * component only reads `.data`/`.isPending` off the store.
+ */
+import { describe, expect, test } from 'bun:test';
+
+import type { CompletedReviewEntry, ReviewListEntry } from '@lostgradient/weft';
+
+import type { CreateQueryResult } from '@tanstack/svelte-query';
+
+import ReviewsArchive from './reviews-archive.svelte';
+
+interface FakeQueryState<T> {
+  data?: T;
+  isPending: boolean;
+}
+
+function fakeQuery(state: FakeQueryState<ReviewListEntry[]>): CreateQueryResult<ReviewListEntry[]> {
+  return {
+    subscribe: (run: (state: FakeQueryState<ReviewListEntry[]>) => void) => {
+      run(state);
+      return () => {};
+    },
+  } as unknown as CreateQueryResult<ReviewListEntry[]>;
+}
+
+const entry: CompletedReviewEntry = {
+  status: 'completed',
+  reviewId: 'review-1',
+  workflowId: 'wf_aa129f0c1234567890abcdef',
+  artifact: {},
+  reviewType: 'Contract approval',
+  reviewers: ['ops@example.com'],
+  allowPartial: false,
+  createdAt: Date.now() - 120_000,
+  decision: 'approved',
+  reviewer: 'Avery Diaz',
+  timestamp: Date.now() - 30_000,
+};
+
+describe('ReviewsArchive', () => {
+  test('shows a loading skeleton while pending', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const { container } = render(ReviewsArchive, {
+      props: { completedQuery: fakeQuery({ isPending: true }) },
+    });
+
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+  });
+
+  test('shows an empty state with no completed reviews', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const { getByText } = render(ReviewsArchive, {
+      props: { completedQuery: fakeQuery({ data: [], isPending: false }) },
+    });
+
+    expect(getByText('No decisions yet')).not.toBeNull();
+  });
+
+  test('renders a row per completed review, read-only (no buttons)', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const { getByText, queryAllByRole } = render(ReviewsArchive, {
+      props: { completedQuery: fakeQuery({ data: [entry], isPending: false }) },
+    });
+
+    expect(getByText('Approved')).not.toBeNull();
+    expect(getByText('Contract approval')).not.toBeNull();
+    expect(getByText('Avery Diaz')).not.toBeNull();
+    expect(getByText('wf_aa129…cdef')).not.toBeNull();
+    expect(queryAllByRole('button')).toEqual([]);
+  });
+});

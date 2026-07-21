@@ -87,12 +87,33 @@
 
 /* Sidebar (design: 232px, surface-inset background — Cinder's Sidebar
  * defaults to `--cinder-surface`; the class this component already accepts
- * is where an app overrides the background token, not a fork). */
+ * is where an app overrides the background token, not a fork).
+ *
+ * The 232px width is scoped to the plain expanded-desktop state
+ * (`:not(.cinder-sidebar--mobile):not([data-cinder-collapsed])`) rather than
+ * applied unconditionally. Cinder's own collapsed-width (`4rem`) and
+ * mobile-drawer-width (`100%`) rules live inside `@layer cinder.components`
+ * (`sidebar.css`), and every rule in this file is unlayered — unlayered CSS
+ * always wins a cascade-layer conflict regardless of selector specificity,
+ * so an unconditional `width: 232px` here silently overrode Cinder's own
+ * per-state sizing while every OTHER collapsed-mode rule (label
+ * hide/reposition, icon-only sizing) kept applying normally, since none of
+ * those set `width`/`inline-size` on this element. The visible symptom:
+ * toggling the icon rail (or loading at a narrow width that starts
+ * collapsed) rendered a full-width sidebar shell with its nav labels
+ * squashed to 0-height and shifted hundreds of pixels off-screen — verified
+ * live via the dev harness (confirmed empirically: `getComputedStyle` on
+ * the nav-item label reported `position: absolute` with a nonsensical
+ * `width`/`x` matching Cinder's collapsed styling, while the `<aside>`
+ * itself stayed pinned at this rule's 232px). */
 
 .weft-shell-sidebar {
-  width: 232px;
   flex: none;
   background: var(--cinder-surface-inset);
+}
+
+.weft-shell-sidebar:not(.cinder-sidebar--mobile):not([data-cinder-collapsed]) {
+  width: 232px;
 }
 
 .weft-shell-nav-item {

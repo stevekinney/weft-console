@@ -1,0 +1,201 @@
+/**
+ * Component tests for `<ScheduleFormDrawer>` against a REAL in-process weft
+ * server.
+ *
+ * The registry-driven workflow-type picker always exercises its free-text
+ * fallback here, not the Select: `client.operations[name]` (the registry
+ * query) always goes through `HttpClient`'s JSON-RPC catalog transport
+ * (`${baseUrl}/jsonrpc`, verified in `weft/src/client/http-operations.ts`),
+ * and `live-source-test-server.test-support.ts`'s `handleRequest()` harness
+ * — a deliberate workaround for the confirmed `serve()` bug
+ * https://github.com/stevekinney/weft/issues/710 (module doc) — never wires
+ * JSON-RPC dispatch, only REST + SSE. That's the same root cause, not a new
+ * gap, and it's exactly the scenario plan §7.2/PROJECT-BRIEF calls "the
+ * create action itself doesn't require this scope/path" degrade — these
+ * tests confirm the degraded path works end-to-end, which is real coverage,
+ * not a workaround. The populated-Select path is covered directly against a
+ * fake `RegistryProbeClient` in `schedule-form-fields.test.ts`.
+ */
+import { describe, expect, test } from 'bun:test';
+
+import { HttpClient } from '@lostgradient/weft/client';
+
+import { startLiveSourceTestServer } from '../../lib/live-source/live-source-test-server.test-support.ts';
+import ScheduleFormDrawerHarness from './schedule-form-drawer-test-harness.test-harness.svelte';
+
+async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
+  const { waitFor } = await import('@testing-library/svelte');
+  return waitFor;
+}
+
+describe('ScheduleFormDrawer — create', () => {
+  test('creates a schedule with the selected workflow type and default cadence', async () => {
+    const { render, fireEvent } = await import('@testing-library/svelte');
+    const server = await startLiveSourceTestServer();
+    const client = new HttpClient({ baseUrl: server.baseUrl });
+
+    let closed = false;
+    try {
+      const { getByRole } = render(ScheduleFormDrawerHarness, {
+        props: { client, mode: 'create', onClose: () => (closed = true) },
+      });
+
+      const waitFor = await waitForCondition();
+      const workflowTypeInput = await waitFor(() =>
+        getByRole('textbox', { name: 'Workflow type' }),
+      );
+      await fireEvent.input(workflowTypeInput, { target: { value: 'inventory-sync-sweep' } });
+
+      const idInput = getByRole('textbox', { name: 'Schedule ID' });
+      await fireEvent.input(idInput, { target: { value: 'test-created-schedule' } });
+
+      await fireEvent.click(getByRole('button', { name: 'Create schedule' }));
+
+      await waitFor(() => expect(closed).toBe(true));
+      const created = await server.engine.getSchedule('test-created-schedule');
+      expect(created?.workflowType).toBe('inventory-sync-sweep');
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('creating with "Start paused" checked leaves the schedule paused', async () => {
+    const { render, fireEvent } = await import('@testing-library/svelte');
+    const server = await startLiveSourceTestServer();
+    const client = new HttpClient({ baseUrl: server.baseUrl });
+
+    let closed = false;
+    try {
+      const { getByRole } = render(ScheduleFormDrawerHarness, {
+        props: { client, mode: 'create', onClose: () => (closed = true) },
+      });
+
+      const waitFor = await waitForCondition();
+      const workflowTypeInput = await waitFor(() =>
+        getByRole('textbox', { name: 'Workflow type' }),
+      );
+      await fireEvent.input(workflowTypeInput, { target: { value: 'inventory-sync-sweep' } });
+
+      const idInput = getByRole('textbox', { name: 'Schedule ID' });
+      await fireEvent.input(idInput, { target: { value: 'test-paused-schedule' } });
+
+      await fireEvent.click(getByRole('switch', { name: 'Start paused' }));
+      await fireEvent.click(getByRole('button', { name: 'Create schedule' }));
+
+      await waitFor(() => expect(closed).toBe(true));
+      const created = await server.engine.getSchedule('test-paused-schedule');
+      expect(created?.status).toBe('paused');
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('the submit button is disabled with a reason pill when schedules:write is missing', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const server = await startLiveSourceTestServer();
+    const client = new HttpClient({ baseUrl: server.baseUrl });
+
+    try {
+      const { getByRole, getByText } = render(ScheduleFormDrawerHarness, {
+        props: {
+          client,
+          mode: 'create',
+          onClose: () => {},
+          scopes: ['schedules:read'],
+        },
+      });
+
+      const waitFor = await waitForCondition();
+      await waitFor(() => {
+        expect(
+          (getByRole('button', { name: 'Create schedule' }) as HTMLButtonElement).disabled,
+        ).toBe(true);
+      });
+      expect(getByText('Requires schedules:write')).not.toBeNull();
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('the submit button stays disabled until the form is valid', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const server = await startLiveSourceTestServer();
+    const client = new HttpClient({ baseUrl: server.baseUrl });
+
+    try {
+      const { getByRole } = render(ScheduleFormDrawerHarness, {
+        props: { client, mode: 'create', onClose: () => {} },
+      });
+
+      const waitFor = await waitForCondition();
+      // No workflow type chosen yet — invalid.
+      await waitFor(() => {
+        expect(
+          (getByRole('button', { name: 'Create schedule' }) as HTMLButtonElement).disabled,
+        ).toBe(true);
+      });
+    } finally {
+      server.stop();
+    }
+  });
+});
+
+describe('ScheduleFormDrawer — edit', () => {
+  test('prefills the cadence from the existing schedule and updates it on save', async () => {
+    const { render, fireEvent } = await import('@testing-library/svelte');
+    const server = await startLiveSourceTestServer();
+    await server.engine.schedule({
+      workflow: 'inventory-sync-sweep',
+      id: 'nightly-rollup',
+      cron: '0 2 * * *',
+      input: { warehouseId: 'wh-main' },
+    });
+    const client = new HttpClient({ baseUrl: server.baseUrl });
+
+    let closed = false;
+    try {
+      const { getByRole } = render(ScheduleFormDrawerHarness, {
+        props: {
+          client,
+          mode: 'edit',
+          scheduleId: 'nightly-rollup',
+          onClose: () => (closed = true),
+        },
+      });
+
+      const waitFor = await waitForCondition();
+      const workflowTypeField = await waitFor(() =>
+        getByRole('textbox', { name: 'Workflow type' }),
+      );
+      expect((workflowTypeField as HTMLInputElement).value).toBe('inventory-sync-sweep');
+      expect((workflowTypeField as HTMLInputElement).disabled).toBe(true);
+
+      await fireEvent.click(getByRole('button', { name: 'Save changes' }));
+
+      await waitFor(() => expect(closed).toBe(true));
+      const updated = await server.engine.getSchedule('nightly-rollup');
+      // Cadence unchanged (no edit made) but the round trip through
+      // updateSchedule() must succeed against the real server.
+      expect(updated?.cronExpression).toBe('0 2 * * *');
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('renders the not-found fault when the schedule no longer exists', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const server = await startLiveSourceTestServer();
+    const client = new HttpClient({ baseUrl: server.baseUrl });
+
+    try {
+      const { getByText } = render(ScheduleFormDrawerHarness, {
+        props: { client, mode: 'edit', scheduleId: 'missing', onClose: () => {} },
+      });
+
+      const waitFor = await waitForCondition();
+      await waitFor(() => expect(getByText('Not found')).not.toBeNull());
+    } finally {
+      server.stop();
+    }
+  });
+});

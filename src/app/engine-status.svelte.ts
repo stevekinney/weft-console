@@ -28,6 +28,8 @@
  * runs unconditionally, so the bell dropdown/critical strip reflect the full
  * replayed backlog; only the ephemeral toast is suppressed for it.
  */
+import { getContext, setContext } from 'svelte';
+
 import type { HttpClient } from '@lostgradient/weft/client';
 
 import {
@@ -148,4 +150,49 @@ export class EngineStatusController {
     this.fleetSource.close();
     this.#healthPoll.close();
   }
+}
+
+// ---------------------------------------------------------------------------
+// Shared FleetEventSource context (Track B / T4.1 addition — see PROJECT-BRIEF
+// "if something genuinely blocks you … make the smallest local workaround")
+// ---------------------------------------------------------------------------
+
+/**
+ * Provides `shell.svelte`'s ALREADY-CONSTRUCTED `EngineStatusController.fleetSource`
+ * to descendant route components, mirroring `../lib/client.ts`'s
+ * `provideClient()`/`getClient()` pattern.
+ *
+ * Domain surfaces that need a live fleet-event subscription (e.g. the
+ * Schedule Detail page's `schedule:fired`/`schedule:missed-fire` live update —
+ * plan §9.3) must reuse this ONE shared connection, never construct their own
+ * `FleetEventSource` — plan §5's "≤3 concurrent sockets … one fleet SSE …
+ * never per-row/per-surface connections" budget is a hard constraint, and
+ * `FleetEventSource.subscribe()` is explicitly designed for exactly this
+ * fan-out (see that class's module doc). Before this addition there was no
+ * way for a route component to reach the shell's instance at all — `Shell`
+ * only forwarded `engineStatus.status`/`engineStatus.fleetSource.status` as
+ * plain props to `<Sidebar>`/`<Topbar>`, not the source itself, and
+ * `RouteOutlet` passes no props to route components. This is the smallest
+ * fix: two calls (provide here in `shell.svelte`, get in the consuming
+ * route), no change to `EngineStatusController`'s own behavior or tests.
+ */
+const FLEET_EVENT_SOURCE_CONTEXT_KEY = Symbol('weft-console-fleet-event-source');
+
+export function provideFleetEventSource(source: FleetEventSource): void {
+  setContext(FLEET_EVENT_SOURCE_CONTEXT_KEY, source);
+}
+
+/**
+ * Reads the shell's shared `FleetEventSource` from context. Throws when
+ * called outside a component tree rendered below `<Shell>` — every route
+ * component qualifies, since `<RouteOutlet>` always renders inside `<Shell>`.
+ */
+export function getFleetEventSource(): FleetEventSource {
+  const source = getContext<FleetEventSource | undefined>(FLEET_EVENT_SOURCE_CONTEXT_KEY);
+  if (!source) {
+    throw new Error(
+      'weft-console: getFleetEventSource() called with no source in context — provideFleetEventSource() must run in an ancestor component.',
+    );
+  }
+  return source;
 }
