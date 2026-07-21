@@ -14,8 +14,10 @@
    * already Cinder's own contract for `CommandPalette` and `Dropdown` (both
    * close on Escape internally) — nothing extra to wire here.
    */
+  import { SIDEBAR_MOBILE_MEDIA_QUERY } from '@lostgradient/cinder/sidebar';
   import type { HttpClient } from '@lostgradient/weft/client';
   import { untrack } from 'svelte';
+  import { MediaQuery } from 'svelte/reactivity';
 
   import { provideClient } from '../../lib/client.ts';
   import type { Principal } from '../../lib/scopes.svelte.ts';
@@ -59,14 +61,40 @@
     return () => engineStatus.dispose();
   });
 
-  let sidebarCollapsed = $state(false);
+  /**
+   * `collapsed` doubles as "drawer closed" once Cinder's `Sidebar` switches
+   * to its mobile presentation below `SIDEBAR_MOBILE_MEDIA_QUERY` (its own
+   * internal `open = !collapsed` — `sidebar.svelte`). Left at its plain
+   * default of `false`, a mobile page load would render the navigation
+   * drawer OPEN over the whole screen with no trigger to close it. Start
+   * collapsed on a mobile viewport instead, and re-close whenever the
+   * viewport crosses INTO mobile (a live desktop→mobile resize shouldn't
+   * leave a rail-expanded desktop session's drawer stuck open either) —
+   * never force it back open on mobile→desktop, so a user's manual
+   * icon-rail collapse preference on desktop survives.
+   */
+  const isMobileViewport = new MediaQuery(SIDEBAR_MOBILE_MEDIA_QUERY, false);
+
+  let sidebarCollapsed = $state(isMobileViewport.current);
+
+  $effect(() => {
+    if (isMobileViewport.current) sidebarCollapsed = true;
+  });
+
   let paletteOpen = $state(false);
 </script>
 
 <div class="weft-shell">
   <Sidebar {client} engineStatus={engineStatus.status} bind:collapsed={sidebarCollapsed} />
   <div class="weft-shell-main">
-    <Topbar principal={principalStore} {notifications} {theme} bind:paletteOpen />
+    <Topbar
+      principal={principalStore}
+      {notifications}
+      liveStatus={engineStatus.fleetSource.status}
+      {theme}
+      bind:paletteOpen
+      bind:sidebarCollapsed
+    />
     <AuthModeBanner mode={principalStore.bannerMode} />
     <CriticalAlertStrip store={notifications} />
     <RouteOutlet />

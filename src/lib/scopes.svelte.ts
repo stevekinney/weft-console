@@ -34,15 +34,17 @@
  * Once the probe resolves, this module optimistically grants all 23 scopes
  * and *degrades* specific ones as the app observes real `403 Forbidden`
  * responses from scope-gated operations it actually calls (`denyScope()` /
- * `isForbidden()`). This is a reasonably safe default: verified against the
- * same operation catalog, the overwhelming majority of operations —
- * including every workflow/schedule/review mutation — declare
- * `access: { kind: 'public' }`. Only a small set (`weft.system.registry`,
- * `weft.system.metrics`, the storage operations, `weft.workers.*` /
- * `weft.worker.deployments.*`, and the fleet/workflow event & stream
- * subscriptions) declare `scoped`/`authenticated` access, so most gated UI
- * actions this store disables-with-reason will, in fact, be permitted by
- * the server even under an optimistic guess.
+ * `isForbidden()`). This is a reasonably safe default for most single-item
+ * workflow/schedule/review actions (start, signal, cancel, suspend, resume,
+ * timeout, fork, tag/attribute mutations, schedule create/update/pause/
+ * resume, review decisions) — verified against the same operation catalog,
+ * these declare `access: { kind: 'public' }`. It is *not* safe for
+ * `weft.workflows.bulk.*` (cancel/delete/tags/retry-failed/signal), which
+ * requires `workflows:admin` unlike its single-item counterparts, or for
+ * system introspection, storage, and event/stream-subscription operations,
+ * which declare `scoped`/`authenticated` access — those surfaces should
+ * expect a real 403-driven degrade on first use rather than treat the
+ * optimistic grant as load-bearing.
  *
  * `unauthenticatedAccess: 'warn'` vs `'allow'` are wire-indistinguishable
  * from the console: both mean the server has no `auth` configured at all

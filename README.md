@@ -122,7 +122,8 @@ proxy or private network.
   itself exports `mount()` only behind the `browser` condition (`default`/`node` resolves to
   `svelte/src/index-server.js`, an SSR-only build with no `mount`), so bare `bun test` fails
   `tests/component-harness.test.ts` with `lifecycle_function_unavailable: mount(...) is not
-available on the server` — 6 pass / 1 fail, not a real regression. There is no bunfig.toml or
+available on the server` for every component test — not a real regression, just proof the flags
+  are load-bearing. There is no bunfig.toml or
   env-var equivalent for `--conditions` (checked: a top-level `conditions` key and `BUN_CONDITIONS`
   are both silently no-ops for `bun test`/`bun run`); the CLI flags are a hard requirement, per the
   comment at the top of `scripts/svelte-test-plugin.ts`.

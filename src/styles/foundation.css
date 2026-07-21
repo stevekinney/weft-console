@@ -85,11 +85,14 @@
   max-width: 60rem;
 }
 
-/* Sidebar (design: 232px, surface-inset background). */
+/* Sidebar (design: 232px, surface-inset background — Cinder's Sidebar
+ * defaults to `--cinder-surface`; the class this component already accepts
+ * is where an app overrides the background token, not a fork). */
 
 .weft-shell-sidebar {
   width: 232px;
   flex: none;
+  background: var(--cinder-surface-inset);
 }
 
 .weft-shell-nav-item {
@@ -160,9 +163,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 260px;
-  max-width: 420px;
-  flex: 1 1 auto;
+  min-width: 300px;
+  flex: 0 1 auto;
   padding: 7px 11px;
   border: 1px solid var(--cinder-border);
   border-radius: var(--cinder-radius-md);
@@ -233,6 +235,60 @@
 .weft-shell-icon-button:hover {
   background: var(--cinder-surface-hover);
   color: var(--cinder-text);
+}
+
+/* Mobile navigation-drawer trigger — hidden above Cinder Sidebar's own
+ * mobile breakpoint (`SIDEBAR_MOBILE_BREAKPOINT`, `47.99rem`); below it,
+ * `Sidebar` renders no trigger of its own, so this is the only way to
+ * reopen the drawer once closed (`shell.svelte`'s module doc). */
+.weft-shell-menu-trigger {
+  display: none;
+}
+
+/* Responsive: PROJECT-BRIEF binding rules — no page-level horizontal
+ * scroll ever; topbar condenses (icon-only ⌘K, menu trigger appears);
+ * interactive targets ≥40px on touch. Kept aligned with Cinder Sidebar's
+ * own `47.99rem` mobile breakpoint (cinder#735/#801) so the menu trigger
+ * appears exactly when `Sidebar` actually becomes a drawer. */
+@media (max-width: 47.99rem) {
+  .weft-shell-menu-trigger {
+    display: grid;
+  }
+
+  .weft-shell-topbar {
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .weft-shell-topbar__domain {
+    display: none;
+  }
+
+  .weft-shell-search-trigger {
+    min-width: 0;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .weft-shell-search-trigger span,
+  .weft-shell-search-trigger__kbd {
+    display: none;
+  }
+
+  .weft-shell-scope-pill span {
+    display: none;
+  }
+
+  .weft-shell-icon-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .weft-shell-outlet {
+    padding: 14px 14px 40px;
+  }
 }
 
 /* Notification bell + dropdown panel (design `Weft New Surfaces.dc.html` §C). */
@@ -369,6 +425,13 @@
   margin-top: 1px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weft-notification-panel__item-time {
+  flex: none;
+  font-size: var(--cinder-text-2xs);
+  color: var(--cinder-text-disabled);
   white-space: nowrap;
 }
 

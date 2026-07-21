@@ -19,6 +19,14 @@
  * ONE place a fleet frame is received and fanned out, so a future
  * dashboard/list-liveness consumer subscribing to the same shared source
  * never doubles the connection.
+ *
+ * Critical/warning notifications additionally spawn a real toast (design
+ * `Weft New Surfaces.dc.html` §C: "critical → strip + toast, warning →
+ * toast, info → bell only"), gated on `FleetEventSource.caughtUp` — a fresh
+ * connection replays up to 1,000 historical fleet events before it, and
+ * every one of those would otherwise toast on page load. `ingest()` still
+ * runs unconditionally, so the bell dropdown/critical strip reflect the full
+ * replayed backlog; only the ephemeral toast is suppressed for it.
  */
 import type { HttpClient } from '@lostgradient/weft/client';
 
@@ -28,9 +36,32 @@ import {
 } from '../lib/live-source/fleet-event-source.svelte.ts';
 import { PollingSource } from '../lib/live-source/polling-source.svelte.ts';
 import type { LiveSourceStatus } from '../lib/live-source/types.ts';
-import type { NotificationStore } from './notifications.svelte.ts';
+import { router } from '../lib/router.svelte.ts';
+import type { NotificationItem, NotificationStore } from './notifications.svelte.ts';
+import { showToast } from './toast-host.svelte';
 
 const DEFAULT_HEALTH_POLL_INTERVAL_MS = 20_000;
+
+/**
+ * Cinder's `<ToastRegion>` only has two urgency channels, keyed off
+ * `variant`: `info`/`success` are polite (`role="status"`), everything else
+ * — including `warning` — is assertive (`role="alert"`,
+ * `toast-region.svelte`'s `isPolite()`). The design caption says warning
+ * toasts should be `role="status"`; Cinder has no way to get a warning-toned
+ * toast into the polite channel. Filed upstream:
+ * https://github.com/stevekinney/cinder/issues/800 — shipped here as-is per
+ * PROJECT-BRIEF's Cinder-gap policy (degraded-but-correct: a warning toast
+ * is momentarily over-announced as assertive, never under-announced).
+ */
+function toastForNotification(item: NotificationItem): void {
+  if (item.tier === 'info') return;
+  showToast(`${item.title} — ${item.body}`, {
+    variant: item.tier === 'critical' ? 'danger' : 'warning',
+    duration: item.tier === 'critical' ? 0 : 6_000,
+    showIcon: true,
+    action: { label: 'View', onAction: () => router.navigate(item.href) },
+  });
+}
 
 /**
  * Plan §5.3: "SSE fails repeatedly (cap 5 attempts, then surface status)".
@@ -76,7 +107,8 @@ export class EngineStatusController {
     });
 
     this.#unsubscribeFleet = this.fleetSource.subscribe((frame: FleetEventFrame) => {
-      notifications.ingest(frame);
+      const item = notifications.ingest(frame);
+      if (item && this.fleetSource.caughtUp) toastForNotification(item);
     });
     this.#unsubscribeHealth = this.#healthPoll.subscribe(() => {});
   }

@@ -83,8 +83,8 @@
  */
 import { Engine } from '@lostgradient/weft';
 import { principalFromStdioLocal } from '@lostgradient/weft/mcp';
-import { handleRequest, type HandlerOptions } from '@lostgradient/weft/server/handler';
 import { wireEventBroadcasting } from '@lostgradient/weft/server';
+import { handleRequest, type HandlerOptions } from '@lostgradient/weft/server/handler';
 
 import { seed, workflows } from '../fixtures/workflows.ts';
 import {
@@ -186,9 +186,26 @@ const engine = await Engine.create({ workflows });
 // not a real runtime concern.
 const untypedEngine = engine as unknown as Engine;
 
+// `wireEventBroadcasting()` needs the bound `Bun.serve()` instance (for
+// `server.publish()`), so it can't run before the port is open — but
+// `seed()` needs to run AFTER `wireEventBroadcasting()` attaches its
+// `engine.addEventListener`, or the fleet feed's replay buffer would be
+// missing every event the seeded fixtures emitted (workflow:started,
+// human-review:requested, …). That leaves a real window where the port is
+// open (so `GET /v1/health` is already green) but `seed()` hasn't finished,
+// which a caller polling health-then-workflows (see the README quickstart
+// and the T0 gate's curl sequence) would read as a seeding failure. Close
+// that window by gating the request handler on a `readyPromise` that
+// resolves only once `seed()` completes — every request, including
+// `/v1/health`, now blocks until seeding is done, so "the health request
+// got a response" implies "the fixtures are seeded," without reordering the
+// event-wiring-before-seeding requirement above.
+let readyPromise: Promise<void> = Promise.resolve();
+
 const server = Bun.serve({
   port: PORT,
   async fetch(request) {
+    await readyPromise;
     const url = new URL(request.url);
     if (!url.pathname.startsWith(`${API_PREFIX}/`)) {
       return handleRequest(request, untypedEngine, handlerOptions);
@@ -202,7 +219,8 @@ const server = Bun.serve({
 
 wireEventBroadcasting(untypedEngine, server, { fleetEventFeed: fleet.wireOption });
 
-await seed(engine);
+readyPromise = seed(engine);
+await readyPromise;
 
 console.log(`weft dev server listening on ${server.url}`);
 console.log(

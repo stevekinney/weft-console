@@ -358,4 +358,67 @@ describe('FleetEventSource', () => {
     expect(() => unsubscribe()).not.toThrow();
     source.close();
   });
+
+  test('caughtUp is false until the replayComplete ping arrives, even though status goes live on the first frame', async () => {
+    scripted = new ScriptedFetch();
+    scripted.enqueue(
+      // No leading `pingChunk(true)` — this envelope frame is delivered
+      // before catch-up completes, mirroring a real replay backlog frame.
+      openSseResponse([
+        envelopeChunk({
+          kind: 'workflow:completed',
+          workflowId: 'wf_1',
+          sequence: 1,
+          cursor: '1',
+          emittedAtMs: 100,
+          payload: {},
+        }),
+      ]),
+    );
+    const waitFor = await waitForCondition();
+
+    const source = new FleetEventSource({ baseUrl: '' });
+    const received: FleetEventFrame[] = [];
+    source.subscribe((frame) => received.push(frame));
+
+    await waitFor(() => {
+      expect(received).toHaveLength(1);
+    });
+    expect(source.status).toBe('live');
+    expect(source.caughtUp).toBe(false);
+    source.close();
+  });
+
+  test('caughtUp becomes true once the replayComplete ping arrives, and resets to false on reconnect', async () => {
+    scripted = new ScriptedFetch();
+    scripted.enqueue(finiteSseResponse([pingChunk(true)]));
+    scripted.enqueue(openSseResponse([]));
+    const waitFor = await waitForCondition();
+
+    // A delay wide enough that the `caughtUp === true` window below is
+    // reliably observable before the reconnect (triggered by
+    // `finiteSseResponse` ending the stream right after the ping) resets it.
+    const RECONNECT_DELAY_MS = 300;
+    const source = new FleetEventSource({
+      baseUrl: '',
+      computeReconnectDelayMs: () => RECONNECT_DELAY_MS,
+    });
+    source.subscribe(() => {});
+
+    await waitFor(() => {
+      expect(source.caughtUp).toBe(true);
+    });
+
+    // Once the reconnect attempt actually starts (a second fetch call),
+    // `caughtUp` must not keep reporting stale catch-up state from the prior
+    // connection — `#connect()` resets it before issuing that fetch.
+    await waitFor(
+      () => {
+        expect(scripted.calls).toHaveLength(2);
+      },
+      { timeout: RECONNECT_DELAY_MS + 1000 },
+    );
+    expect(source.caughtUp).toBe(false);
+    source.close();
+  });
 });

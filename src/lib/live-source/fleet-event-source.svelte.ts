@@ -138,6 +138,26 @@ export class FleetEventSource implements LiveSource<FleetEventFrame> {
     return this.#reconnectAttempt;
   }
 
+  /**
+   * True once the CURRENT connection's replay/catch-up phase has finished
+   * (the server's `replayComplete: true` ping — plan Appendix A: "`ping`
+   * keepalives carry no cursor; `replayComplete: true` marks catch-up
+   * done"). Resets to `false` at the start of every (re)connect attempt.
+   *
+   * Exists because `status`/`whenConnected()` can't make this distinction:
+   * both flip to `'live'`/resolved on the FIRST frame seen at all —
+   * `#markLive()` runs for both a `replayComplete` ping AND an ordinary
+   * envelope frame, and on a fresh connect (default cursor `-1`, weft
+   * `INITIAL_CURSOR`) the server replays up to 1,000 historical events
+   * before that ping. A caller that must tell "this frame just happened"
+   * from "this frame is reconnect/catch-up backlog" (e.g. deciding whether
+   * to spawn a toast for it) needs this, not `status`. Additive on the
+   * concrete class — same non-breaking-extra precedent as `reconnectAttempt`.
+   */
+  get caughtUp(): boolean {
+    return this.#caughtUp;
+  }
+
   readonly #baseUrl: string;
   readonly #headers: Record<string, string>;
   readonly #connectionFilter: FleetEventFilter | undefined;
@@ -148,6 +168,7 @@ export class FleetEventSource implements LiveSource<FleetEventFrame> {
   #abortController: AbortController | null = null;
   #reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   #reconnectAttempt = 0;
+  #caughtUp = $state(false);
   #lastEventId: string | undefined;
   #closed = false;
   #connected: ReturnType<typeof Promise.withResolvers<void>> = Promise.withResolvers();
@@ -213,6 +234,7 @@ export class FleetEventSource implements LiveSource<FleetEventFrame> {
   async #connect(): Promise<void> {
     if (this.#closed) return;
     this.status = this.#reconnectAttempt === 0 ? 'connecting' : 'reconnecting';
+    this.#caughtUp = false;
 
     const controller = new AbortController();
     this.#abortController = controller;
@@ -252,7 +274,10 @@ export class FleetEventSource implements LiveSource<FleetEventFrame> {
   #handleFrame(frame: ServerSentEventFrame): void {
     if (frame.event === 'ping') {
       this.#reconnectAttempt = 0;
-      if (isReplayCompletePing(frame.data)) this.#markLive();
+      if (isReplayCompletePing(frame.data)) {
+        this.#markLive();
+        this.#caughtUp = true;
+      }
       return;
     }
     // `event: error` precedes the server closing the stream (see

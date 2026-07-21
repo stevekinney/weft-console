@@ -74,6 +74,33 @@ describe('EngineStatusController (integration, real server)', () => {
     }
   });
 
+  test('caughtUp becomes true against a real server (the toast-gate primitive actually opens, not just "no crash")', async () => {
+    // `notifyForNotification`'s gate (`if (item && this.fleetSource.caughtUp)
+    // toastForNotification(item)`) is only worth anything if `caughtUp` ever
+    // flips true against the real `handleRequest`/fleet-SSE path the dev
+    // harness and `serve()` both use — a fake/no-op `replayComplete` ping
+    // would make this pass trivially by never toasting anything, ever, which
+    // "0 toasts on load" alone can't distinguish from "the gate correctly
+    // suppressed replay". This proves the real server actually sends the
+    // ping that opens the gate.
+    const server = await startLiveSourceTestServer();
+    const notifications = new NotificationStore();
+    const controller = new EngineStatusController(
+      { baseUrl: server.baseUrl, headers: {} },
+      notifications,
+    );
+
+    try {
+      const waitFor = await waitForCondition();
+      await waitFor(() => {
+        expect(controller.fleetSource.caughtUp).toBe(true);
+      });
+    } finally {
+      controller.dispose();
+      server.stop();
+    }
+  });
+
   test('dispose() closes both the fleet source and the health poll', async () => {
     const server = await startLiveSourceTestServer();
     const notifications = new NotificationStore();

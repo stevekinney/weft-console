@@ -25,6 +25,6 @@
  * only".
  */
 export {
-  encodeSequencedFeedCursor as encodeTestCursor,
   InMemorySequencedFeed,
+  encodeSequencedFeedCursor as encodeTestCursor,
 } from './in-memory-sequenced-feed.ts';

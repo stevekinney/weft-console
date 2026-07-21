@@ -6,9 +6,16 @@
    * lightweight current-domain label — full breadcrumbs are a per-surface
    * concern (workflow/schedule/review detail headers, plan §9.2–§9.5), out
    * of the shell's scope.
+   *
+   * The leading menu button (PROJECT-BRIEF: "topbar condenses … overflow
+   * menu for secondary controls") is CSS-hidden above Cinder Sidebar's own
+   * mobile breakpoint (`foundation.css`, `47.99rem`) and is the only way to
+   * reopen the navigation drawer on a small viewport once it's closed —
+   * `Sidebar` itself renders no trigger of its own below that width.
    */
-  import { Monitor, Moon, Search, Shield, Sun } from 'lucide-svelte';
+  import { Menu, Monitor, Moon, Search, Shield, Sun } from 'lucide-svelte';
 
+  import type { LiveSourceStatus } from '../../lib/live-source/index.ts';
   import type { PrincipalStore } from '../../lib/scopes.svelte.ts';
   import { router } from '../../lib/router.svelte.ts';
   import type { ThemeStore } from '../theme.svelte.ts';
@@ -18,11 +25,22 @@
   interface TopbarProps {
     principal: PrincipalStore;
     notifications: NotificationStore;
+    /** The shared fleet feed's connection status — passed through to the notification bell's footer live pill. */
+    liveStatus: LiveSourceStatus;
     theme: ThemeStore;
     paletteOpen: boolean;
+    /** Bound to `Sidebar`'s own `collapsed` (`./shell.svelte`) — below the mobile breakpoint this doubles as "drawer closed"; the menu button toggles it open. */
+    sidebarCollapsed: boolean;
   }
 
-  let { principal, notifications, theme, paletteOpen = $bindable(false) }: TopbarProps = $props();
+  let {
+    principal,
+    notifications,
+    liveStatus,
+    theme,
+    paletteOpen = $bindable(false),
+    sidebarCollapsed = $bindable(false),
+  }: TopbarProps = $props();
 
   const DOMAIN_LABELS: Readonly<Record<string, string>> = {
     '/': 'Dashboard',
@@ -57,6 +75,15 @@
 </script>
 
 <header class="weft-shell-topbar">
+  <button
+    type="button"
+    class="weft-shell-icon-button weft-shell-menu-trigger"
+    aria-label="Toggle navigation menu"
+    onclick={() => (sidebarCollapsed = !sidebarCollapsed)}
+  >
+    <Menu aria-hidden="true" size={18} />
+  </button>
+
   <span class="weft-shell-topbar__domain">{domainLabel}</span>
 
   <button type="button" class="weft-shell-search-trigger" onclick={() => (paletteOpen = true)}>
@@ -77,7 +104,7 @@
     <span>{grantedScopeCount} scope{grantedScopeCount === 1 ? '' : 's'}</span>
   </a>
 
-  <NotificationBell store={notifications} />
+  <NotificationBell store={notifications} {liveStatus} />
 
   <button
     type="button"

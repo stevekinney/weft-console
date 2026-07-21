@@ -1,13 +1,17 @@
 /**
  * Formatting helpers (plan §4, §10.8, T1.3): id truncation, durations,
- * bytes, relative time, and the `computeNextFires` callback ScheduleBuilder
- * (Cinder) is date-library-free and expects consumers to inject (plan §7.1,
- * `design/README.md` "ScheduleBuilder"). Frozen after the Phase 1
- * Foundation gate — see PROJECT-BRIEF "Shared contracts".
+ * bytes, relative time. Frozen after the Phase 1 Foundation gate — see
+ * PROJECT-BRIEF "Shared contracts".
+ *
+ * `computeNextFires` (the `cron-parser`-backed callback injected into
+ * Cinder's `ScheduleBuilder`, plan §7.1) lives in `./cron-preview.ts`, not
+ * here — split out as a T1.6 integration fix (reported per PROJECT-BRIEF's
+ * "small integration bugs in `src/lib/**`" allowance) after it was found to
+ * pull the entire `cron-parser` dependency into every consumer of these
+ * otherwise-tiny generic formatters, including shell chrome that has
+ * nothing to do with schedules. Import `computeNextFires` from
+ * `./cron-preview.ts` directly.
  */
-import { CronExpressionParser } from 'cron-parser';
-
-import type { ScheduleFire, ScheduleValue } from '@lostgradient/cinder';
 
 /**
  * Truncates a high-cardinality id to `first8…last4` for display (plan §10.8).
@@ -79,86 +83,4 @@ export function formatRelativeTime(timestampMs: number, now: number = Date.now()
   const magnitude = formatDuration(absolute).split(' ')[0] ?? formatDuration(absolute);
 
   return suffix ? `${magnitude} ${suffix}` : `${prefix} ${magnitude}`;
-}
-
-// ---------------------------------------------------------------------------
-// computeNextFires — injected into Cinder's ScheduleBuilder (plan §7.1/§7.2 C3)
-// ---------------------------------------------------------------------------
-
-const MINUTE_MS = 60_000;
-
-/**
- * The next `count` fires of a 5-field cron expression (minute hour
- * day-of-month month day-of-week — the field order `ScheduleValue`'s `cron`
- * mode documents), strictly after `from`. Delegates to `cron-parser`
- * (`CronExpressionParser`) rather than hand-rolling field/range/alias
- * parsing: it already handles month/day-of-week name aliases (`MON`,
- * `JAN-MAR`, …), step/range/list syntax, and POSIX day-of-month ×
- * day-of-week OR semantics correctly. A 5-field expression is accepted
- * as-is — `cron-parser` defaults the (unused) seconds field to `0`.
- * Malformed expressions or out-of-range field values throw synchronously
- * from `CronExpressionParser.parse`; that throw is intentionally left to
- * propagate rather than swallowed, so an invalid schedule fails loudly
- * instead of silently previewing zero fires.
- */
-function nextCronFires(expression: string, count: number, from: Date): readonly Date[] {
-  const interval = CronExpressionParser.parse(expression, { currentDate: from });
-  return interval.take(count).map((cronDate) => cronDate.toDate());
-}
-
-function nextIntervalFires(
-  every: number,
-  unit: 'minutes' | 'hours' | 'days' | 'weeks',
-  count: number,
-  from: Date,
-): readonly Date[] {
-  const unitMs: Record<typeof unit, number> = {
-    minutes: MINUTE_MS,
-    hours: 60 * MINUTE_MS,
-    days: 24 * 60 * MINUTE_MS,
-    weeks: 7 * 24 * 60 * MINUTE_MS,
-  };
-  const stepMs = every * unitMs[unit];
-
-  const fires: Date[] = [];
-  let next = from.getTime() + stepMs;
-  for (let index = 0; index < count; index += 1) {
-    fires.push(new Date(next));
-    next += stepMs;
-  }
-  return fires;
-}
-
-const FIRE_LABEL_FORMATTER = new Intl.DateTimeFormat(undefined, {
-  weekday: 'short',
-  month: 'short',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-});
-
-/**
- * The `computeNextFires` callback injected into Cinder's `ScheduleBuilder`
- * (plan §7.1/§7.2 C3). Signature takes an optional `from` (defaulting to
- * `new Date()`) so it can be passed straight through as
- * `ScheduleBuilderProps['computeNextFires']`, which only ever calls it with
- * `(value, count)`. `cron` mode's field parsing/timezone handling is
- * `cron-parser`'s and throws on a malformed expression or an out-of-range
- * field; `interval` mode is a plain fixed-step walk and trusts `every` to be
- * the positive integer `ScheduleValue` documents.
- */
-export function computeNextFires(
-  value: ScheduleValue,
-  count: number,
-  from: Date = new Date(),
-): ScheduleFire[] {
-  const dates =
-    value.mode === 'cron'
-      ? nextCronFires(value.expression, count, from)
-      : nextIntervalFires(value.every, value.unit, count, from);
-
-  return dates.map((date) => ({
-    id: date.toISOString(),
-    label: FIRE_LABEL_FORMATTER.format(date),
-  }));
 }

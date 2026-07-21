@@ -16,7 +16,9 @@ describe('NotificationBell', () => {
   test('shows no unread count badge when there are no notifications', async () => {
     const { render } = await import('@testing-library/svelte');
     const store = new NotificationStore();
-    const { getByRole, container } = render(NotificationBell, { props: { store } });
+    const { getByRole, container } = render(NotificationBell, {
+      props: { store, liveStatus: 'live' },
+    });
 
     expect(getByRole('button', { name: 'Notifications, 0 unread' })).not.toBeNull();
     expect(container.querySelector('.weft-notification-bell__count')).toBeNull();
@@ -29,7 +31,9 @@ describe('NotificationBell', () => {
     store.ingest(fleetFrame('schedule:missed-fire', { cursor: 'c2' }));
     store.ingest(fleetFrame('worker:connected', { cursor: 'c3', payload: { id: 'w-1' } }));
 
-    const { getByRole, getByText, container } = render(NotificationBell, { props: { store } });
+    const { getByRole, getByText, container } = render(NotificationBell, {
+      props: { store, liveStatus: 'live' },
+    });
 
     expect(container.querySelector('.weft-notification-bell__count')?.textContent).toBe('3');
 
@@ -44,7 +48,9 @@ describe('NotificationBell', () => {
   test('empty state renders when there are no items yet', async () => {
     const { render, fireEvent } = await import('@testing-library/svelte');
     const store = new NotificationStore();
-    const { getByRole, getByText } = render(NotificationBell, { props: { store } });
+    const { getByRole, getByText } = render(NotificationBell, {
+      props: { store, liveStatus: 'live' },
+    });
 
     await fireEvent.click(getByRole('button', { name: 'Notifications, 0 unread' }));
 
@@ -57,7 +63,7 @@ describe('NotificationBell', () => {
     store.ingest(fleetFrame('workflow:started', { cursor: 'c1', workflowId: 'wf-1' }));
     store.ingest(fleetFrame('workflow:completed', { cursor: 'c2', workflowId: 'wf-2' }));
 
-    const { getByRole } = render(NotificationBell, { props: { store } });
+    const { getByRole } = render(NotificationBell, { props: { store, liveStatus: 'live' } });
     await fireEvent.click(getByRole('button', { name: 'Notifications, 2 unread' }));
     await fireEvent.click(getByRole('button', { name: 'Mark all read' }));
 
@@ -69,7 +75,9 @@ describe('NotificationBell', () => {
     const store = new NotificationStore();
     store.ingest(fleetFrame('workflow:started', { cursor: 'c1', workflowId: 'wf-1' }));
 
-    const { getByRole, getByText } = render(NotificationBell, { props: { store } });
+    const { getByRole, getByText } = render(NotificationBell, {
+      props: { store, liveStatus: 'live' },
+    });
     await fireEvent.click(getByRole('button', { name: 'Notifications, 1 unread' }));
     await fireEvent.click(getByText('Workflow started'));
 

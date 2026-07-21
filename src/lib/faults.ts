@@ -38,6 +38,19 @@
  * upstream design, not a bug to fix here: don't "fix" the JSON-RPC path to
  * try to recover it.
  */
+// `isWeftFault` (and the rest of the `isWeftError*` family) is exported only
+// from the package ROOT, not `@lostgradient/weft/client` — the root barrel
+// also re-exports server-only code (`createAuthenticator` et al., which
+// reaches `node:crypto`), so this import makes `vite build` print a
+// "node:crypto externalized for browser compatibility" warning. That warning
+// is build-log noise, not a shipped-bytes problem today: `@lostgradient/weft`
+// declares `sideEffects: false`, so Rollup tree-shakes the unused
+// server-only bindings out of the final bundle (verified by grepping the
+// built `dist/assets/index-*.js` for `constant-time`/`createAuthenticator`/
+// `node:crypto` — no matches). It's fragile rather than fixed, since it
+// depends on tree-shaking continuing to prove those bindings dead. Filed
+// upstream to export the error-classification helpers from `/client`
+// directly: https://github.com/stevekinney/weft/issues/722.
 import type { FaultCode, WeftErrorCode } from '@lostgradient/weft';
 import { isWeftFault } from '@lostgradient/weft';
 import { HttpClientError } from '@lostgradient/weft/client';

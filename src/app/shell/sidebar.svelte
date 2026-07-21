@@ -17,7 +17,7 @@
    */
   import Badge from '@lostgradient/cinder/badge';
   import ConnectionIndicator from '@lostgradient/cinder/connection-indicator';
-  import Sidebar from '@lostgradient/cinder/sidebar';
+  import Sidebar, { SIDEBAR_MOBILE_MEDIA_QUERY } from '@lostgradient/cinder/sidebar';
   import SideNavigation from '@lostgradient/cinder/side-navigation';
   import SideNavigationItem from '@lostgradient/cinder/side-navigation-item';
   import type { HttpClient } from '@lostgradient/weft/client';
@@ -31,6 +31,7 @@
     UserCheck,
     Workflow,
   } from 'lucide-svelte';
+  import { MediaQuery } from 'svelte/reactivity';
 
   import { createQuery } from '@tanstack/svelte-query';
 
@@ -45,6 +46,15 @@
   }
 
   let { client, engineStatus, collapsed = $bindable(false) }: SidebarNavProps = $props();
+
+  /**
+   * On a mobile viewport, `collapsed` doubles as "drawer closed" (Cinder
+   * `Sidebar`'s own `open = !collapsed`) — a nav click there should close
+   * the drawer after navigating, same as any other mobile drawer nav
+   * pattern. On desktop, `collapsed` is the user's icon-rail preference and
+   * must NOT be touched by a nav click.
+   */
+  const isMobileViewport = new MediaQuery(SIDEBAR_MOBILE_MEDIA_QUERY, false);
 
   const STALE_HEARTBEAT_MS = 30_000;
 
@@ -138,6 +148,7 @@
       return;
     event.preventDefault();
     router.navigate(path);
+    if (isMobileViewport.current) collapsed = true;
   }
 
   const enginePillLabel: Readonly<Record<LiveSourceStatus, string>> = {

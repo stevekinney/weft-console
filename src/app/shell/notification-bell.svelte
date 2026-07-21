@@ -45,14 +45,18 @@
     UserCheck,
   } from 'lucide-svelte';
 
+  import { formatRelativeTime } from '../../lib/format/index.ts';
+  import type { LiveSourceStatus } from '../../lib/live-source/index.ts';
   import { router } from '../../lib/router.svelte.ts';
   import type { NotificationItem, NotificationStore } from '../notifications.svelte.ts';
 
   interface NotificationBellProps {
     store: NotificationStore;
+    /** The shared fleet feed's own connection status — the footer's "Live" pill (design: "footer live pill") reflects where the notifications above it actually come from, rather than a static label. */
+    liveStatus: LiveSourceStatus;
   }
 
-  let { store }: NotificationBellProps = $props();
+  let { store, liveStatus }: NotificationBellProps = $props();
 
   let open = $state(false);
 
@@ -160,6 +164,9 @@
                 <span class="weft-notification-panel__item-title">{item.title}</span>
                 <span class="weft-notification-panel__item-detail">{item.body}</span>
               </span>
+              <span class="weft-notification-panel__item-time">
+                {formatRelativeTime(item.emittedAtMs)}
+              </span>
             </a>
           {/each}
         {/if}
@@ -171,7 +178,7 @@
 
       <div class="weft-notification-panel__footer">
         <span class="weft-notification-panel__live">
-          <ConnectionIndicator status="live" label="Live" />
+          <ConnectionIndicator status={liveStatus} />
         </span>
         <button type="button" class="weft-notification-panel__alerts-link" onclick={openAlertsView}>
           Open alerts view →

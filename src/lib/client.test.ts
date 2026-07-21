@@ -6,15 +6,17 @@
  * to the opaque-origin string `"null"`, not a usable URL). Exercises
  * `createClient()`/`setApiKey()` directly rather than through
  * `provideClient()`/`getClient()`, which need an active Svelte component
- * context — same convention `scopes.svelte.test.ts` (T1.2) uses for
- * `providePrincipalStore()`/`getPrincipalStore()`, covered later by the
- * app-shell's own component tests (T1.6).
+ * context; those two are exercised through the `*.test-harness.svelte`
+ * components below — a bare call from this file only reaches Svelte's own
+ * "no active component" lifecycle error, never the context plumbing itself.
  *
  * `HttpClient.headers` keys are lower-cased (`Headers`/Fetch-spec
  * normalization) — assertions below read `headers['authorization']`, not
  * `headers['Authorization']`.
  */
 import { describe, expect, test } from 'bun:test';
+
+import type { HttpClient } from '@lostgradient/weft/client';
 
 import { createClient, getClient, provideClient, setApiKey } from './client.ts';
 import type { WeftConsoleRuntimeConfig } from './config.ts';
@@ -132,11 +134,44 @@ describe('getClient — outside any provideClient() ancestor', () => {
     // — still proves getClient() is not silently swallowing the missing case.
     expect(() => getClient()).toThrow();
   });
+
+  test("inside a real component with no provideClient() ancestor, getClient()'s own guard fires", async () => {
+    // Unlike the bare call above, `get-client-harness.test-harness.svelte`
+    // renders as a real component, so `getContext()` succeeds (returns
+    // `undefined` — no ancestor called `provideClient()`) and control reaches
+    // `getClient()`'s own `if (!client) throw …` guard.
+    const { render } = await import('@testing-library/svelte');
+    const harnessModule = await import('./get-client-harness.test-harness.svelte');
+    const GetClientHarness = harnessModule.default;
+    expect(() => render(GetClientHarness)).toThrow(
+      /getClient\(\) called with no client in context/,
+    );
+  });
 });
 
 describe('provideClient — outside any component', () => {
   test("throws Svelte's own lifecycle error rather than silently no-op-ing", () => {
     const client = createClient({ baseUrl: 'https://weft.example.com' });
     expect(() => provideClient(client)).toThrow();
+  });
+});
+
+describe('provideClient + getClient — round trip through a real component tree', () => {
+  test('a child of the provideClient() ancestor gets the exact same client instance back', async () => {
+    // Mirrors how `src/app/shell/shell.svelte` actually wires these two
+    // functions: `ProvideClientHarness` calls `provideClient()` during its
+    // own setup, then renders `GetClientHarness` (reused from the "no
+    // ancestor" tests above) as a child that calls `getClient()`.
+    const { render } = await import('@testing-library/svelte');
+    const harnessModule = await import('./provide-client-harness.test-harness.svelte');
+    const ProvideClientHarness = harnessModule.default;
+    const client = createClient({ baseUrl: 'https://weft.example.com' });
+
+    let received: HttpClient | undefined;
+    render(ProvideClientHarness, {
+      props: { client, onClient: (c: HttpClient) => (received = c) },
+    });
+
+    expect(received).toBe(client);
   });
 });
