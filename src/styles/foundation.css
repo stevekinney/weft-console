@@ -1,0 +1,513 @@
+/* foundation — track-owned stylesheet. Add `@lostgradient/cinder/<component>/styles`
+ * imports and route-local rules here; never in src/styles/index.css. */
+
+@import '@lostgradient/cinder/empty-state/styles';
+@import '@lostgradient/cinder/card/styles';
+@import '@lostgradient/cinder/input/styles';
+@import '@lostgradient/cinder/button/styles';
+
+/* T1.5 handoff (fault-boundary.svelte / toast-host.svelte module docs):
+ * neither owns a track CSS file, so the shell — which mounts both — carries
+ * their per-component style imports. */
+@import '@lostgradient/cinder/toast-region/styles';
+@import '@lostgradient/cinder/badge/styles';
+@import '@lostgradient/cinder/collapsible/styles';
+
+/* T1.6 shell components. */
+@import '@lostgradient/cinder/connection-indicator/styles';
+@import '@lostgradient/cinder/sidebar/styles';
+@import '@lostgradient/cinder/side-navigation/styles';
+@import '@lostgradient/cinder/navigation-item/styles';
+@import '@lostgradient/cinder/command-palette/styles';
+@import '@lostgradient/cinder/command-item/styles';
+@import '@lostgradient/cinder/dropdown/styles';
+@import '@lostgradient/cinder/skeleton/styles';
+
+/* API-key entry surface (T1.1, plan §6) — full-page auth-required
+ * treatment per §10.4's fault-presentation rules. */
+.weft-console-api-key-entry {
+  display: flex;
+  min-height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: var(--cinder-space-4, 1rem);
+}
+
+.weft-console-api-key-entry .cinder-card {
+  width: 100%;
+  max-width: 24rem;
+}
+
+.weft-console-api-key-entry form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cinder-space-4, 1rem);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Shell layout (plan §13 T1.6; design `Weft Console.dc.html`)             */
+/* ---------------------------------------------------------------------- */
+
+.weft-shell-boot-skeleton {
+  display: block;
+  height: 100vh;
+}
+
+.weft-shell {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background: var(--cinder-bg);
+  color: var(--cinder-text);
+  font-size: var(--cinder-text-base);
+}
+
+.weft-shell-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.weft-shell-outlet {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.weft-shell-outlet__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cinder-space-3, 0.75rem);
+  max-width: 60rem;
+}
+
+/* Sidebar (design: 232px, surface-inset background). */
+
+.weft-shell-sidebar {
+  width: 232px;
+  flex: none;
+}
+
+.weft-shell-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.weft-shell-brand__mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--cinder-accent);
+  color: var(--cinder-accent-contrast);
+}
+
+.weft-shell-brand__name {
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  font-size: 13px;
+}
+
+.weft-shell-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-width: 0;
+}
+
+.weft-shell-nav-item__icon {
+  flex: none;
+}
+
+.weft-shell-nav-item__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weft-shell-engine-pill {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: var(--cinder-radius-md);
+  background: var(--cinder-surface);
+  border: 1px solid var(--cinder-border);
+  color: inherit;
+  text-decoration: none;
+}
+
+.weft-shell-engine-pill:hover {
+  background: var(--cinder-surface-hover);
+}
+
+.weft-shell-engine-pill__chevron {
+  flex: none;
+  color: var(--cinder-text-subtle);
+  margin-inline-start: auto;
+}
+
+/* Topbar (design: 53px, surface background). */
+
+.weft-shell-topbar {
+  height: 53px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--cinder-border);
+  background: var(--cinder-surface);
+}
+
+.weft-shell-topbar__domain {
+  font-size: var(--cinder-text-sm);
+  font-weight: 600;
+  flex: none;
+  white-space: nowrap;
+}
+
+.weft-shell-search-trigger {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 260px;
+  max-width: 420px;
+  flex: 1 1 auto;
+  padding: 7px 11px;
+  border: 1px solid var(--cinder-border);
+  border-radius: var(--cinder-radius-md);
+  background: var(--cinder-surface-inset);
+  color: var(--cinder-text-subtle);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--cinder-text-sm);
+}
+
+.weft-shell-search-trigger:hover {
+  background: var(--cinder-surface-hover);
+  color: var(--cinder-text);
+}
+
+.weft-shell-search-trigger span:not(.weft-shell-search-trigger__kbd) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weft-shell-search-trigger__kbd {
+  margin-inline-start: auto;
+  display: flex;
+  gap: 3px;
+  flex: none;
+}
+
+.weft-shell-search-trigger__kbd kbd {
+  font-family: var(--cinder-font-mono);
+  font-size: 10px;
+  padding: 2px 5px;
+  border: 1px solid var(--cinder-border);
+  border-radius: 4px;
+  background: var(--cinder-surface);
+}
+
+.weft-shell-scope-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 5px 9px;
+  border: 1px solid var(--cinder-color-warning-border);
+  border-radius: var(--cinder-radius-md);
+  background: var(--cinder-color-warning-bg);
+  color: var(--cinder-color-warning-fg);
+  font-size: var(--cinder-text-xs);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.weft-shell-icon-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--cinder-radius-md);
+  background: transparent;
+  color: var(--cinder-text-subtle);
+  cursor: pointer;
+}
+
+.weft-shell-icon-button:hover {
+  background: var(--cinder-surface-hover);
+  color: var(--cinder-text);
+}
+
+/* Notification bell + dropdown panel (design `Weft New Surfaces.dc.html` §C). */
+
+.weft-notification-bell__count {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  background: var(--cinder-danger);
+  color: var(--cinder-danger-contrast);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.weft-notification-panel {
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  background: var(--cinder-surface-raised);
+  border-radius: var(--cinder-radius-lg);
+  overflow: hidden;
+}
+
+.weft-notification-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--cinder-border-muted);
+}
+
+.weft-notification-panel__title {
+  font-size: var(--cinder-text-sm);
+  font-weight: 600;
+}
+
+.weft-notification-panel__mark-read {
+  margin-inline-start: auto;
+  border: 0;
+  background: transparent;
+  color: var(--cinder-accent-text);
+  font: inherit;
+  font-size: var(--cinder-text-2xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.weft-notification-panel__group-label {
+  padding: 7px 14px 3px;
+  font-size: var(--cinder-text-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cinder-text-subtle);
+  border-top: 1px solid var(--cinder-border-muted);
+}
+
+.weft-notification-panel__group-label:first-of-type {
+  border-top: 0;
+}
+
+.weft-notification-panel__group-label[data-tier='critical'] {
+  color: var(--cinder-color-danger-fg);
+}
+
+.weft-notification-panel__group-label[data-tier='warning'] {
+  color: var(--cinder-color-warning-fg);
+}
+
+.weft-notification-panel__item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 9px 14px;
+  text-decoration: none;
+  color: var(--cinder-text);
+  border-inline-start: 2px solid transparent;
+}
+
+.weft-notification-panel__item:hover {
+  background: var(--cinder-surface-hover);
+}
+
+.weft-notification-panel__item[data-tier='critical'] {
+  border-inline-start-color: var(--cinder-danger);
+}
+
+.weft-notification-panel__item[data-tier='warning'] {
+  border-inline-start-color: var(--cinder-warning);
+}
+
+.weft-notification-panel__item[data-read='true'] {
+  opacity: 0.65;
+}
+
+.weft-notification-panel__item-icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--cinder-text-subtle);
+}
+
+.weft-notification-panel__item[data-tier='critical'] .weft-notification-panel__item-icon {
+  color: var(--cinder-color-danger-fg);
+}
+
+.weft-notification-panel__item[data-tier='warning'] .weft-notification-panel__item-icon {
+  color: var(--cinder-color-warning-fg);
+}
+
+.weft-notification-panel__item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.weft-notification-panel__item-title {
+  display: block;
+  font-size: var(--cinder-text-xs);
+  font-weight: 600;
+}
+
+.weft-notification-panel__item[data-read='true'] .weft-notification-panel__item-title {
+  font-weight: 400;
+}
+
+.weft-notification-panel__item-detail {
+  display: block;
+  font-size: var(--cinder-text-2xs);
+  color: var(--cinder-text-subtle);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weft-notification-panel__empty {
+  padding: 20px 14px;
+  margin: 0;
+  text-align: center;
+  font-size: var(--cinder-text-sm);
+  color: var(--cinder-text-subtle);
+}
+
+.weft-notification-panel__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-top: 1px solid var(--cinder-border-muted);
+}
+
+.weft-notification-panel__alerts-link {
+  border: 0;
+  background: transparent;
+  color: var(--cinder-accent-text);
+  font: inherit;
+  font-size: var(--cinder-text-2xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Critical-alert strip (design §C: "below header, dismissible"). */
+
+.weft-critical-strip {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 18px;
+}
+
+.weft-critical-strip__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  background: var(--cinder-color-danger-bg);
+  border: 1px solid var(--cinder-color-danger-border);
+  border-radius: var(--cinder-radius-md);
+  color: var(--cinder-color-danger-fg);
+  font-size: var(--cinder-text-xs);
+}
+
+.weft-critical-strip__icon {
+  flex: none;
+}
+
+.weft-critical-strip__message {
+  flex: 1;
+  min-width: 0;
+}
+
+.weft-critical-strip__link {
+  flex: none;
+  font-weight: 600;
+  color: inherit;
+}
+
+.weft-critical-strip__dismiss {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* Unauthenticated-mode banner (plan §6, §10; design "auth-mode banner"). */
+
+.weft-shell-auth-banner {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+  background: var(--cinder-color-warning-bg);
+  border-bottom: 1px solid var(--cinder-color-warning-border);
+  color: var(--cinder-color-warning-fg);
+  font-size: var(--cinder-text-xs);
+}
+
+.weft-shell-auth-banner[data-variant='allow'] {
+  background: var(--cinder-surface-inset);
+  border-bottom-color: var(--cinder-border);
+  color: var(--cinder-text-subtle);
+}
+
+.weft-shell-auth-banner__icon {
+  flex: none;
+}
+
+.weft-shell-auth-banner__dismiss {
+  margin-inline-start: auto;
+  width: 22px;
+  height: 22px;
+}
+
+/* Command palette result groups (skeleton: id-prefix search). */
+
+.weft-command-group__label {
+  display: block;
+  padding: 7px 14px 3px;
+  font-size: var(--cinder-text-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cinder-text-subtle);
+}

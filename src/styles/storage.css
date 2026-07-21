@@ -1,0 +1,4 @@
+/* storage — track-owned stylesheet. Add `@lostgradient/cinder/<component>/styles`
+ * imports and route-local rules here; never in src/styles/index.css. */
+
+@import '@lostgradient/cinder/empty-state/styles';

@@ -1,0 +1,132 @@
+/**
+ * `EngineStatusController` integration tests against a REAL in-process weft
+ * server (`live-source-test-server.test-support.ts`, T1.4's harness — see
+ * its module doc for why `handleRequest` is used instead of `serve()`).
+ *
+ * Scope: `FleetEventSource`'s own wire/reconnect behavior is exhaustively
+ * covered by T1.4's own test suites; what this file proves is the
+ * composition this module adds — real fleet frames land in the shared
+ * `NotificationStore`, `status` reflects the fleet connection once it's
+ * live, and `dispose()` actually tears both sources down. The
+ * `status`-falls-back-to-the-health-poll branch (`fleetSource.status ===
+ * 'closed'`) is reachable only in the narrow window before the
+ * constructor's synchronous `subscribe()` call flips `FleetEventSource`
+ * into `'connecting'`, or after `dispose()` (at which point reading
+ * `status` is moot) — not exercised here; see the module's getter doc.
+ */
+import { describe, expect, test } from 'bun:test';
+
+import { startLiveSourceTestServer } from '../lib/live-source/live-source-test-server.test-support.ts';
+import { EngineStatusController } from './engine-status.svelte.ts';
+import { NotificationStore } from './notifications.svelte.ts';
+
+async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
+  const { waitFor } = await import('@testing-library/svelte');
+  return waitFor;
+}
+
+/** A bare `Bun.serve()` that always fails `/v1/events/sse` (mirrors the dev harness's real 501 — `handleRequest` with no `fleetEventFeed` configured) but keeps `/v1/health` reachable, so `EngineStatusController`'s health-poll fallback has somewhere to succeed. */
+function startUnreachableFleetServer(): { baseUrl: string; stop: () => void } {
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      const url = new URL(request.url);
+      if (url.pathname === '/v1/health') {
+        return Response.json({ status: 'ok' });
+      }
+      if (url.pathname === '/v1/events/sse') {
+        return new Response('Not Implemented', { status: 501 });
+      }
+      return new Response('Not Found', { status: 404 });
+    },
+  });
+  return { baseUrl: server.url.toString().replace(/\/+$/, ''), stop: () => server.stop(true) };
+}
+
+describe('EngineStatusController (integration, real server)', () => {
+  test('status becomes live and real fleet frames are forwarded into the notification store', async () => {
+    const server = await startLiveSourceTestServer();
+    const notifications = new NotificationStore();
+    const controller = new EngineStatusController(
+      { baseUrl: server.baseUrl, headers: {} },
+      notifications,
+    );
+
+    try {
+      const waitFor = await waitForCondition();
+      await waitFor(() => {
+        expect(controller.status).toBe('live');
+      });
+
+      const workflowId = 'engine-status-integration';
+      await server.engine.start('signal-stepped', { steps: 1 }, { id: workflowId });
+
+      await waitFor(() => {
+        expect(
+          notifications.items.some(
+            (item) => item.href === `/workflows/${workflowId}` && item.title === 'Workflow started',
+          ),
+        ).toBe(true);
+      });
+    } finally {
+      controller.dispose();
+      server.stop();
+    }
+  });
+
+  test('dispose() closes both the fleet source and the health poll', async () => {
+    const server = await startLiveSourceTestServer();
+    const notifications = new NotificationStore();
+    const controller = new EngineStatusController(
+      { baseUrl: server.baseUrl, headers: {} },
+      notifications,
+      { healthPollIntervalMs: 5 },
+    );
+
+    try {
+      const waitFor = await waitForCondition();
+      await waitFor(() => {
+        expect(controller.status).toBe('live');
+      });
+
+      controller.dispose();
+
+      expect(controller.fleetSource.status).toBe('closed');
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('falls back to the health poll once the fleet feed fails to reconnect 5 times in a row', async () => {
+    const server = startUnreachableFleetServer();
+    const notifications = new NotificationStore();
+    const controller = new EngineStatusController(
+      { baseUrl: server.baseUrl, headers: {} },
+      notifications,
+      { healthPollIntervalMs: 5, fleetReconnectDelayMs: () => 1 },
+    );
+
+    try {
+      const waitFor = await waitForCondition();
+      await waitFor(
+        () => {
+          expect(controller.fleetSource.reconnectAttempt).toBeGreaterThanOrEqual(5);
+        },
+        { timeout: 2000 },
+      );
+
+      await waitFor(() => {
+        expect(controller.status).toBe('polling');
+      });
+
+      // The fleet source itself never gives up — it keeps retrying in the
+      // background at its own capped curve (plan §5.3's fallback is a
+      // DISPLAY policy, not a "stop trying" policy) — only the controller's
+      // displayed `status` switches over.
+      expect(controller.fleetSource.status).not.toBe('closed');
+    } finally {
+      controller.dispose();
+      server.stop();
+    }
+  });
+});

@@ -1,0 +1,11 @@
+[test]
+preload = ["./tests/setup.ts"]
+
+# `bun run test` runs with `--conditions browser --conditions svelte`
+# (see package.json). Cinder ships `.svelte`/`.ts` SOURCE under its `browser`
+# and `svelte` package.json export conditions (not just `dist/`); without
+# these flags, imports like `import { Button } from '@lostgradient/cinder'`
+# resolve through the `node`/`default` condition instead and pull in
+# already-compiled dist output that our own Bun Svelte-compile plugin
+# (registered in tests/setup.ts) never touches — same pattern as
+# `cinder/packages/components/bunfig.toml` + its `test` script.
