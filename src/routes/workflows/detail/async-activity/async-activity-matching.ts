@@ -39,12 +39,27 @@ function runningActivityStepsNamed(
   );
 }
 
+function runningActivityStepsAt(
+  entries: readonly WorkflowTimelineEntry[],
+  step: number,
+): WorkflowTimelineEntry[] {
+  return entries.filter(
+    (entry) =>
+      entry.step === step && entry.operationType === 'activity' && entry.status === 'running',
+  );
+}
+
 export function attachPendingActivitiesToSteps(
   pending: readonly PendingAsyncActivityObservation[],
   entries: readonly WorkflowTimelineEntry[],
 ): AttachedPendingActivity[] {
   return pending.map((observation) => {
-    const matches = runningActivityStepsNamed(entries, observation.activityName);
+    const stepMatches =
+      observation.step === undefined ? [] : runningActivityStepsAt(entries, observation.step);
+    const matches =
+      stepMatches.length > 0
+        ? stepMatches
+        : runningActivityStepsNamed(entries, observation.activityName);
     const single = matches.length === 1 ? matches[0] : undefined;
     return { ...observation, stepId: single !== undefined ? timelineStepId(single.step) : null };
   });

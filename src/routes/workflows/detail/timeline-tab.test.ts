@@ -52,9 +52,22 @@ function inertQueryClient(): QueryClient {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
 
-function baseClient(entries: WorkflowTimelineEntry[]) {
+function baseClient(
+  entries: WorkflowTimelineEntry[],
+  pendingItems: ReadonlyArray<{
+    token: string;
+    operationId: string;
+    activityName: string;
+    step: number;
+    attempt: number;
+    createdAt: number;
+  }> = [],
+) {
   return {
     getTimeline: async () => entries,
+    operations: {
+      'weft.workflows.activities.pending.list': async () => ({ items: pendingItems }),
+    },
     activity: {
       complete: async () => {},
       completeExceptionally: async () => {},
@@ -245,19 +258,6 @@ describe('TimelineTab', () => {
     const { render, waitFor } = await import('@testing-library/svelte');
     const fleet = new InertFleet();
     const liveObservations = new WorkflowLiveObservations(fleet, inertQueryClient(), 'wf-1');
-    fleet.emit({
-      kind: 'activity:async-pending',
-      workflowId: 'wf-1',
-      sequence: 1,
-      cursor: '1',
-      emittedAtMs: 1,
-      payload: {
-        token: 'tok-1',
-        operationId: 'op-1',
-        activityName: 'printShippingLabel',
-        attempt: 1,
-      },
-    });
     const entries = [
       entry({
         step: 1,
@@ -269,7 +269,16 @@ describe('TimelineTab', () => {
 
     const { getByText } = render(TimelineTabHarness, {
       props: {
-        client: baseClient(entries),
+        client: baseClient(entries, [
+          {
+            token: 'tok-1',
+            operationId: 'op-1',
+            activityName: 'printShippingLabel',
+            step: 1,
+            attempt: 1,
+            createdAt: 1,
+          },
+        ]),
         workflow: workflow({ id: 'wf-1', status: 'running' }),
         liveObservations,
         finalizerStatus: null,
@@ -286,25 +295,21 @@ describe('TimelineTab', () => {
     const { render, waitFor } = await import('@testing-library/svelte');
     const fleet = new InertFleet();
     const liveObservations = new WorkflowLiveObservations(fleet, inertQueryClient(), 'wf-1');
-    fleet.emit({
-      kind: 'activity:async-pending',
-      workflowId: 'wf-1',
-      sequence: 1,
-      cursor: '1',
-      emittedAtMs: 1,
-      payload: {
-        token: 'tok-1',
-        operationId: 'op-1',
-        activityName: 'printShippingLabel',
-        attempt: 1,
-      },
-    });
     // No matching timeline entry at all — the observation stays unattached.
     const entries = [entry({ step: 1, operationLabel: 'unrelatedStep', status: 'completed' })];
 
     const { getByText } = render(TimelineTabHarness, {
       props: {
-        client: baseClient(entries),
+        client: baseClient(entries, [
+          {
+            token: 'tok-1',
+            operationId: 'op-1',
+            activityName: 'printShippingLabel',
+            step: 1,
+            attempt: 1,
+            createdAt: 1,
+          },
+        ]),
         workflow: workflow({ id: 'wf-1' }),
         liveObservations,
         finalizerStatus: null,

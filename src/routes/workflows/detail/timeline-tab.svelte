@@ -35,7 +35,7 @@
   import RunStepTimeline, { type RunStep } from '@lostgradient/cinder/run-step-timeline';
   import SegmentedControl, { Segment } from '@lostgradient/cinder/segmented-control';
   import Skeleton from '@lostgradient/cinder/skeleton';
-  import { createQuery } from '@tanstack/svelte-query';
+  import { createQuery, useQueryClient } from '@tanstack/svelte-query';
   import type { WeftClientActivity, HttpClient } from '@lostgradient/weft/client';
   import type { WorkflowFinalizerStatus, WorkflowState } from '@lostgradient/weft';
   import { Clock, Link, X } from 'lucide-svelte';
@@ -43,6 +43,11 @@
   import { toStore } from 'svelte/store';
 
   import { attachPendingActivitiesToSteps } from './async-activity/async-activity-matching.ts';
+  import {
+    pendingAsyncActivitiesQueryKey,
+    pendingAsyncActivityObservations,
+    PENDING_ASYNC_ACTIVITY_OPERATION,
+  } from './async-activity/async-activity-query.ts';
   import AsyncActivityDrawer from './async-activity/async-activity-drawer.svelte';
   import FinalizerStrip from './timeline/finalizer-strip.svelte';
   import {
@@ -70,6 +75,7 @@
 
   interface TimelineTabProps {
     readonly client: Pick<HttpClient, 'getTimeline'> & {
+      readonly operations: Pick<HttpClient['operations'], typeof PENDING_ASYNC_ACTIVITY_OPERATION>;
       readonly activity: Pick<WeftClientActivity, 'complete' | 'completeExceptionally'>;
     };
     readonly workflow: WorkflowState;
@@ -84,6 +90,18 @@
     toStore(() => ({
       queryKey: workflowTimelineQueryKey(workflow.id),
       queryFn: () => client.getTimeline(workflow.id),
+    })),
+  );
+
+  const queryClient = useQueryClient();
+  const pendingAsyncActivitiesQuery = createQuery(
+    toStore(() => ({
+      queryKey: pendingAsyncActivitiesQueryKey(workflow.id),
+      queryFn: () =>
+        client.operations[PENDING_ASYNC_ACTIVITY_OPERATION]({
+          workflowId: workflow.id,
+          limit: 200,
+        }),
     })),
   );
 
@@ -146,7 +164,10 @@
   }
 
   const attachedPendingActivities = $derived(
-    attachPendingActivitiesToSteps(liveObservations.pendingAsyncActivities, entries),
+    attachPendingActivitiesToSteps(
+      pendingAsyncActivityObservations($pendingAsyncActivitiesQuery.data?.items ?? []),
+      entries,
+    ),
   );
   const unattachedPendingActivities = $derived(
     attachedPendingActivities.filter((activity) => activity.stepId === null),
@@ -163,6 +184,9 @@
 
   function handleResolved(token: string): void {
     liveObservations.forgetToken(token);
+    void queryClient.invalidateQueries({
+      queryKey: pendingAsyncActivitiesQueryKey(workflow.id),
+    });
     openDrawerToken = null;
   }
 </script>

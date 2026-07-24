@@ -42,6 +42,20 @@ describe('attachPendingActivitiesToSteps', () => {
     expect(attached?.stepId).toBe('step-1');
   });
 
+  test('prefers the authoritative operation step when it is available', () => {
+    const entries = [
+      entry({ step: 3, operationLabel: 'sameName', status: 'running' }),
+      entry({ step: 8, operationLabel: 'sameName', status: 'running' }),
+    ];
+
+    const [attached] = attachPendingActivitiesToSteps(
+      [pending({ activityName: 'sameName', step: 8 })],
+      entries,
+    );
+
+    expect(attached?.stepId).toBe('step-8');
+  });
+
   test('leaves it unattached when no running step matches the activity name', () => {
     const entries = [entry({ step: 1, operationLabel: 'printShippingLabel', status: 'completed' })];
 

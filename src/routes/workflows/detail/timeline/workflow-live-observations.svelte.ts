@@ -65,12 +65,14 @@
 import type { QueryClient } from '@tanstack/svelte-query';
 
 import type { FleetEventFrame } from '../../../../lib/live-source/fleet-event-source.svelte.ts';
+import { pendingAsyncActivitiesQueryKey } from '../async-activity/async-activity-query.ts';
 import { workflowTimelineQueryKey } from '../workflow-timeline-data.ts';
 
 export interface PendingAsyncActivityObservation {
   readonly token: string;
   readonly operationId: string;
   readonly activityName: string;
+  readonly step?: number;
   readonly attempt: number;
   readonly observedAt: number;
 }
@@ -150,6 +152,7 @@ export class WorkflowLiveObservations {
     // there is no `activity:completed`/`activity:failed` event for the
     // async-completion path at all).
     void queryClient.invalidateQueries({ queryKey: workflowTimelineQueryKey(workflowId) });
+    void queryClient.invalidateQueries({ queryKey: pendingAsyncActivitiesQueryKey(workflowId) });
   }
 
   /** Optimistically drops a token from the observed-pending list right after this console's own drawer resolves it — see module doc for why the fleet feed itself never signals removal. */

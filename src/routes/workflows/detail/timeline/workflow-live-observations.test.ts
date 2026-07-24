@@ -123,7 +123,10 @@ describe('WorkflowLiveObservations', () => {
 
     fleet.emit(frame({ kind: 'activity:started', payload: {} }));
 
-    expect(queryClient.invalidated).toEqual([['workflows', 'timeline', 'wf-1']]);
+    expect(queryClient.invalidated).toEqual([
+      ['workflows', 'timeline', 'wf-1'],
+      ['workflows', 'pending-async-activities', 'wf-1'],
+    ]);
   });
 
   test('dispose unsubscribes from the fleet feed', () => {
