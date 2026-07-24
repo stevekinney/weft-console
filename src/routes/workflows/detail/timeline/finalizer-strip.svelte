@@ -2,67 +2,84 @@
   /**
    * Finalizer strip (plan T3.2, design `Weft New Surfaces.dc.html` §F: "Weft
    * concept, not a RunStepTimeline primitive") + the run-level Finalizing /
-   * Cancelled — cleanup failed badges. Renders nothing when this session has
-   * observed neither signal — see `workflow-live-observations.svelte.ts` for
-   * why (both are live-feed-only; there is no durable field to poll instead).
+   * Cancelled — cleanup failed badges.
+   *
+   * ## Durable, as of weft 0.15.0 — not a live-feed-only observation anymore
+   *
+   * This used to render from `WorkflowLiveObservations`' session-scoped,
+   * live-event-only `finalizingLive`/`finalizerTeardown` state, and it
+   * empirically never populated on a typical page load (see this repo's git
+   * history / the removed module doc on `workflow-live-observations.svelte.ts`
+   * for the confirmed replay-ordering reason) — weft#732 item 4 asked for a
+   * durable field instead. `@lostgradient/weft@0.15.0` (PR #760) shipped
+   * `weft.workflows.finalizer.get`, so `status` here is the same durable
+   * `WorkflowFinalizerStatus | null` `workflow-detail.svelte` fetches once and
+   * passes to both this strip and the header badge (`workflow-status.ts`'s
+   * `finalizerStatusPresentation` — the two surfaces now derive their special
+   * statuses from the exact same field instead of two independent
+   * heuristics). Renders nothing when the workflow recorded no finalizer work
+   * (`status === null`) or the query hasn't resolved yet (`undefined`).
    */
   import Badge from '@lostgradient/cinder/badge';
   import StatusDot from '@lostgradient/cinder/status-dot';
+  import type { WorkflowFinalizerStatus, WorkflowStatus } from '@lostgradient/weft';
   import { CircleX, Loader, Paintbrush, TriangleAlert } from 'lucide-svelte';
 
-  import type { FinalizerTeardownObservation } from './workflow-live-observations.svelte.ts';
+  import { finalizerStatusPresentation } from '../workflow-status.ts';
 
   interface FinalizerStripProps {
-    readonly finalizingLive: boolean;
-    readonly teardown: FinalizerTeardownObservation | null;
+    /** The workflow's base terminal status — only `cancelled`/`timed-out` ever carry finalizer work; used for wording ("Cancelled" vs "Timed out"). */
+    readonly baseStatus: WorkflowStatus;
+    /** `weft.workflows.finalizer.get` result. `undefined` while loading, `null` when nothing was recorded — both render nothing. */
+    readonly status: WorkflowFinalizerStatus | null | undefined;
   }
 
-  let { finalizingLive, teardown }: FinalizerStripProps = $props();
+  let { baseStatus, status }: FinalizerStripProps = $props();
 
-  const visible = $derived(finalizingLive || teardown !== null);
+  const presentation = $derived(finalizerStatusPresentation(baseStatus, status));
+  const inFlight = $derived(status?.status === 'pending' || status?.status === 'running');
+  const failed = $derived(status?.status === 'failed');
+  const succeeded = $derived(status?.status === 'succeeded');
 </script>
 
-{#if visible}
+{#if status !== null && status !== undefined}
   <div class="weft-finalizer-strip">
-    <div class="weft-finalizer-strip__badges">
-      <span class="weft-finalizer-strip__badges-label">Special statuses</span>
-      {#if finalizingLive}
-        <Badge variant="warning">
-          <Loader aria-hidden="true" size={11} />
-          Finalizing
+    {#if inFlight || failed}
+      <div class="weft-finalizer-strip__badges">
+        <span class="weft-finalizer-strip__badges-label">Special statuses</span>
+        <Badge variant={presentation.variant}>
+          {#if inFlight}
+            <Loader aria-hidden="true" size={11} />
+          {:else}
+            <TriangleAlert aria-hidden="true" size={11} />
+          {/if}
+          {presentation.label}
         </Badge>
-      {:else if teardown && teardown.status !== 'completed'}
-        <Badge variant="danger">
-          <TriangleAlert aria-hidden="true" size={11} />
-          Cancelled — cleanup failed
-        </Badge>
-      {/if}
-    </div>
+      </div>
+    {/if}
 
     <div class="weft-finalizer-strip__section">
       <div class="weft-finalizer-strip__section-label">
         <Paintbrush aria-hidden="true" size={12} />
-        Finalizer · runs after cancellation
+        Finalizer · runs after {baseStatus === 'timed-out' ? 'a timeout' : 'cancellation'}
       </div>
       <div class="weft-finalizer-strip__row">
-        {#if finalizingLive}
+        {#if inFlight}
           <StatusDot status="pending" label="Finalizer pending" showLabel={false} />
           <span class="weft-finalizer-strip__row-name">Awaiting completion…</span>
-        {:else if teardown}
+        {:else if status}
           <StatusDot
-            status={teardown.status === 'completed' ? 'success' : 'danger'}
-            label={teardown.status === 'completed' ? 'Finalizer completed' : 'Finalizer failed'}
+            status={succeeded ? 'success' : 'danger'}
+            label={succeeded ? 'Finalizer completed' : 'Finalizer failed'}
             showLabel={false}
           />
           <span class="weft-finalizer-strip__row-name">
-            Teardown {teardown.status === 'completed'
-              ? 'completed'
-              : teardown.status.replace('-', ' ')}
-            {#if teardown.attempts > 1}
-              · {teardown.attempts} attempts
+            Teardown {succeeded ? 'completed' : 'failed'}
+            {#if status.attempts > 1}
+              · {status.attempts} attempts
             {/if}
           </span>
-          {#if teardown.status !== 'completed'}
+          {#if failed}
             <Badge size="sm" variant="danger">
               <CircleX aria-hidden="true" size={10} />
               Failed
@@ -70,14 +87,9 @@
           {/if}
         {/if}
       </div>
-      {#if teardown?.error}
-        <p class="weft-finalizer-strip__error">{teardown.error}</p>
+      {#if status && 'error' in status}
+        <p class="weft-finalizer-strip__error">{status.error}</p>
       {/if}
-      <p class="weft-finalizer-strip__caveat">
-        Observed via the live event feed for this session only — weft has no durable field recording
-        finalizer status, so this section is empty on a page reload once the moment has passed. See
-        the workflow detail track report for the upstream request.
-      </p>
     </div>
   </div>
 {/if}
@@ -140,11 +152,5 @@
     margin: 0;
     font-size: var(--cinder-text-2xs);
     color: var(--cinder-color-danger-fg);
-  }
-
-  .weft-finalizer-strip__caveat {
-    margin: 0;
-    font-size: var(--cinder-text-2xs);
-    color: var(--cinder-text-disabled);
   }
 </style>

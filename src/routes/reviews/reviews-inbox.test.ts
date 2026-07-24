@@ -58,7 +58,7 @@ describe('ReviewsInbox', () => {
     expect(queryByText('All caught up')).toBeNull();
   });
 
-  test('Retry on the fault banner calls the failed query\'s refetch', async () => {
+  test("Retry on the fault banner calls the failed query's refetch", async () => {
     const { render, fireEvent } = await import('@testing-library/svelte');
     let refetched = false;
     const { getByRole } = render(ReviewsInboxTestHarness, {
@@ -93,7 +93,7 @@ describe('ReviewsInbox', () => {
     expect(getByText('All caught up')).not.toBeNull();
   });
 
-  test('switching to Decided surfaces the completed query\'s error, not the pending query\'s', async () => {
+  test("switching to Decided surfaces the completed query's error, not the pending query's", async () => {
     const { render, fireEvent } = await import('@testing-library/svelte');
     const { getByRole, getByText, queryByText } = render(ReviewsInboxTestHarness, {
       props: {

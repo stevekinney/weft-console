@@ -1,24 +1,22 @@
 /**
- * Live-feed-only observations for two signals `getTimeline()`/`GET
- * /api/v1/workflows/:id` never carry (plan T3.2's finalizer badges, T3.4's
- * async-activity completion drawer): the durable async-activity completion
- * token, and finalizer teardown outcome.
+ * Live-feed-only observation for one signal `getTimeline()`/`GET
+ * /api/v1/workflows/:id` never carries (plan T3.4's async-activity
+ * completion drawer): the durable async-activity completion token.
  *
  * ## Why this exists — and its one real limitation
  *
  * Verified against weft v0.11.0 and a live dev-harness curl of `GET
- * /api/v1/events/sse?workflowId=<id>` on both the `ship-package-async` and
- * `sandbox-session` fixtures: `activity:async-pending` (carrying `token`,
- * `operationId`, `activityName`, `attempt`) and `workflow:teardown`
- * (carrying `status`/`attempts`/`error`) are both in
- * `EVENTS_READ_EVENT_TYPES`, so the fleet feed (`GET …/events/sse`, NOT the
- * durable per-workflow event log — `getEvents()` only ever records
- * `workflow:checkpoint` markers, see `events-tab.svelte`) replays them on a
- * FRESH connection (confirmed live: a brand-new SSE connection to the
- * async-activity fixture replayed its `activity:async-pending` frame,
- * `payload.token` intact, before the `replayComplete` ping). Neither
- * `WorkflowState` nor `WorkflowTimelineEntry` carries a token or finalizer
- * field at all — this is the ONLY way the console can discover either.
+ * /api/v1/events/sse?workflowId=<id>` on the `ship-package-async` fixture:
+ * `activity:async-pending` (carrying `token`, `operationId`,
+ * `activityName`, `attempt`) is in `EVENTS_READ_EVENT_TYPES`, so the fleet
+ * feed (`GET …/events/sse`, NOT the durable per-workflow event log —
+ * `getEvents()` only ever records `workflow:checkpoint` markers, see
+ * `events-tab.svelte`) replays it on a FRESH connection (confirmed live: a
+ * brand-new SSE connection to the fixture replayed its
+ * `activity:async-pending` frame, `payload.token` intact, before the
+ * `replayComplete` ping). Neither `WorkflowState` nor
+ * `WorkflowTimelineEntry` carries this token at all — this is the ONLY way
+ * the console can discover it.
  *
  * That replay is per-CONNECTION, not per-subscriber: `FleetEventSource`
  * (`lib/live-source/fleet-event-source.svelte.ts`) shares ONE connection
@@ -36,23 +34,25 @@
  * does. That shell subscription is therefore always the first subscriber on
  * every page load, always wins the shared connection's one-time replay, and
  * every later subscriber — this one included, no matter how early within
- * route-level code it runs — only ever sees frames emitted AFTER that. Two
- * fresh-tab, direct-URL loads of the `ship-package-async`/`sandbox-session`
- * fixtures' Timeline tab (bypassing every other page) both confirmed the
- * async-pending badge and finalizer strip never populate, even though a
- * bare `curl` of the same SSE endpoint at the same moment does replay the
- * event — proving the gap is this ordering, not server-side event
- * eviction. This is a genuine Foundation-layer property
- * (`FleetEventSource` has no "buffer replay for late joiners" mode), out of
- * this track's owned paths to fix. The code below is kept — it is correct,
- * fully unit-tested, and does the right thing on `activity:async-pending`
- * frames that DO arrive live (an operator watching the Timeline tab in real
- * time while a token is minted) — but do not expect it to populate on a
- * typical page load. Filed upstream: a durable, queryable
- * pending-async-activity listing operation and a finalizer-status field on
- * `WorkflowState` remove the need for replay-racing entirely; alternatively
- * `FleetEventSource` could buffer its own catch-up backlog for late
- * subscribers. See this track's final report.
+ * route-level code it runs — only ever sees frames emitted AFTER that. This
+ * is a genuine Foundation-layer property (`FleetEventSource` has no "buffer
+ * replay for late joiners" mode), out of this track's owned paths to fix.
+ * The code below is kept — it is correct, fully unit-tested, and does the
+ * right thing on `activity:async-pending` frames that DO arrive live (an
+ * operator watching the Timeline tab in real time while a token is minted)
+ * — but do not expect it to populate on a typical page load. weft ships
+ * `weft.workflows.activities.pending.list` (bounded, paginated, durable
+ * pending-async-activity discovery) as of `@lostgradient/weft@0.15.0` —
+ * available but not yet adopted here; wiring the Timeline tab's
+ * async-activity affordances onto it instead of this live-only heuristic is
+ * a real follow-up, out of scope for this pass (see this session's report).
+ *
+ * The finalizer teardown half of this class (`finalizingLive`/
+ * `finalizerTeardown`) is GONE, not just renamed: weft#732 item 4 shipped
+ * `weft.workflows.finalizer.get`, a durable field with none of this
+ * replay-ordering problem, so `workflow-detail.svelte` now fetches finalizer
+ * status directly as a plain query instead of inferring it from a live event
+ * this class might miss — see `finalizer-strip.svelte`'s module doc.
  *
  * Never reconstructs a token by re-deriving weft's internal
  * `async-act:v1:<workflowId>:<step>:<attempt>` format
@@ -75,15 +75,6 @@ export interface PendingAsyncActivityObservation {
   readonly observedAt: number;
 }
 
-export type FinalizerTeardownStatus = 'completed' | 'failed' | 'dead-lettered';
-
-export interface FinalizerTeardownObservation {
-  readonly status: FinalizerTeardownStatus;
-  readonly attempts: number;
-  readonly error: string | undefined;
-  readonly observedAt: number;
-}
-
 interface AsyncPendingPayload {
   readonly token: string;
   readonly operationId: string;
@@ -102,30 +93,6 @@ function isAsyncPendingPayload(payload: unknown): payload is AsyncPendingPayload
   );
 }
 
-interface TeardownPayload {
-  readonly status: FinalizerTeardownStatus;
-  readonly attempts: number;
-  readonly error?: string;
-}
-
-const TEARDOWN_STATUSES: ReadonlySet<string> = new Set(['completed', 'failed', 'dead-lettered']);
-
-function isTeardownPayload(payload: unknown): payload is TeardownPayload {
-  if (typeof payload !== 'object' || payload === null) return false;
-  const record = payload as Record<string, unknown>;
-  return (
-    typeof record['status'] === 'string' &&
-    TEARDOWN_STATUSES.has(record['status']) &&
-    typeof record['attempts'] === 'number' &&
-    (record['error'] === undefined || typeof record['error'] === 'string')
-  );
-}
-
-const TERMINAL_WITH_POSSIBLE_FINALIZER: ReadonlySet<string> = new Set([
-  'workflow:cancelled',
-  'workflow:timed-out',
-]);
-
 export interface FleetSubscribable {
   subscribe(
     onFrame: (frame: FleetEventFrame) => void,
@@ -142,16 +109,6 @@ export interface FleetSubscribable {
  */
 export class WorkflowLiveObservations {
   pendingAsyncActivities = $state<PendingAsyncActivityObservation[]>([]);
-  finalizerTeardown = $state<FinalizerTeardownObservation | null>(null);
-  /**
-   * True only for a cancel/timeout transition observed AFTER the shared
-   * connection's replay caught up (`fleet.caughtUp`) — a REPLAYED
-   * cancel/timeout with no subsequent teardown is indistinguishable from
-   * "this workflow type has no finalizer at all" (weft exposes no
-   * finalizer-presence field anywhere — see `workflow-status.ts`'s sibling
-   * finding), so replay never sets this, only a live transition does.
-   */
-  finalizingLive = $state(false);
 
   readonly #unsubscribe: () => void;
 
@@ -161,14 +118,13 @@ export class WorkflowLiveObservations {
     workflowId: string,
   ) {
     this.#unsubscribe = fleet.subscribe(
-      (frame) => this.#handleFrame(frame, fleet, queryClient, workflowId),
+      (frame) => this.#handleFrame(frame, queryClient, workflowId),
       { workflowId },
     );
   }
 
   #handleFrame(
     frame: FleetEventFrame,
-    fleet: FleetSubscribable,
     queryClient: Pick<QueryClient, 'invalidateQueries'>,
     workflowId: string,
   ): void {
@@ -185,17 +141,6 @@ export class WorkflowLiveObservations {
           observedAt: frame.emittedAtMs,
         },
       ];
-    } else if (frame.kind === 'workflow:teardown' && isTeardownPayload(frame.payload)) {
-      const payload = frame.payload;
-      this.finalizerTeardown = {
-        status: payload.status,
-        attempts: payload.attempts,
-        error: payload.error,
-        observedAt: frame.emittedAtMs,
-      };
-      this.finalizingLive = false;
-    } else if (TERMINAL_WITH_POSSIBLE_FINALIZER.has(frame.kind)) {
-      if (fleet.caughtUp && this.finalizerTeardown === null) this.finalizingLive = true;
     }
 
     // Any frame for this workflow may have moved a timeline entry's status

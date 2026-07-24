@@ -15,6 +15,7 @@ import {
   WORKERS_LIST_KEY,
   workflowDetailKey,
   workflowEventsKey,
+  workflowFinalizerKey,
   WORKFLOWS_AGGREGATE_KEY_PREFIX,
   WORKFLOWS_LIST_KEY_PREFIX,
 } from './cache-integration.ts';
@@ -126,6 +127,16 @@ describe('applyFleetEventFrame', () => {
     expect(queryClient.getQueryState(workflowDetailKey('wf_1'))?.isInvalidated).toBe(true);
     // Fleet frames never append into the live-tail events cache (module doc).
     expect(queryClient.getQueryState(workflowEventsKey('wf_1'))?.isInvalidated).toBeFalsy();
+  });
+
+  test("a workflow-scoped frame also invalidates that workflow's finalizer query (weft#732 item 4)", () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(workflowFinalizerKey('wf_1'), () => null);
+    applyFleetEventFrame(
+      queryClient,
+      fleetFrame({ kind: 'workflow:teardown', workflowId: 'wf_1' }),
+    );
+    expect(queryClient.getQueryState(workflowFinalizerKey('wf_1'))?.isInvalidated).toBe(true);
   });
 
   test("a workflow-scoped frame does not invalidate a different workflow's detail cache", () => {

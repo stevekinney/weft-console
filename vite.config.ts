@@ -24,9 +24,7 @@ const devServerTarget = process.env['WEFT_API_BASE_URL'] ?? 'http://localhost:72
  */
 const shikiLangsThemesAlias = {
   find: /^shiki\/(langs|themes)$/,
-  replacement: fileURLToPath(
-    new URL('./scripts/shiki-curated-langs-themes.ts', import.meta.url),
-  ),
+  replacement: fileURLToPath(new URL('./scripts/shiki-curated-langs-themes.ts', import.meta.url)),
 };
 
 // Everything functional is served under `/api`; a handful of discovery and

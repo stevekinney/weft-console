@@ -28,10 +28,10 @@
    *    CLAUDE.md, fixed rather than reported).
    * 2. A `checkpoints` tab (T3.3) was added to the tab list/panel — the
    *    Timeline track owns `checkpoints-tab.svelte`.
-   * 3. `WorkflowLiveObservations` (T3.2/T3.4 — finalizer teardown status,
-   *    async-activity completion tokens) is instantiated HERE, not inside
-   *    `timeline-tab.svelte`, so it subscribes as early as this track's
-   *    files can reach — but that turns out not to be early enough: see
+   * 3. `WorkflowLiveObservations` (T3.4 — async-activity completion tokens)
+   *    is instantiated HERE, not inside `timeline-tab.svelte`, so it
+   *    subscribes as early as this track's files can reach — but that turns
+   *    out not to be early enough: see
    *    `timeline/workflow-live-observations.svelte.ts`'s module doc for the
    *    empirically-confirmed finding that `src/app/shell/shell.svelte`'s
    *    `EngineStatusController` always wins the shared `FleetEventSource`'s
@@ -39,6 +39,19 @@
    *    still the earliest reachable point AND it correctly handles frames
    *    that arrive live (after mount), which is a real, tested behavior
    *    independent of the replay-timing gap.
+   *
+   * ## Finalizer status (weft#732 item 4, shipped 0.15.0)
+   *
+   * `finalizerQuery` fetches `weft.workflows.finalizer.get` alongside the
+   * workflow itself and is the ONE fetch both the header badge and the
+   * Timeline tab's finalizer strip render from (`workflow-observability.ts`'s
+   * module doc) — no more session-scoped live-event guessing. Enabled only
+   * while `workflow.status` is `cancelled`/`timed-out`
+   * (`statusMayHaveFinalizer`): every other status can never carry finalizer
+   * work (weft's own docs), so there's nothing to fetch. `applyFleetEventFrame`
+   * (`cache-integration.ts`) also invalidates this query on any fleet event
+   * naming this workflow, so a `pending`/`running` finalizer that settles
+   * while this page is open refreshes without a manual reload.
    */
   import EmptyState from '@lostgradient/cinder/empty-state';
   import Skeleton from '@lostgradient/cinder/skeleton';
@@ -67,7 +80,8 @@
   import { WorkflowLiveObservations } from './timeline/workflow-live-observations.svelte.ts';
   import UpdatesTab from './updates-tab.svelte';
   import './workflow-detail.css';
-  import type { WorkflowContextualAction } from './workflow-status.ts';
+  import { finalizerQueryKey, getFinalizerStatus } from './workflow-observability.ts';
+  import { statusMayHaveFinalizer, type WorkflowContextualAction } from './workflow-status.ts';
 
   const client: HttpClient = getClient();
   const queryClient = useQueryClient();
@@ -80,6 +94,19 @@
     toStore(() => ({
       queryKey: queryKeys.workflows.detail(id),
       queryFn: () => client.get(id),
+    })),
+  );
+
+  // See module doc "Finalizer status". `enabled` reads the JUST-fetched
+  // workflow status reactively (not `untrack()`ed) — unlike the fleet
+  // subscription/`liveObservations` below, this legitimately needs to
+  // re-evaluate if a `cancel`/`force-timeout` mutation flips `workflow.status`
+  // into `cancelled`/`timed-out` while this page stays mounted.
+  const finalizerQuery = createQuery(
+    toStore(() => ({
+      queryKey: finalizerQueryKey(id),
+      queryFn: () => getFinalizerStatus(client, id),
+      enabled: statusMayHaveFinalizer($detailQuery.data?.status ?? 'pending'),
     })),
   );
 
@@ -221,6 +248,7 @@
       onAction={handleAction}
       {activeTab}
       onNavigateToTab={navigateToTab}
+      finalizerStatus={$finalizerQuery.data}
       onRunQuery={runQuery}
     />
 
@@ -240,7 +268,12 @@
         <div class="weft-workflow-detail__content">
           <Tabs.Panel value="overview"><OverviewTab {client} {workflow} /></Tabs.Panel>
           <Tabs.Panel value="timeline"
-            ><TimelineTab {client} {workflow} {liveObservations} /></Tabs.Panel
+            ><TimelineTab
+              {client}
+              {workflow}
+              {liveObservations}
+              finalizerStatus={$finalizerQuery.data}
+            /></Tabs.Panel
           >
           <Tabs.Panel value="events"><EventsTab {client} {workflow} /></Tabs.Panel>
           <Tabs.Panel value="logs"><LogsTab /></Tabs.Panel>

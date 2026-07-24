@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import type { WorkflowState } from '@lostgradient/weft';
+import type { WorkflowFinalizerStatus, WorkflowState } from '@lostgradient/weft';
 
 import Header from './header.svelte';
 import type { WorkflowContextualAction } from './workflow-status.ts';
@@ -32,6 +32,7 @@ describe('WorkflowDetailHeader', () => {
         onAction: noop,
         activeTab: 'overview',
         onNavigateToTab: noop,
+        finalizerStatus: null,
         onRunQuery: noopAsync,
       },
     });
@@ -51,6 +52,7 @@ describe('WorkflowDetailHeader', () => {
         onAction: noop,
         activeTab: 'overview',
         onNavigateToTab: noop,
+        finalizerStatus: null,
         onRunQuery: noopAsync,
       },
     });
@@ -70,6 +72,7 @@ describe('WorkflowDetailHeader', () => {
         onAction: noop,
         activeTab: 'overview',
         onNavigateToTab: noop,
+        finalizerStatus: null,
         onRunQuery: noopAsync,
       },
     });
@@ -90,6 +93,7 @@ describe('WorkflowDetailHeader', () => {
         },
         activeTab: 'overview',
         onNavigateToTab: noop,
+        finalizerStatus: null,
         onRunQuery: noopAsync,
       },
     });
@@ -112,6 +116,7 @@ describe('WorkflowDetailHeader', () => {
         },
         activeTab: 'overview',
         onNavigateToTab: noop,
+        finalizerStatus: null,
         onRunQuery: noopAsync,
       },
     });
@@ -134,6 +139,7 @@ describe('WorkflowDetailHeader', () => {
         onNavigateToTab: (tab: string) => {
           navigated.tab = tab;
         },
+        finalizerStatus: null,
         onRunQuery: noopAsync,
       },
     });
@@ -152,12 +158,79 @@ describe('WorkflowDetailHeader', () => {
         onAction: noop,
         activeTab: 'overview',
         onNavigateToTab: noop,
+        finalizerStatus: null,
         onRunQuery: noopAsync,
       },
     });
 
     expect(getByText('prod')).not.toBeNull();
     expect(getByText('tier-1')).not.toBeNull();
+  });
+
+  test('a cancelled workflow with an in-flight finalizer renders "Finalizing" instead of "Cancelled" (weft#732 item 4)', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const finalizerStatus: WorkflowFinalizerStatus = {
+      status: 'running',
+      attempts: 1,
+      startedAt: 1,
+    };
+    const { getByText, queryByText } = render(Header, {
+      props: {
+        workflow: workflow({ status: 'cancelled' }),
+        now: 2_000,
+        pendingAction: null,
+        onAction: noop,
+        activeTab: 'overview',
+        onNavigateToTab: noop,
+        finalizerStatus,
+        onRunQuery: noopAsync,
+      },
+    });
+
+    expect(getByText('Finalizing')).not.toBeNull();
+    expect(queryByText('Cancelled')).toBeNull();
+  });
+
+  test('a cancelled workflow with a failed finalizer renders "Cancelled — cleanup failed"', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const finalizerStatus: WorkflowFinalizerStatus = {
+      status: 'failed',
+      attempts: 3,
+      failedAt: 1,
+      error: 'destroySandbox threw',
+    };
+    const { getByText } = render(Header, {
+      props: {
+        workflow: workflow({ status: 'cancelled' }),
+        now: 2_000,
+        pendingAction: null,
+        onAction: noop,
+        activeTab: 'overview',
+        onNavigateToTab: noop,
+        finalizerStatus,
+        onRunQuery: noopAsync,
+      },
+    });
+
+    expect(getByText('Cancelled — cleanup failed')).not.toBeNull();
+  });
+
+  test('a cancelled workflow with no finalizer work recorded renders the plain "Cancelled" badge', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const { getByText } = render(Header, {
+      props: {
+        workflow: workflow({ status: 'cancelled' }),
+        now: 2_000,
+        pendingAction: null,
+        onAction: noop,
+        activeTab: 'overview',
+        onNavigateToTab: noop,
+        finalizerStatus: null,
+        onRunQuery: noopAsync,
+      },
+    });
+
+    expect(getByText('Cancelled')).not.toBeNull();
   });
 
   test('deadline countdown renders for a running workflow with an execution deadline', async () => {
@@ -170,6 +243,7 @@ describe('WorkflowDetailHeader', () => {
         onAction: noop,
         activeTab: 'overview',
         onNavigateToTab: noop,
+        finalizerStatus: null,
         onRunQuery: noopAsync,
       },
     });

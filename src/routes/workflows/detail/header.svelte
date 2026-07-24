@@ -14,9 +14,13 @@
    * mutation-ownership split as `review-decision-form.svelte`/
    * `reviews-data.ts`, Track D).
    *
-   * "Finalizing"/"Cancelled — cleanup failed" sub-statuses are NOT rendered
-   * here — see `workflow-status.ts` module doc for why (no public field to
-   * derive them from).
+   * "Finalizing"/"Cancelled — cleanup failed" sub-statuses ARE rendered here
+   * as of weft 0.15.0 — see `workflow-status.ts`'s `finalizerStatusPresentation`
+   * module doc (weft#732 item 4). `finalizerStatus` is a plain prop, not
+   * fetched here: this stays the dumb-component/mutation-ownership split the
+   * module doc above already describes — `workflow-detail.svelte` owns the
+   * `weft.workflows.finalizer.get` query and passes the result down, the same
+   * way it owns `client.get(id)`.
    */
   import Badge from '@lostgradient/cinder/badge';
   import Button from '@lostgradient/cinder/button';
@@ -24,7 +28,7 @@
   import CopyButton from '@lostgradient/cinder/copy-button';
   import Input from '@lostgradient/cinder/input';
   import Tooltip from '@lostgradient/cinder/tooltip';
-  import type { WorkflowState } from '@lostgradient/weft';
+  import type { WorkflowFinalizerStatus, WorkflowState } from '@lostgradient/weft';
   import {
     ArrowLeftRight,
     Ban,
@@ -32,10 +36,12 @@
     CircleX,
     Clock,
     HelpCircle,
+    Loader,
     Pause,
     Play,
     Radio,
     TimerOff,
+    TriangleAlert,
   } from 'lucide-svelte';
 
   import { formatDuration, formatRelativeTime, truncateId } from '../../../lib/format/index.ts';
@@ -44,7 +50,7 @@
     actionConfirmTier,
     actionLabel,
     availableActions,
-    workflowStatusPresentation,
+    finalizerStatusPresentation,
     type WorkflowContextualAction,
   } from './workflow-status.ts';
 
@@ -55,6 +61,8 @@
     readonly onAction: (action: WorkflowContextualAction) => void;
     readonly activeTab: string;
     readonly onNavigateToTab: (tab: string) => void;
+    /** `weft.workflows.finalizer.get` result — `undefined` while loading, `null` when no finalizer work was recorded. See module doc. */
+    readonly finalizerStatus: WorkflowFinalizerStatus | null | undefined;
     /** Runs a read-only query and resolves with its result, or throws. */
     readonly onRunQuery: (name: string, input: string) => Promise<unknown>;
   }
@@ -66,10 +74,11 @@
     onAction,
     activeTab,
     onNavigateToTab,
+    finalizerStatus,
     onRunQuery,
   }: WorkflowDetailHeaderProps = $props();
 
-  const presentation = $derived(workflowStatusPresentation(workflow.status));
+  const presentation = $derived(finalizerStatusPresentation(workflow.status, finalizerStatus));
   const actions = $derived(availableActions(workflow.status));
 
   const STATUS_ICON = {
@@ -80,6 +89,8 @@
     'circle-x': CircleX,
     ban: Ban,
     'timer-off': TimerOff,
+    loader: Loader,
+    'triangle-alert': TriangleAlert,
   } as const;
 
   const StatusIcon = $derived(STATUS_ICON[presentation.icon]);
@@ -151,13 +162,22 @@
       <div class="weft-workflow-detail__badges">
         <h1 class="weft-workflow-detail__title">{workflow.type}</h1>
         <Badge variant="accent" mono>v{workflow.versionTuple.workflowVersion}</Badge>
-        <Badge variant={presentation.variant}>
-          <StatusIcon aria-hidden="true" size={11} />
-          {presentation.label}
-          {#if workflow.status === 'failed' && workflow.failureCategory !== undefined}
-            · {failureCategoryLabel(workflow.failureCategory)}
-          {/if}
-        </Badge>
+        {#if presentation.tooltip}
+          <Tooltip text={presentation.tooltip}>
+            <Badge variant={presentation.variant}>
+              <StatusIcon aria-hidden="true" size={11} />
+              {presentation.label}
+            </Badge>
+          </Tooltip>
+        {:else}
+          <Badge variant={presentation.variant}>
+            <StatusIcon aria-hidden="true" size={11} />
+            {presentation.label}
+            {#if workflow.status === 'failed' && workflow.failureCategory !== undefined}
+              · {failureCategoryLabel(workflow.failureCategory)}
+            {/if}
+          </Badge>
+        {/if}
         {#if workflow.tags && workflow.tags.length > 0}
           {#each workflow.tags as tag (tag)}
             <Badge variant="neutral" size="sm">{tag}</Badge>

@@ -60,6 +60,11 @@ export function workflowDetailKey(workflowId: string): QueryKey {
   return ['workflows', 'detail', workflowId];
 }
 
+/** Matches `finalizerQueryKey(id)` (`../../routes/workflows/detail/workflow-observability.ts`) — kept as a literal here (not an import) for the same reason every other key in this module is. */
+export function workflowFinalizerKey(workflowId: string): QueryKey {
+  return ['workflows', 'finalizer', workflowId];
+}
+
 /** The live-tail events cache — see module doc for how this differs from Track A's cursor-paginated key. */
 export function workflowEventsKey(workflowId: string): QueryKey {
   return ['workflows', 'events', workflowId];
@@ -132,6 +137,14 @@ export function applyFleetEventFrame(queryClient: QueryClient, frame: FleetEvent
     queryClient.invalidateQueries({ queryKey: WORKFLOWS_LIST_KEY_PREFIX });
     queryClient.invalidateQueries({ queryKey: WORKFLOWS_AGGREGATE_KEY_PREFIX });
     queryClient.invalidateQueries({ queryKey: workflowDetailKey(frame.workflowId) });
+    // The durable finalizer field (`weft.workflows.finalizer.get`, weft#732
+    // item 4, shipped 0.15.0) only ever changes alongside a lifecycle event
+    // naming this workflow — a `workflow:teardown` frame chief among them —
+    // so any such frame is a reasonable trigger to refetch it, independent
+    // of whether this session's fleet connection actually replayed the
+    // specific `workflow:teardown` frame (the durable field is
+    // authoritative either way; this is just "refresh sooner").
+    queryClient.invalidateQueries({ queryKey: workflowFinalizerKey(frame.workflowId) });
     return;
   }
 

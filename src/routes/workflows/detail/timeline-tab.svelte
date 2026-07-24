@@ -37,7 +37,7 @@
   import Skeleton from '@lostgradient/cinder/skeleton';
   import { createQuery } from '@tanstack/svelte-query';
   import type { WeftClientActivity, HttpClient } from '@lostgradient/weft/client';
-  import type { WorkflowState } from '@lostgradient/weft';
+  import type { WorkflowFinalizerStatus, WorkflowState } from '@lostgradient/weft';
   import { Clock, Link, X } from 'lucide-svelte';
   import { untrack } from 'svelte';
   import { toStore } from 'svelte/store';
@@ -74,9 +74,11 @@
     };
     readonly workflow: WorkflowState;
     readonly liveObservations: WorkflowLiveObservations;
+    /** `weft.workflows.finalizer.get` result, fetched once by `workflow-detail.svelte` and shared with the header badge — see `finalizer-strip.svelte`'s module doc. */
+    readonly finalizerStatus: WorkflowFinalizerStatus | null | undefined;
   }
 
-  let { client, workflow, liveObservations }: TimelineTabProps = $props();
+  let { client, workflow, liveObservations, finalizerStatus }: TimelineTabProps = $props();
 
   const timelineQuery = createQuery(
     toStore(() => ({
@@ -166,10 +168,7 @@
 </script>
 
 <div class="weft-timeline-tab">
-  <FinalizerStrip
-    finalizingLive={liveObservations.finalizingLive}
-    teardown={liveObservations.finalizerTeardown}
-  />
+  <FinalizerStrip baseStatus={workflow.status} status={finalizerStatus} />
 
   {#if unattachedPendingActivities.length > 0}
     <div class="weft-timeline-tab__unattached">

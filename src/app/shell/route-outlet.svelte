@@ -59,7 +59,7 @@
         description="This path isn't one of the console's routes. Use the sidebar or Cmd+K to navigate."
       />
     {:else if loading || !activeComponent}
-      <div class="weft-shell-outlet__skeleton" aria-busy="true" aria-label="Loading">
+      <div class="weft-shell-outlet__skeleton" role="status" aria-busy="true" aria-label="Loading">
         <Skeleton height="1.5rem" width="40%" />
         <Skeleton height="10rem" />
         <Skeleton height="10rem" />

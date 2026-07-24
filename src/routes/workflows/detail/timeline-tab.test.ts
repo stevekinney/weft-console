@@ -72,7 +72,12 @@ describe('TimelineTab', () => {
     );
 
     const { getByText } = render(TimelineTabHarness, {
-      props: { client: baseClient([]), workflow: workflow(), liveObservations },
+      props: {
+        client: baseClient([]),
+        workflow: workflow(),
+        liveObservations,
+        finalizerStatus: null,
+      },
     });
 
     await waitFor(() => expect(getByText('No timeline entries yet')).not.toBeNull());
@@ -91,7 +96,12 @@ describe('TimelineTab', () => {
     ];
 
     const { getByText } = render(TimelineTabHarness, {
-      props: { client: baseClient(entries), workflow: workflow(), liveObservations },
+      props: {
+        client: baseClient(entries),
+        workflow: workflow(),
+        liveObservations,
+        finalizerStatus: null,
+      },
     });
 
     await waitFor(() => {
@@ -114,6 +124,7 @@ describe('TimelineTab', () => {
         client: baseClient(entries),
         workflow: workflow({ id: 'wf-select-1' }),
         liveObservations,
+        finalizerStatus: null,
       },
     });
 
@@ -154,6 +165,7 @@ describe('TimelineTab', () => {
         client: baseClient(entries),
         workflow: workflow({ id: 'wf-select-2' }),
         liveObservations,
+        finalizerStatus: null,
       },
     });
 
@@ -199,6 +211,7 @@ describe('TimelineTab', () => {
         client: baseClient(entries),
         workflow: workflow({ id: 'wf-filter-1' }),
         liveObservations,
+        finalizerStatus: null,
       },
     });
 
@@ -211,25 +224,17 @@ describe('TimelineTab', () => {
     });
   });
 
-  test('shows the Finalizing badge when the live observations report a still-in-flight finalizer', async () => {
+  test('shows the Finalizing badge when the durable finalizer field reports still-in-flight (weft#732 item 4)', async () => {
     const { render, waitFor } = await import('@testing-library/svelte');
     const fleet = new InertFleet();
-    fleet.caughtUp = true;
     const liveObservations = new WorkflowLiveObservations(fleet, inertQueryClient(), 'wf-1');
-    fleet.emit({
-      kind: 'workflow:cancelled',
-      workflowId: 'wf-1',
-      sequence: 1,
-      cursor: '1',
-      emittedAtMs: 1,
-      payload: {},
-    });
 
     const { getByText } = render(TimelineTabHarness, {
       props: {
         client: baseClient([]),
         workflow: workflow({ status: 'cancelled' }),
         liveObservations,
+        finalizerStatus: { status: 'running', attempts: 1, startedAt: 1 },
       },
     });
 
@@ -267,6 +272,7 @@ describe('TimelineTab', () => {
         client: baseClient(entries),
         workflow: workflow({ id: 'wf-1', status: 'running' }),
         liveObservations,
+        finalizerStatus: null,
       },
     });
 
@@ -297,7 +303,12 @@ describe('TimelineTab', () => {
     const entries = [entry({ step: 1, operationLabel: 'unrelatedStep', status: 'completed' })];
 
     const { getByText } = render(TimelineTabHarness, {
-      props: { client: baseClient(entries), workflow: workflow({ id: 'wf-1' }), liveObservations },
+      props: {
+        client: baseClient(entries),
+        workflow: workflow({ id: 'wf-1' }),
+        liveObservations,
+        finalizerStatus: null,
+      },
     });
 
     await waitFor(() => {

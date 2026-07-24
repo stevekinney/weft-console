@@ -61,24 +61,228 @@ sends) is wired up, which is a deliberate follow-up, not done here.
 
 ## Deployment modes
 
-The same built bundle (`dist/`) boots in three modes, distinguished only by how it's served and
-which realtime transport is viable — see plan §3 for the full detail:
+The same built bundle (`dist/`) boots in three modes — distinguished only by how the shell is
+served and which realtime transport is viable, never by rebuilding — via one runtime
+configuration layer (plan §3). `tests/deployment/` integration-tests the Service Worker and
+cross-origin modes against real weft code (`setupServiceWorker`/`handleRequest`, a real
+`serve({ cors })`). Bun-mount's five-route contract is verified against a real
+`serve({ dashboard: weftConsole() })` instance built from the packed npm tarball (Phase 10
+release-readiness gate, 2026-07-24): all five `DASHBOARD_PAGE_ROUTES` return the shell at `200`
+and `/api`/root-stable routes are untouched, confirming the page-route/API split works exactly as
+documented. That check also surfaced a real limitation — see the callout below.
 
-1. **Bun server mount** (primary) — `serve({ engine, dashboard: weftConsole() })` from
-   `@lostgradient/weft/server`. `src/mount.ts` exports `weftConsole()`.
-2. **Service Worker** — the engine runs inside a browser Service Worker
-   (`setupServiceWorker`); the host page serves `dist/` itself and the console boots with
-   `{ baseUrl: '/weft', eventTransport: 'sse' }` (WebSocket upgrades can't cross a Service
-   Worker).
-3. **Standalone / cross-origin** — the console on a different origin than the `weft` server,
-   via weft's `cors` option.
+### 1. Bun server mount (primary)
 
-All three read their runtime configuration from one place: the
-`<script type="application/json" id="weft-console-config">` block in `index.html`
-(`src/lib/config.ts` reads and validates it). **Security note**: the shell HTML is served
-before weft's `auth` handler runs (Bun's static route table is matched first) — `auth` protects
-the API, not the page itself. Deployments that must hide the shell put it behind a reverse
-proxy or private network.
+```ts
+import { Engine } from '@lostgradient/weft';
+import { serve } from '@lostgradient/weft/server';
+import { weftConsole } from '@lostgradient/weft-console';
+import { workflows } from './workflows';
+
+const engine = await Engine.create({ workflows });
+await serve({ engine, dashboard: weftConsole() });
+```
+
+`weftConsole({ distDir? })` (`src/mount.ts`) returns a static `Response` streaming the built
+`index.html` — `serve()` registers it at exactly the five `DASHBOARD_PAGE_ROUTES`
+(`/`, `/workflows`, `/workflows/*`, `/reviews`, `/workers`) and, by construction of Bun's static
+route table, it can never shadow `/api/*` or the root-stable discovery routes (`/v1/health`,
+`/openapi.json`, …). The injected config block defaults to `{ baseUrl: '' }` (same origin — the
+console and API share a port under this mode). Pass `distDir` only if you build once and copy
+`dist/` to a different location than this package's own `dist/` (e.g. a CDN origin bucket) before
+serving it from there.
+
+**This call alone does not serve the shell's assets.** `ServeOptions.dashboard` only mounts a
+single `Response` at the five page-route keys above — it has no mechanism to also serve the
+content-hashed JS/CSS chunks the shell's `index.html` references under `/assets/*`. Verified
+directly: a `serve({ dashboard: weftConsole() })` instance built from a packed tarball returns the
+shell HTML at `200` on all five routes, but every `/assets/*.js`/`.css` request it makes 404s
+through weft's own API 404 handler (unmatched paths fall through to `fetch`, same as any other
+unknown API path). This is a gap in weft's mount contract, not something this package can work
+around — `ServeOptions` has no hook to register additional static routes alongside `dashboard`,
+and inlining every route's JS/CSS into a single self-contained response (making `/assets/*`
+unnecessary) would defeat the per-route code-splitting this bundle's `check:bundle` budgets are
+built around, so this package doesn't do that either. Filed upstream
+(`stevekinney/weft`, see the issue tracker — search "dashboard assets").
+
+**Until that lands, serve `dist/assets/*` yourself** — put a static file server or reverse proxy
+in front that serves `/assets/*` directly from this package's `dist/assets` (`node_modules/@lostgradient/weft-console/dist/assets/` once installed, or wherever you copied `dist/` via
+`distDir`) and proxies everything else to the `serve()` process. This is also weft's own
+recommended production topology for external dashboards (see the security note below), so a
+correctly deployed console already has this reverse proxy in place; a bare `serve({ dashboard })`
+call with nothing in front of it is a local/dev convenience, not a complete production
+deployment.
+
+**Security note.** The shell HTML is served from Bun's static `routes` table, which is matched
+_before_ weft's `fetch`/auth handler runs — so `serve({ auth })` protects the API, never the
+page. Anyone who can reach the port gets the (empty, data-free) shell; only the API calls it then
+makes are authenticated. If a deployment needs to hide the shell itself, put it behind a reverse
+proxy or on a private network — weft has no page-level access control to configure.
+
+### 2. Standalone / cross-origin
+
+The console runs on a different origin than the `weft` server — a hosted console pointed at
+several backends, or local development where the dev server and API aren't same-origin. Enabled
+by weft's `cors` option on `serve()`:
+
+```ts
+import { Engine } from '@lostgradient/weft';
+import { serve } from '@lostgradient/weft/server';
+
+const engine = await Engine.create({ workflows });
+await serve({
+  engine,
+  cors: {
+    allowedOrigins: ['https://console.example.com'],
+    credentials: true,
+  },
+  publicOrigin: 'https://api.example.com',
+});
+```
+
+The console's own config block then points at the API origin explicitly:
+`{ "baseUrl": "https://api.example.com" }`. `cors` answers preflight (`OPTIONS`) requests, decorates
+allowed-origin responses with `Access-Control-Allow-*` headers, and rejects cross-origin WebSocket
+upgrades from disallowed origins — all verified live in `tests/deployment/cross-origin.test.ts`
+against a real `serve({ cors })` instance (preflight and actual GET for an allowed origin;
+withheld headers, not a thrown request, for a disallowed one — `fetch()` itself never enforces
+CORS, only a real browser does). **Omitting `cors` is the safe default**: no `Access-Control-*`
+headers are ever emitted and only same-origin requests succeed; weft never falls back to
+`Access-Control-Allow-Origin: *`.
+
+`serve()` validates the `cors` option **synchronously, before the port binds** — a wildcard
+origin (`allowedOrigins: ['*']`) combined with `credentials: true`, or with an explicit
+`Authorization` allowed-header, throws at `serve()`-call time rather than being silently accepted
+and only failing at request time. Both rejections are covered in
+`tests/deployment/cross-origin.test.ts`. Set `publicOrigin` (or `trustedHosts`) alongside `cors`
+so the discovery routes (`/.well-known/api-catalog`, `/.well-known/mcp.json`) emit correct
+absolute URLs instead of trusting an attacker-controlled `Host` header.
+
+### 3. Service Worker host page
+
+The engine runs inside a browser (or WebExtension) Service Worker — no Bun server at all, storage
+is `IndexedDBStorage`. A host page serves the built `dist/` itself and registers the worker:
+
+```ts
+// service-worker.ts, registered by the host page
+import { workflow } from '@lostgradient/weft';
+import { setupServiceWorker } from '@lostgradient/weft/service-worker';
+
+const checkout = workflow({ name: 'checkout' }).execute(async function* () {
+  /* … */
+});
+
+await setupServiceWorker({
+  pathPrefix: '/weft/',
+  register: (engine) => {
+    engine.register(checkout);
+  },
+});
+```
+
+The host page's `index.html` (copied from this package's `dist/`) carries a config block of
+`{ "baseUrl": "/weft", "eventTransport": "sse" }` — WebSocket upgrades cannot be intercepted by a
+Service Worker, so the console must be told to use SSE up front rather than discover it via
+`'auto'`'s WebSocket-first probe. `tests/deployment/config-injection.test.ts` proves this exact
+block round-trips through `readRuntimeConfig()`/`createClient()` into a correctly-configured
+`HttpClient`, and `tests/deployment/service-worker.test.ts` proves a REST read (`GET
+/weft/v1/workflows/:id`) resolves end to end through the real `setupServiceWorker()` fetch
+listener against `IndexedDBStorage`.
+
+**Known gap — SSE does not work through `setupServiceWorker()` today.** `handleRequest` itself
+streams SSE incrementally rather than buffering (proven directly in
+`tests/deployment/service-worker.test.ts`: a live-appended fleet event arrives over an
+already-open `Response` body without the underlying subscription ever completing). But
+`setupServiceWorker()`'s own fetch listener calls `handleRequest(request, engine)` with no
+`HandlerOptions` at all — no `authContext`, no `fleetEventFeed`, no `workflowEventFeed` — so
+every request through the real Service Worker entry point is unconditionally anonymous, and any
+`scoped`/`authenticated` operation 401s before reaching a feed that was never wired up in the
+first place (also proven in that test file). This is a gap in weft's public `service-worker`
+API — confirmed from source, not a console defect and not a buffering problem — surfaced by this
+track's testing rather than a previously-filed issue; it needs its own upstream tracking, and this
+repository does not patch it locally. Until it's addressed, a host that needs SW-mode SSE has to
+hand-roll the fetch listener instead of using
+`setupServiceWorker()`'s convenience wrapper for that one concern:
+
+```ts
+import { buildDelegatedRequest, normalizePathPrefix } from '@lostgradient/weft/service-worker';
+import { createFleetEventFeed, handleRequest } from '@lostgradient/weft/server/handler';
+
+const pathPrefix = normalizePathPrefix('/weft/');
+const fleetEventFeed = createFleetEventFeed(engine.storage);
+
+self.addEventListener('fetch', (event) => {
+  const delegated = buildDelegatedRequest(event, pathPrefix);
+  if (delegated === null) return;
+  event.respondWith(
+    handleRequest(delegated, engine, {
+      fleetEventFeed,
+      // authContext: … — still required for any `scoped`/`authenticated` route.
+    }),
+  );
+});
+```
+
+### Runtime configuration contract
+
+All three modes read one injected block, parsed once at boot by `readRuntimeConfig()`
+(`src/lib/config.ts`) and turned into the app's single `HttpClient` by `createClient()`
+(`src/lib/client.ts`):
+
+```html
+<script type="application/json" id="weft-console-config">
+  { "baseUrl": "/weft", "eventTransport": "sse" }
+</script>
+```
+
+| Field            | Type                             | Meaning                                                                                                                                                                                                                          |
+| ---------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `baseUrl`        | `string` (required)              | `''` → same origin (Bun mount, same-origin standalone); an absolute URL → a fixed API origin (cross-origin standalone); a root-relative path (`/weft`) → resolved against the page's own origin (Service Worker's `pathPrefix`). |
+| `eventTransport` | `'auto' \| 'websocket' \| 'sse'` | Optional, defaults to `'auto'`. Service Worker mode must set `'sse'` explicitly — WebSocket upgrades never reach a Service Worker `fetch` listener.                                                                              |
+| `token`          | `string`                         | Optional bearer token, held only in the constructed `HttpClient` (never written to `localStorage` or a cookie by this package).                                                                                                  |
+| `headers`        | `Record<string, string>`         | Optional extra headers sent on every request (e.g. a fixed `X-API-Key` for a deployment that doesn't use bearer tokens). An explicit `headers.Authorization` wins over `token`.                                                  |
+| `assetBase`      | `string`                         | Declared and validated, reserved for a future CDN asset-base rewrite (plan §3.1's "asset base URL for CDN deployments"). Not yet consumed anywhere in this bundle — setting it today has no effect.                              |
+
+A present-but-malformed config block (invalid JSON, or valid JSON that fails shape validation)
+throws loudly rather than silently falling back — it's generated by the mount, so a broken one is
+a deployment bug worth surfacing, not masking. A missing/empty block falls back to
+`{ baseUrl: '', eventTransport: 'auto' }` (same-origin, auto-transport) so a bare `index.html`
+load outside any of the three documented modes still boots.
+
+### Scope requirements per surface
+
+Sourced from the current operation catalog (`@lostgradient/weft/src/server/operations/*.ts`), not
+from the scope vocabulary alone — several declared scopes are not yet enforced by any operation
+(see the caveat below). What's actually checked today:
+
+| Surface                                                                                                                                                                                                              | Access policy today                                                                                                                                  |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bulk workflow operations (cancel / delete / retry-failed / signal / tag-mutate)                                                                                                                                      | `scoped` — `workflows:admin`                                                                                                                         |
+| Async-activity completion (`weft.activities.complete` / `.fail`)                                                                                                                                                     | `scoped` — `workflows:write` (read/heartbeat side: `workflows:read`)                                                                                 |
+| Human-review listing (`weft.reviews.list`)                                                                                                                                                                           | `scoped` — `reviews:read`                                                                                                                            |
+| Raw storage KV browser (get / put / delete / scan / batch / conditional-batch)                                                                                                                                       | `scoped` — `storage:admin`                                                                                                                           |
+| Workers, task queues, task diagnostics (list), registry, system lease, metrics                                                                                                                                       | `scoped` — `system:read`                                                                                                                             |
+| Worker drain / resume / clear-dead-letter, task-diagnostics admin actions                                                                                                                                            | `scoped` — `system:admin`                                                                                                                            |
+| Per-workflow live tail (`/watch`, `/stream`)                                                                                                                                                                         | `scoped` — `streams:read`                                                                                                                            |
+| Fleet events feed (`/v1/events/sse`, `weft.events.subscribe`)                                                                                                                                                        | `scoped` — `events:read`                                                                                                                             |
+| Schedule read (`weft.schedules.get` / `.list`)                                                                                                                                                                       | `authenticated` — any authenticated principal, no specific scope                                                                                     |
+| Everything else — workflow reads/starts/signals/updates/queries, single-workflow control (cancel/suspend/resume/terminate), attributes, tags, schedule create/update/pause/resume/cancel, review-decision submission | `public` — allowed for any principal the server-level authenticator admits (including an anonymous one, if `auth`/`unauthenticatedAccess` allows it) |
+
+**A `public` access policy is not the same as "no authentication required".** When `serve({ auth })`
+is configured, every request still needs _some_ valid credential — a request with none 401s before
+it ever reaches the operation catalog (`authenticateRequest`, `src/server/runtime/request-gate.ts`).
+`public` only means the operation itself performs no _additional_ scope check once a principal is
+authenticated — so a credential issued with, say, only `workflows:read` can still call
+`purge-workflows` or `recover-all` today, because those operations never look at the principal's
+granted scopes. `schedules:write`, `signals:write`, `updates:write`, `queries:read`,
+`attributes:read`/`write`, `tags:write`, and `budget:read`/`write` are all declared in weft's scope
+vocabulary but checked by **no** operation as of this writing. This is a known, already-tracked
+posture gap in weft itself, not a console defect, and not something this repository works around
+locally. The console still gates its own UI on the principal's granted scopes
+(`src/lib/scopes.svelte.ts`'s `hasScope()`, disable-with-reason per PROJECT-BRIEF) — that's correct
+and forward-compatible with tighter server enforcement landing later, but it is a client-side
+convenience, not a security boundary: don't rely on the console's disabled-button state as proof
+that the server would also reject the call.
 
 ## Toolchain decisions (Phase 0, plan §2/§13 T0.2–T0.3)
 

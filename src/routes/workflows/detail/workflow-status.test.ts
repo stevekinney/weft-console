@@ -1,12 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 
-import type { WorkflowStatus } from '@lostgradient/weft';
+import type { WorkflowFinalizerStatus, WorkflowStatus } from '@lostgradient/weft';
 
 import {
   actionConfirmTier,
   actionLabel,
   availableActions,
+  finalizerStatusPresentation,
   isTerminalStatus,
+  statusMayHaveFinalizer,
   workflowStatusPresentation,
   type WorkflowContextualAction,
 } from './workflow-status.ts';
@@ -43,6 +45,83 @@ describe('workflowStatusPresentation', () => {
   test('terminal completed/cancelled render as neutral/gray', () => {
     expect(workflowStatusPresentation('completed').variant).toBe('neutral');
     expect(workflowStatusPresentation('cancelled').variant).toBe('neutral');
+  });
+});
+
+describe('statusMayHaveFinalizer', () => {
+  test('only cancelled and timed-out may carry finalizer work', () => {
+    for (const status of ALL_STATUSES) {
+      expect(statusMayHaveFinalizer(status)).toBe(status === 'cancelled' || status === 'timed-out');
+    }
+  });
+});
+
+describe('finalizerStatusPresentation', () => {
+  test('falls back to the plain status badge when finalizer is undefined (still loading)', () => {
+    const presentation = finalizerStatusPresentation('cancelled', undefined);
+    expect(presentation).toEqual(workflowStatusPresentation('cancelled'));
+  });
+
+  test('falls back to the plain status badge when finalizer is null (no finalizer work recorded)', () => {
+    const presentation = finalizerStatusPresentation('cancelled', null);
+    expect(presentation).toEqual(workflowStatusPresentation('cancelled'));
+  });
+
+  test('never renders a finalizer sub-state for completed/failed, even if a finalizer value is somehow passed', () => {
+    const finalizer: WorkflowFinalizerStatus = { status: 'running', attempts: 1, startedAt: 1 };
+    expect(finalizerStatusPresentation('completed', finalizer)).toEqual(
+      workflowStatusPresentation('completed'),
+    );
+    expect(finalizerStatusPresentation('failed', finalizer)).toEqual(
+      workflowStatusPresentation('failed'),
+    );
+  });
+
+  test('pending/running finalizer renders "Finalizing" (amber, loader icon, tooltip)', () => {
+    const inFlightFinalizers: readonly WorkflowFinalizerStatus[] = [
+      { status: 'pending', attempts: 0 },
+      { status: 'running', attempts: 1, startedAt: 1 },
+    ];
+    for (const finalizer of inFlightFinalizers) {
+      const presentation = finalizerStatusPresentation('cancelled', finalizer);
+      expect(presentation.label).toBe('Finalizing');
+      expect(presentation.variant).toBe('warning');
+      expect(presentation.icon).toBe('loader');
+      expect(presentation.tooltip).toBeDefined();
+    }
+  });
+
+  test('failed finalizer after a cancellation renders "Cancelled — cleanup failed" (danger, triangle-alert icon)', () => {
+    const finalizer: WorkflowFinalizerStatus = {
+      status: 'failed',
+      attempts: 3,
+      failedAt: 1,
+      error: 'destroySandbox threw',
+    };
+    const presentation = finalizerStatusPresentation('cancelled', finalizer);
+    expect(presentation.label).toBe('Cancelled — cleanup failed');
+    expect(presentation.variant).toBe('danger');
+    expect(presentation.icon).toBe('triangle-alert');
+    expect(presentation.tooltip).toContain('destroySandbox threw');
+  });
+
+  test('failed finalizer after a timeout renders "Timed out — cleanup failed"', () => {
+    const finalizer: WorkflowFinalizerStatus = {
+      status: 'failed',
+      attempts: 1,
+      failedAt: 1,
+      error: 'boom',
+    };
+    expect(finalizerStatusPresentation('timed-out', finalizer).label).toBe(
+      'Timed out — cleanup failed',
+    );
+  });
+
+  test('succeeded finalizer renders the plain terminal badge, not a special sub-state', () => {
+    const finalizer: WorkflowFinalizerStatus = { status: 'succeeded', attempts: 1, completedAt: 1 };
+    expect(finalizerStatusPresentation('cancelled', finalizer)).toEqual(
+      workflowStatusPresentation('cancelled'),
+    );
   });
 });
 

@@ -7,7 +7,9 @@ import QueryFaultBanner from './query-fault-banner.svelte';
 describe('QueryFaultBanner', () => {
   test('renders the treatment title and message for a classified fault', async () => {
     const { render } = await import('@testing-library/svelte');
-    const error = new HttpClientError(401, 'authentication required', { faultCode: 'Unauthorized' });
+    const error = new HttpClientError(401, 'authentication required', {
+      faultCode: 'Unauthorized',
+    });
     const { getByText } = render(QueryFaultBanner, { props: { error, onRetry: () => {} } });
 
     expect(getByText('Not authorized')).not.toBeNull();

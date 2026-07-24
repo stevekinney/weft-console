@@ -77,7 +77,9 @@ describe('ScheduleDetail', () => {
 
       const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('No active or queued runs.')).not.toBeNull());
-      await waitFor(() => expect(getByText("No runs yet — this schedule hasn't fired.")).not.toBeNull());
+      await waitFor(() =>
+        expect(getByText("No runs yet — this schedule hasn't fired.")).not.toBeNull(),
+      );
     } finally {
       await server.stop();
     }

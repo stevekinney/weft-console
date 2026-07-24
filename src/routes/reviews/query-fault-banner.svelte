@@ -22,7 +22,11 @@
     ServerCrash,
   } from 'lucide-svelte';
 
-  import { FAULT_TREATMENT_TITLE, faultTreatment, type FaultTreatmentKind } from '../../lib/faults.ts';
+  import {
+    FAULT_TREATMENT_TITLE,
+    faultTreatment,
+    type FaultTreatmentKind,
+  } from '../../lib/faults.ts';
 
   interface QueryFaultBannerProps {
     error: unknown;

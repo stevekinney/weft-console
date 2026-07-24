@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import type { WorkflowState, WorkflowTimelineEntry } from '@lostgradient/weft';
+import type { PaginatedResult, WorkflowState, WorkflowSummary } from '@lostgradient/weft';
 
 import OverviewTabHarness from './overview-tab.test-harness.svelte';
 
@@ -17,12 +17,19 @@ function workflow(overrides: Partial<WorkflowState> = {}): WorkflowState {
   };
 }
 
+function emptyPage(): PaginatedResult<WorkflowSummary> {
+  return { items: [], total: 0, offset: 0, limit: 5 };
+}
+
 function baseClient() {
   return {
     addTags: async () => {},
     removeTags: async () => {},
     get: async (): Promise<WorkflowState | null> => null,
-    getTimeline: async (): Promise<WorkflowTimelineEntry[]> => [],
+    list: async (): Promise<PaginatedResult<WorkflowSummary>> => emptyPage(),
+    operations: {
+      'weft.workflows.scheduleprovenance.get': async () => null,
+    },
   };
 }
 

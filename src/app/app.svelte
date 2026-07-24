@@ -85,7 +85,12 @@
   {:else if phase.status === 'needs-api-key'}
     <ApiKeyEntry onSubmit={onApiKeySubmit} />
   {:else}
-    <div class="weft-shell-boot-skeleton" aria-busy="true" aria-label="Loading Weft Console">
+    <div
+      class="weft-shell-boot-skeleton"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading Weft Console"
+    >
       <Skeleton height="100vh" radius="0" />
     </div>
   {/if}

@@ -115,52 +115,6 @@ describe('WorkflowLiveObservations', () => {
     expect(observations.pendingAsyncActivities).toEqual([]);
   });
 
-  test('records a workflow:teardown frame and clears any in-flight "finalizing" flag', () => {
-    const fleet = new FakeFleet();
-    fleet.caughtUp = true;
-    const queryClient = fakeQueryClient();
-    const observations = new WorkflowLiveObservations(fleet, queryClient, 'wf-1');
-
-    fleet.emit(frame({ kind: 'workflow:cancelled', payload: {} }));
-    expect(observations.finalizingLive).toBe(true);
-
-    fleet.emit(
-      frame({
-        kind: 'workflow:teardown',
-        payload: { status: 'failed', attempts: 2, error: 'destroySandbox threw' },
-      }),
-    );
-
-    expect(observations.finalizerTeardown).toEqual({
-      status: 'failed',
-      attempts: 2,
-      error: 'destroySandbox threw',
-      observedAt: 1_000,
-    });
-    expect(observations.finalizingLive).toBe(false);
-  });
-
-  test('a REPLAYED (not-yet-caught-up) cancellation never sets finalizingLive — ambiguous with "no finalizer at all"', () => {
-    const fleet = new FakeFleet();
-    fleet.caughtUp = false;
-    const queryClient = fakeQueryClient();
-    const observations = new WorkflowLiveObservations(fleet, queryClient, 'wf-1');
-
-    fleet.emit(frame({ kind: 'workflow:cancelled', payload: {} }));
-
-    expect(observations.finalizingLive).toBe(false);
-  });
-
-  test('a malformed workflow:teardown payload is ignored', () => {
-    const fleet = new FakeFleet();
-    const queryClient = fakeQueryClient();
-    const observations = new WorkflowLiveObservations(fleet, queryClient, 'wf-1');
-
-    fleet.emit(frame({ kind: 'workflow:teardown', payload: { status: 'not-a-real-status' } }));
-
-    expect(observations.finalizerTeardown).toBeNull();
-  });
-
   test('every frame for this workflow invalidates the timeline query so a resolved step self-heals', () => {
     const fleet = new FakeFleet();
     const queryClient = fakeQueryClient();

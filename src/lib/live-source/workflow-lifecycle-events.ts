@@ -7,39 +7,47 @@
  *
  * weft's own `WORKFLOW_TERMINAL_EVENT_TYPES` (`core/events/workflow-
  * events.ts`) is not a public export, so this is the console's own copy —
- * built from the individual event classes' `.type` statics
- * (`WorkflowCompletedEvent.type` etc.), which ARE public root exports, so
- * this can't silently drift on the *names*, only on the *set* (re-verify
- * against `WorkflowStatus`'s terminal members on every `@lostgradient/weft`
- * bump — `'suspended'` is deliberately excluded: a suspended workflow is
- * resumable, not terminal, per that type's own doc comment).
+ * built from the individual event classes' `.type` statics, which ARE
+ * public exports, so this can't silently drift on the *names*, only on the
+ * *set* (re-verify against `WorkflowStatus`'s terminal members on every
+ * `@lostgradient/weft` bump — `'suspended'` is deliberately excluded: a
+ * suspended workflow is resumable, not terminal, per that type's own doc
+ * comment).
  *
- * The event *classes* themselves (`WorkflowStartedEvent` etc.) are root-only
- * value exports: importing any one of them forces a bundler to resolve
- * `@lostgradient/weft`'s package-root barrel (`dist/index.js`), which also
- * re-exports server-only code reaching `node:crypto`
- * (`server/authentication/constant-time-api-key.js`) — the same class of
- * browser-bundle leak `isWeftFault`/`isWeftError*` had before
- * `@lostgradient/weft@0.12.0` moved them to `/client` (weft#722, fixed
- * upstream #733). The event classes haven't made that move yet — filed
- * upstream: https://github.com/stevekinney/weft/issues/751. Until then, this
- * module hardcodes each class's `static readonly type` string literal
- * (verified against the installed `@lostgradient/weft@0.12.0`
- * `dist/core/events/workflow-events.d.ts`) instead of importing the classes
- * as values, keeping this module's dependency graph browser-only end to
- * end. Only the `WorkflowStatus` *type* is imported from the root — types
- * are erased at compile time and never reach the bundler's module graph.
+ * `@lostgradient/weft@0.15.0` shipped weft#751: the event classes
+ * themselves (`WorkflowStartedEvent` etc.) are now re-exported from
+ * `/client`, not just the package root — importing them here no longer
+ * forces a bundler to resolve the root barrel's server-only re-exports
+ * (`handleRequest`/`createAuthenticator`, reaching `node:crypto`), the same
+ * class of browser-bundle leak `isWeftFault`/`isWeftError*` had before
+ * `@lostgradient/weft@0.12.0` moved them to `/client` (weft#722/#733). This
+ * module now imports the classes as values and reads their `.type` statics
+ * directly instead of hardcoding string literals — the compiler now catches
+ * a typo or a renamed event type at build time instead of a silent drift.
+ * `WorkflowStatus` itself stays `/client`-agnostic: it is not re-exported
+ * from `/client` (only value exports needed the move), so it is still
+ * imported `type`-only from the package root — types are erased at compile
+ * time and never reach the bundler's module graph either way.
  */
 import type { WorkflowStatus } from '@lostgradient/weft';
+import {
+  WorkflowCancelledEvent,
+  WorkflowCompletedEvent,
+  WorkflowFailedEvent,
+  WorkflowResumedEvent,
+  WorkflowStartedEvent,
+  WorkflowSuspendedEvent,
+  WorkflowTimedOutEvent,
+} from '@lostgradient/weft/client';
 
 const WORKFLOW_STATUS_BY_EVENT_TYPE: ReadonlyMap<string, WorkflowStatus> = new Map([
-  ['workflow:started', 'running'],
-  ['workflow:resumed', 'running'],
-  ['workflow:suspended', 'suspended'],
-  ['workflow:completed', 'completed'],
-  ['workflow:failed', 'failed'],
-  ['workflow:cancelled', 'cancelled'],
-  ['workflow:timed-out', 'timed-out'],
+  [WorkflowStartedEvent.type, 'running'],
+  [WorkflowResumedEvent.type, 'running'],
+  [WorkflowSuspendedEvent.type, 'suspended'],
+  [WorkflowCompletedEvent.type, 'completed'],
+  [WorkflowFailedEvent.type, 'failed'],
+  [WorkflowCancelledEvent.type, 'cancelled'],
+  [WorkflowTimedOutEvent.type, 'timed-out'],
 ]);
 
 const TERMINAL_WORKFLOW_STATUSES: ReadonlySet<WorkflowStatus> = new Set([

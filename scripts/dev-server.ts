@@ -103,10 +103,11 @@ await seed(engine);
 console.log(`weft dev server listening on ${server.url}`);
 console.log(
   'Seeded fixture workflows: order-processing, payment-failing, long-sleeper, review-gate, ' +
-    'checkout-coordination, trip-booking-saga, sandbox-session, ship-package-async, ' +
-    'fulfillment-parent (+ validate-shipment, monitor-delivery), audit-trail-sweep, ' +
-    'customer-outreach-campaign (x4), timeout/cancellation/resource/system-failure-demo, ' +
-    'content-review (x3), inventory-sync-sweep',
+    'signal-stepped, checkout-coordination, trip-booking-saga, sandbox-session, ' +
+    'ship-package-async, fulfillment-parent (+ validate-shipment, monitor-delivery), ' +
+    'audit-trail-sweep, customer-outreach-campaign (x4), ' +
+    'timeout/cancellation/resource/system-failure-demo, content-review (x3), ' +
+    'inventory-sync-sweep, nightly-reconciliation (start-new continuation chain)',
 );
 console.log(
   'Seeded schedules: inventory-sync-every-5-minutes (active), nightly-inventory-audit (paused)',
