@@ -7,13 +7,12 @@
    * `reviews:read` scope gate; this component owns the tri-state filter,
    * selection, the live toggle, and layout.
    *
-   * Lists default Live OFF (plan §5 UI treatment) — visiting the inbox never
-   * opens a second fleet SSE connection on top of the shell's own; the
-   * operator opts in per visit. See `src/app/engine-status.svelte.ts` for
-   * the shell's shared connection — it is not exposed via Svelte context
-   * today (a Foundation-layer gap outside this track's owned paths), so
-   * turning Live on here opens its own route-scoped `FleetEventSource`,
-   * closed on unmount or when toggled back off.
+   * Lists default Live OFF (plan §5 UI treatment) — the operator opts in
+   * per visit. Turning Live on subscribes to the shell's ONE shared
+   * `FleetEventSource` from context (`getFleetEventSource()`, provided in
+   * `src/app/shell/shell.svelte`); toggle-off/unmount only unsubscribes —
+   * never `close()` — because the source is shared with the notification
+   * center and every other live surface (plan §5 connection budget).
    */
   import ConnectionIndicator from '@lostgradient/cinder/connection-indicator';
   import EmptyState from '@lostgradient/cinder/empty-state';
@@ -28,12 +27,12 @@
 
   import { useQueryClient, type CreateQueryResult } from '@tanstack/svelte-query';
 
-  import { getClient } from '../../lib/client.ts';
-  import { FleetEventSource } from '../../lib/live-source/index.ts';
+  import { getFleetEventSource } from '../../app/engine-status.svelte.ts';
   import { queryKeys } from '../../lib/query.ts';
   import { getPrincipalStore, scopeGate } from '../../lib/scopes.svelte.ts';
   import CompletedReviewRow from './completed-review-row.svelte';
   import PendingReviewRow from './pending-review-row.svelte';
+  import QueryFaultBanner from './query-fault-banner.svelte';
   import type { ReviewDecisionSubmission } from './review-decision-form.svelte';
   import ReviewDetailPanel from './review-detail-panel.svelte';
   import {
@@ -53,7 +52,6 @@
 
   let { pendingQuery, completedQuery, submitting, onSubmit }: ReviewsInboxProps = $props();
 
-  const client = getClient();
   const principalStore = getPrincipalStore();
   const queryClient = useQueryClient();
 
@@ -91,6 +89,17 @@
         : completed,
   );
 
+  /**
+   * The query backing the currently visible tab — 'pending' and 'timeout'
+   * both partition `pendingQuery`'s single `status=pending` fetch (see
+   * `review-domain.ts`'s `partitionPendingReviews`); only 'completed' reads
+   * `completedQuery`. A query error here must render the same fault banner
+   * every other route surfaces (plan §10.4), not the false "all caught up" /
+   * "no decisions yet" empty state a failed fetch would otherwise fall
+   * through to via `?? []`.
+   */
+  const activeQuery = $derived(inboxState === 'completed' ? completedQuery : pendingQuery);
+
   $effect(() => {
     if (!visibleEntries.some((entry) => entry.reviewId === selectedReviewId)) {
       selectedReviewId = visibleEntries[0]?.reviewId ?? null;
@@ -101,15 +110,13 @@
     visibleEntries.find((entry) => entry.reviewId === selectedReviewId) ?? null,
   );
 
-  let fleetSource = $state<FleetEventSource | null>(null);
+  const fleetSource = getFleetEventSource();
   const liveToggleGate = $derived(scopeGate(principalStore, ['events:read']));
 
   $effect(() => {
     if (!live || liveToggleGate.disabled) return;
 
-    const source = new FleetEventSource({ baseUrl: client.baseUrl, headers: client.headers });
-    fleetSource = source;
-    const unsubscribe = source.subscribe((frame) => {
+    return fleetSource.subscribe((frame) => {
       if (!isReviewFleetEventKind(frame.kind)) return;
       void queryClient.invalidateQueries({
         queryKey: queryKeys.reviews.list({ status: 'pending' }),
@@ -118,12 +125,6 @@
         queryKey: queryKeys.reviews.list({ status: 'completed' }),
       });
     });
-
-    return () => {
-      unsubscribe();
-      source.close();
-      fleetSource = null;
-    };
   });
 
   const isLoading = $derived($pendingQuery.isPending || $completedQuery.isPending);
@@ -158,7 +159,7 @@
 
     <div class="weft-reviews-inbox__live">
       {#if live}
-        <ConnectionIndicator status={fleetSource?.status ?? 'connecting'} />
+        <ConnectionIndicator status={fleetSource.status} />
       {/if}
       {#if liveToggleGate.disabled}
         <Tooltip text={liveToggleGate.title ?? ''}>
@@ -193,7 +194,12 @@
       {#snippet children(pane)}
         {#if pane.id === 'list'}
           <div class="weft-reviews-inbox__list-pane">
-            {#if visibleEntries.length === 0}
+            {#if $activeQuery.isError}
+              <QueryFaultBanner
+                error={$activeQuery.error}
+                onRetry={() => void $activeQuery.refetch()}
+              />
+            {:else if visibleEntries.length === 0}
               {@const copy = emptyStateCopy(inboxState)}
               <EmptyState title={copy.title} description={copy.description} />
             {:else}

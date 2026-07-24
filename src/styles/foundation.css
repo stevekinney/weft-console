@@ -585,3 +585,73 @@
   letter-spacing: 0.06em;
   color: var(--cinder-text-subtle);
 }
+
+/* Fault treatment (plan §10.4) — shared by `src/app/fault-boundary.svelte`
+ * and `src/routes/system/query-fault-banner.svelte`, so these rules live in
+ * this plain global stylesheet, not a component's scoped <style> block
+ * (scoped styles never apply to another component's markup). */
+
+.weft-fault-boundary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cinder-space-2, 0.5rem);
+  padding: 11px 14px;
+  border: 1px solid var(--cinder-border);
+  border-radius: var(--cinder-radius-md);
+  background: var(--cinder-surface-raised);
+}
+
+.weft-fault-boundary[data-tone='warning'] {
+  border-color: var(--cinder-color-warning-border);
+  background: var(--cinder-color-warning-bg);
+}
+
+.weft-fault-boundary[data-tone='danger'] {
+  border-color: var(--cinder-color-danger-border);
+  background: var(--cinder-color-danger-bg);
+}
+
+.weft-fault-boundary__banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.weft-fault-boundary__icon {
+  flex: none;
+  color: var(--cinder-text-subtle);
+}
+
+.weft-fault-boundary[data-tone='warning'] .weft-fault-boundary__icon {
+  color: var(--cinder-color-warning-fg);
+}
+
+.weft-fault-boundary[data-tone='danger'] .weft-fault-boundary__icon {
+  color: var(--cinder-color-danger-fg);
+}
+
+.weft-fault-boundary__message {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: var(--cinder-text-sm);
+  color: var(--cinder-text);
+}
+
+.weft-fault-boundary__note,
+.weft-fault-boundary__field-errors {
+  margin: 0;
+  font-size: var(--cinder-text-sm);
+  color: var(--cinder-text-muted);
+}
+
+.weft-fault-boundary__field-errors {
+  padding-inline-start: 1.25rem;
+}
+
+.weft-fault-boundary__stack {
+  margin: 0;
+  overflow-x: auto;
+  font-family: var(--cinder-font-mono);
+  font-size: var(--cinder-text-2xs);
+  color: var(--cinder-text-muted);
+}

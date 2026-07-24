@@ -157,69 +157,7 @@
   {/snippet}
 </svelte:boundary>
 
-<style>
-  .weft-fault-boundary {
-    display: flex;
-    flex-direction: column;
-    gap: var(--cinder-space-2, 0.5rem);
-    padding: 11px 14px;
-    border: 1px solid var(--cinder-border);
-    border-radius: var(--cinder-radius-md);
-    background: var(--cinder-surface-raised);
-  }
-
-  .weft-fault-boundary[data-tone='warning'] {
-    border-color: var(--cinder-color-warning-border);
-    background: var(--cinder-color-warning-bg);
-  }
-
-  .weft-fault-boundary[data-tone='danger'] {
-    border-color: var(--cinder-color-danger-border);
-    background: var(--cinder-color-danger-bg);
-  }
-
-  .weft-fault-boundary__banner {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  :global(.weft-fault-boundary__icon) {
-    flex: none;
-    color: var(--cinder-text-subtle);
-  }
-
-  .weft-fault-boundary[data-tone='warning'] :global(.weft-fault-boundary__icon) {
-    color: var(--cinder-color-warning-fg);
-  }
-
-  .weft-fault-boundary[data-tone='danger'] :global(.weft-fault-boundary__icon) {
-    color: var(--cinder-color-danger-fg);
-  }
-
-  .weft-fault-boundary__message {
-    flex: 1 1 auto;
-    margin: 0;
-    font-size: var(--cinder-text-sm);
-    color: var(--cinder-text);
-  }
-
-  .weft-fault-boundary__note,
-  .weft-fault-boundary__field-errors {
-    margin: 0;
-    font-size: var(--cinder-text-sm);
-    color: var(--cinder-text-muted);
-  }
-
-  .weft-fault-boundary__field-errors {
-    padding-inline-start: 1.25rem;
-  }
-
-  .weft-fault-boundary__stack {
-    margin: 0;
-    overflow-x: auto;
-    font-family: var(--cinder-font-mono);
-    font-size: var(--cinder-text-2xs);
-    color: var(--cinder-text-muted);
-  }
-</style>
+<!-- Styles: `.weft-fault-boundary*` rules live in src/styles/foundation.css
+     (plain global) because src/routes/system/query-fault-banner.svelte
+     renders the same treatment markup — a scoped <style> block here would
+     never reach it. -->

@@ -10,13 +10,15 @@
    * constructible from a plain `.test.ts` file). Never imported by
    * production code.
    */
-  import { untrack } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
 
   import type { HttpClient } from '@lostgradient/weft/client';
 
   import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
 
+  import { provideFleetEventSource } from '../../app/engine-status.svelte.ts';
   import { provideClient } from '../../lib/client.ts';
+  import { FleetEventSource } from '../../lib/live-source/index.ts';
   import { providePrincipalStore, type AuthorizationScope } from '../../lib/scopes.svelte.ts';
   import ReviewsRoute from './index.svelte';
 
@@ -34,6 +36,15 @@
   provideClient(untrack(() => client));
   const principalStore = providePrincipalStore();
   principalStore.setPrincipal({ scopes: untrack(() => scopes), unauthenticatedAccess: null });
+
+  // `getFleetEventSource()` (the inbox Live toggle) needs a real provided
+  // instance — same pattern as `schedules-test-harness.test-harness.svelte`,
+  // pointed at the SAME server the `client` prop uses.
+  const fleetSource = untrack(
+    () => new FleetEventSource({ baseUrl: client.baseUrl, headers: client.headers }),
+  );
+  provideFleetEventSource(fleetSource);
+  onDestroy(() => fleetSource.close());
 </script>
 
 <QueryClientProvider client={queryClient}>
