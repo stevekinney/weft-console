@@ -43,9 +43,9 @@ describe('ConfigureStep', () => {
 
     const textarea = getByLabelText('Payload (JSON)');
     expect(textarea.getAttribute('aria-invalid')).toBe('true');
-    expect((getByRole('button', { name: 'Continue to review' }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+    expect(
+      (getByRole('button', { name: 'Continue to review' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 
   test('valid JSON enables Continue and calls onContinue with the parsed value', async () => {

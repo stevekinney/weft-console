@@ -406,10 +406,6 @@
   border-inline-start-color: var(--cinder-warning);
 }
 
-.weft-notification-panel__item[data-read='true'] {
-  opacity: 0.65;
-}
-
 .weft-notification-panel__item-icon {
   flex: none;
   margin-top: 2px;
@@ -435,8 +431,24 @@
   font-weight: 600;
 }
 
+/**
+ * T9.4 accessibility pass: this used to be a blanket `opacity: 0.65` on the
+ * whole `.weft-notification-panel__item` row (design §C: "read at 0.65
+ * opacity"). Measured in a real browser with `ctx.globalAlpha` (canvas 2D
+ * composites exactly like CSS `opacity`, in gamma-encoded sRGB — a naive
+ * `color-mix(in oklch, …)` stand-in reads noticeably higher and is NOT
+ * trustworthy near a 4.5:1 threshold), both themes: `--cinder-text` (this
+ * title) holds AA at 0.65 opacity (5.61:1 light / 5.98:1 dark), but the
+ * icon/detail/time already render in `--cinder-text-subtle`/
+ * `--cinder-text-disabled` — dimming THOSE further dropped body text to
+ * ~3.3–3.5:1, under WCAG AA's 4.5:1 for normal text. Scoping the opacity to
+ * the title only (which also already gets the `font-weight: 400` non-color
+ * signal below) keeps the read/unread distinction — now doubly non-color,
+ * weight AND opacity — without taking the icon/detail/time below AA.
+ */
 .weft-notification-panel__item[data-read='true'] .weft-notification-panel__item-title {
   font-weight: 400;
+  opacity: 0.65;
 }
 
 .weft-notification-panel__item-detail {

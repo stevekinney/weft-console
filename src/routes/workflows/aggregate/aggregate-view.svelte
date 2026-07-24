@@ -131,7 +131,10 @@
   </div>
 
   {#if gate.disabled}
-    <EmptyState title="Access restricted" description={gate.title ?? "You don't have permission to view workflows."} />
+    <EmptyState
+      title="Access restricted"
+      description={gate.title ?? "You don't have permission to view workflows."}
+    />
   {:else}
     <div class="weft-aggregate-view__controls">
       <span class="weft-aggregate-view__group-by-label">Group by</span>
@@ -173,7 +176,10 @@
         <Skeleton height="16rem" />
       </div>
     {:else if $aggregateQuery.isError}
-      <QueryFaultBanner error={$aggregateQuery.error} onRetry={() => void $aggregateQuery.refetch()} />
+      <QueryFaultBanner
+        error={$aggregateQuery.error}
+        onRetry={() => void $aggregateQuery.refetch()}
+      />
     {:else if groups.length === 0}
       <EmptyState
         title="No data to aggregate"
@@ -211,10 +217,9 @@
             >
               <td>
                 {#if href}
-                  <a
-                    href={router.href(href)}
-                    onclick={(event) => onGroupRowClick(event, group.key)}
-                  >{aggregateGroupKeyLabel(group.key)}</a>
+                  <a href={router.href(href)} onclick={(event) => onGroupRowClick(event, group.key)}
+                    >{aggregateGroupKeyLabel(group.key)}</a
+                  >
                 {:else}
                   {aggregateGroupKeyLabel(group.key)}
                 {/if}
@@ -229,7 +234,9 @@
                   <span>{pct}%</span>
                 </div>
               </td>
-              <td>{#if href}<ChevronRight aria-hidden="true" size={14} />{/if}</td>
+              <td
+                >{#if href}<ChevronRight aria-hidden="true" size={14} />{/if}</td
+              >
             </tr>
           {/each}
         </tbody>

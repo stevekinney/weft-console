@@ -22,7 +22,10 @@
     serializeWorkflowListFilter,
     type WorkflowListQuery,
   } from '../../../lib/filters.ts';
-  import { WORKFLOWS_AGGREGATE_KEY_PREFIX } from '../../../lib/live-source/cache-integration.ts';
+  import {
+    WORKFLOWS_AGGREGATE_KEY_PREFIX,
+    WORKFLOWS_LIST_KEY_PREFIX,
+  } from '../../../lib/live-source/cache-integration.ts';
   import { queryKeys } from '../../../lib/query.ts';
   import { router } from '../../../lib/router.svelte.ts';
   import { getPrincipalStore, scopeGate } from '../../../lib/scopes.svelte.ts';
@@ -38,6 +41,7 @@
   const principalStore = getPrincipalStore();
   const queryClient = useQueryClient();
   const listGate = $derived(scopeGate(principalStore, ['workflows:read']));
+  const bulkAdminGate = $derived(scopeGate(principalStore, ['workflows:admin']));
 
   const filter = $derived<WorkflowListQuery>({
     limit: DEFAULT_PAGE_SIZE,
@@ -88,6 +92,25 @@
     // is invalidated here too rather than teaching the live controller
     // about a query key outside its own module.
     void queryClient.invalidateQueries({ queryKey: WORKFLOWS_AGGREGATE_KEY_PREFIX });
+  }
+
+  /**
+   * Invalidates list + aggregate queries after a bulk action commits (plan
+   * §13 T8.1) — same two keys `onLiveRefresh` above already invalidates for
+   * the same reason. Also clears the row selection: after a successful
+   * bulk action the previously-checked rows may no longer exist (cancel/
+   * delete/purge) or no longer match the filter, so leaving them "selected"
+   * (`bulk-selection-bar.svelte`'s own bar would then show a stale "N
+   * selected" against a changed/empty result set) is confusing rather than
+   * a convenience. Wired to `BulkActionDialog`/`BulkPurgeDialog`'s
+   * `onSuccess` — fires ONLY when a commit actually succeeds, never on a
+   * plain dismiss (`onClose`), so trying a different action against the
+   * same selection after backing out of one dialog still works.
+   */
+  function onBulkActionComplete(): void {
+    void queryClient.invalidateQueries({ queryKey: WORKFLOWS_LIST_KEY_PREFIX });
+    void queryClient.invalidateQueries({ queryKey: WORKFLOWS_AGGREGATE_KEY_PREFIX });
+    selectedIds = new Set();
   }
 
   // --- Query builder disclosure (plan §10.3) -------------------------------
@@ -263,10 +286,13 @@
     {/if}
 
     <BulkSelectionBar
+      {client}
+      {filter}
       selectedCount={selectedIds.size}
       totalMatchingFilter={total}
       onDeselect={() => (selectedIds = new Set())}
-      actionsDisabledReason="Bulk operations ship in a later phase — requires workflows:admin"
+      adminGate={bulkAdminGate}
+      onActionComplete={onBulkActionComplete}
     />
   {/if}
 </div>

@@ -71,18 +71,24 @@
    * internal `open = !collapsed` — `sidebar.svelte`). Left at its plain
    * default of `false`, a mobile page load would render the navigation
    * drawer OPEN over the whole screen with no trigger to close it. Start
-   * collapsed on a mobile viewport instead, and re-close whenever the
-   * viewport crosses INTO mobile (a live desktop→mobile resize shouldn't
-   * leave a rail-expanded desktop session's drawer stuck open either) —
-   * never force it back open on mobile→desktop, so a user's manual
-   * icon-rail collapse preference on desktop survives.
+   * collapsed on a mobile viewport instead.
+   *
+   * The desktop shell has no manual icon-rail toggle (the design keeps the
+   * sidebar always expanded above the mobile breakpoint — see the CSS
+   * comment on `.weft-shell-menu-trigger` in `foundation.css`), so
+   * `collapsed` must track the breakpoint directly: true while the
+   * viewport is mobile, false once it crosses back to desktop. Anything
+   * short of that (e.g. only forcing collapse on mobile *entry*) leaves a
+   * desktop→mobile→desktop resize with the sidebar permanently stuck at
+   * 64px with no way to re-expand it, since the only toggle
+   * (`.weft-shell-menu-trigger`) is CSS-hidden above the breakpoint.
    */
   const isMobileViewport = new MediaQuery(SIDEBAR_MOBILE_MEDIA_QUERY, false);
 
   let sidebarCollapsed = $state(isMobileViewport.current);
 
   $effect(() => {
-    if (isMobileViewport.current) sidebarCollapsed = true;
+    sidebarCollapsed = isMobileViewport.current;
   });
 
   let paletteOpen = $state(false);

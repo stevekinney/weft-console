@@ -3,8 +3,11 @@ import { describe, expect, test } from 'bun:test';
 import type { WorkflowEvent, WorkflowState, WorkflowTimelineEntry } from '@lostgradient/weft';
 import type { WorkflowEventTail } from '@lostgradient/weft/client';
 
-import { selectTimelineStep, timelineSelectionFor } from './timeline/timeline-selection-store.svelte.ts';
 import EventsTabHarness from './events-tab.test-harness.svelte';
+import {
+  selectTimelineStep,
+  timelineSelectionFor,
+} from './timeline/timeline-selection-store.svelte.ts';
 
 /** A fake tail that connects immediately and yields nothing — enough to exercise the wiring without needing the full reconnect-timing surface (already covered by `src/lib/live-source/workflow-tail-source.test.ts`). */
 class EmptyTail implements WorkflowEventTail {

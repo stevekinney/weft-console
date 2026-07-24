@@ -17,7 +17,11 @@
   import { applyRunStepTimelineDivergenceHighlight } from '../timeline/run-step-timeline-selection.ts';
   import { mapTimelineToSteps } from '../timeline/timeline-mapping.ts';
   import { workflowTimelineQueryKey } from '../workflow-timeline-data.ts';
-  import { alignTimelinesForDivergence, divergedForkedStepIds, divergedOriginalStepIds } from './divergence.ts';
+  import {
+    alignTimelinesForDivergence,
+    divergedForkedStepIds,
+    divergedOriginalStepIds,
+  } from './divergence.ts';
 
   interface DivergenceViewProps {
     readonly client: Pick<HttpClient, 'getTimeline'>;
@@ -56,7 +60,8 @@
 
   $effect(() => {
     void originalSteps;
-    if (originalContainer) applyRunStepTimelineDivergenceHighlight(originalContainer, divergedOriginal);
+    if (originalContainer)
+      applyRunStepTimelineDivergenceHighlight(originalContainer, divergedOriginal);
   });
   $effect(() => {
     void forkedSteps;
@@ -68,7 +73,10 @@
   {#if loading}
     <Skeleton height="12rem" />
   {:else if rows.length === 0}
-    <EmptyState title="Nothing to compare" description="Neither run has any timeline entries yet." />
+    <EmptyState
+      title="Nothing to compare"
+      description="Neither run has any timeline entries yet."
+    />
   {:else}
     <p class="weft-divergence-view__note">
       Diverged steps are highlighted. Both timelines are identical through the fork point by

@@ -20,7 +20,11 @@
     | { readonly status: 'idle' }
     | { readonly status: 'pending' }
     | { readonly status: 'success'; readonly workflowId: string }
-    | { readonly status: 'error'; readonly error: unknown; readonly isSpentIdempotencyKey: boolean };
+    | {
+        readonly status: 'error';
+        readonly error: unknown;
+        readonly isSpentIdempotencyKey: boolean;
+      };
 
   interface ReviewStepProps {
     type: string;
@@ -36,7 +40,9 @@
   const advancedItems = $derived(
     [
       advanced.id ? { term: 'Workflow id', definition: advanced.id } : null,
-      advanced.idempotencyKey ? { term: 'Idempotency key', definition: advanced.idempotencyKey } : null,
+      advanced.idempotencyKey
+        ? { term: 'Idempotency key', definition: advanced.idempotencyKey }
+        : null,
       advanced.tags.length > 0 ? { term: 'Tags', definition: advanced.tags.join(', ') } : null,
       advanced.executionTimeout
         ? { term: 'Execution timeout', definition: advanced.executionTimeout }
@@ -46,9 +52,7 @@
 </script>
 
 <div class="weft-start-review">
-  <DescriptionList
-    items={[{ term: 'Workflow type', definition: type }, ...advancedItems]}
-  />
+  <DescriptionList items={[{ term: 'Workflow type', definition: type }, ...advancedItems]} />
 
   <div class="weft-start-review__payload">
     <span class="weft-start-review__payload-label">Payload</span>

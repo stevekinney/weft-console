@@ -13,7 +13,12 @@
 import { describe, expect, spyOn, test } from 'bun:test';
 
 import { UNKNOWN_FAULT_TREATMENT } from '../lib/faults.ts';
-import ToastHost, { showFault, showToast } from './toast-host.svelte';
+import ToastHost, {
+  FAULT_TOAST_DURATION_MS,
+  FAULT_TOAST_VARIANT,
+  showFault,
+  showToast,
+} from './toast-host.svelte';
 
 describe('showToast — before <ToastHost> has mounted', () => {
   test('no-ops and logs a console.error rather than throwing', () => {
@@ -84,5 +89,60 @@ describe('showFault', () => {
     expect(toastText.closest('[data-cinder-variant]')?.getAttribute('data-cinder-variant')).toBe(
       'danger',
     );
+  });
+
+  /**
+   * T9.4 accessibility pass (design §C tier mapping): danger-variant faults
+   * are the operator-must-act case and must persist (Cinder's `duration: 0`
+   * contract — never auto-dismiss on its uniform 5s default) while the
+   * lower-stakes warning kinds still auto-dismiss. Asserted against the pure
+   * policy table directly rather than by waiting out real dismiss timers —
+   * `showFault` passes `FAULT_TOAST_DURATION_MS[treatment.kind]` straight
+   * through to `showToast`/Cinder's `ToastApi.show`, so this is the same
+   * value Cinder actually receives, without a slow/flaky timer-based test.
+   */
+  test('every danger-variant kind persists (duration 0) and every warning-variant kind auto-dismisses', () => {
+    for (const kind of Object.keys(FAULT_TOAST_VARIANT) as (keyof typeof FAULT_TOAST_VARIANT)[]) {
+      if (FAULT_TOAST_VARIANT[kind] === 'danger') {
+        expect(FAULT_TOAST_DURATION_MS[kind]).toBe(0);
+      } else {
+        expect(FAULT_TOAST_DURATION_MS[kind]).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  test('renders inside the assertive (role=alert) live region for a danger-variant fault', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const { findByText } = render(ToastHost);
+
+    showFault(UNKNOWN_FAULT_TREATMENT);
+
+    const toastText = await findByText(`Something went wrong: ${UNKNOWN_FAULT_TREATMENT.message}`);
+    expect(toastText.closest('[role="alert"]')).not.toBeNull();
+  });
+
+  /**
+   * NOT `role="status"`. Cinder's `toast-region.svelte` `isPolite()` only
+   * treats `info`/`success` variants as the polite channel — `warning` (and
+   * `danger`) both land in the assertive `role="alert"` channel, a known,
+   * already-filed Cinder gap (`../app/engine-status.svelte.ts`'s
+   * `toastForNotification` module doc: "Cinder has no way to get a
+   * warning-toned toast into the polite channel. Filed upstream:
+   * https://github.com/stevekinney/cinder/issues/800"). None of the six
+   * fault kinds map to `info`/`success` (`FAULT_TOAST_VARIANT` is
+   * danger-or-warning only), so every `showFault` toast is currently
+   * assertive — this pins that real, degraded-but-correct behavior rather
+   * than asserting the design's aspirational (but Cinder-unsupported)
+   * warning-is-polite split.
+   */
+  test('a warning-variant fault ALSO renders assertive (role=alert), not polite — the Cinder #800 gap', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const { findByText } = render(ToastHost);
+
+    showFault({ kind: 'not-found', message: 'workflow wf-1 not found' });
+
+    const toastText = await findByText('Not found: workflow wf-1 not found');
+    expect(toastText.closest('[role="alert"]')).not.toBeNull();
+    expect(toastText.closest('[role="status"]')).toBeNull();
   });
 });

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { DetachedWindowAPI } from 'happy-dom';
 
-import { render } from '@testing-library/svelte';
-import { within } from '@testing-library/dom';
 import { QueryClient } from '@tanstack/svelte-query';
+import { within } from '@testing-library/dom';
+import { render } from '@testing-library/svelte';
 
 import { router } from '../../../lib/router.svelte.ts';
 import type { Principal } from '../../../lib/scopes.svelte.ts';
@@ -95,7 +95,11 @@ describe('AggregateView', () => {
   });
 
   test('shows the empty state when no groups match', async () => {
-    fetchScript.routeJsonRpcMethod('weft.workflows.aggregate', { total: 0, truncated: false, groups: [] });
+    fetchScript.routeJsonRpcMethod('weft.workflows.aggregate', {
+      total: 0,
+      truncated: false,
+      groups: [],
+    });
 
     const { findByText } = render(AggregateViewHarness, {
       props: { client: realClient(), principal: GRANTED_PRINCIPAL, queryClient: newQueryClient() },

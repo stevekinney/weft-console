@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { DetachedWindowAPI } from 'happy-dom';
 
 import type { WorkflowSummary } from '@lostgradient/weft';
-import { render } from '@testing-library/svelte';
 import { QueryClient } from '@tanstack/svelte-query';
+import { render } from '@testing-library/svelte';
 
 import { router } from '../../../lib/router.svelte.ts';
 import type { Principal } from '../../../lib/scopes.svelte.ts';

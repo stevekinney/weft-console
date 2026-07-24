@@ -15,10 +15,12 @@ function newQueryClient(): QueryClient {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
 
-function baseClient(checkpoints: CheckpointSummary[] = [
-  { step: 3, timestamp: 3_000, sizeBytes: 512 },
-  { step: 2, timestamp: 2_000, sizeBytes: 256 },
-]) {
+function baseClient(
+  checkpoints: CheckpointSummary[] = [
+    { step: 3, timestamp: 3_000, sizeBytes: 512 },
+    { step: 2, timestamp: 2_000, sizeBytes: 256 },
+  ],
+) {
   return {
     operations: {
       'weft.workflows.checkpoints.list': async (): Promise<CheckpointSummary[]> => checkpoints,
@@ -124,7 +126,7 @@ describe('CheckpointsTab', () => {
     });
   });
 
-  test('a query fault (e.g. this dev harness\'s documented missing-JSON-RPC-transport 404) shows the real fault treatment, not a fabricated "no checkpoints" empty state', async () => {
+  test('a query fault (e.g. a 404 from the checkpoints operation) shows the real fault treatment, not a fabricated "no checkpoints" empty state', async () => {
     const { render, waitFor } = await import('@testing-library/svelte');
     const client = baseClient();
     const failingClient = {

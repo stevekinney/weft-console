@@ -1,9 +1,8 @@
 /**
  * Integration tests for `FleetEventSource` against a REAL in-process weft
- * server (`live-source-test-server.test-support.ts`) — no mock server. See
- * that module's doc comment for why `serve()` isn't used and why the fleet
- * feed here is genuinely engine-backed (`wireEventBroadcasting`, the same
- * function `serve()` itself uses in production), not synthetic.
+ * server (`live-source-test-server.test-support.ts`, a plain `serve()`) — no
+ * mock server; the fleet feed is genuinely engine-backed via `serve()`'s own
+ * production `wireEventBroadcasting()` wiring.
  *
  * **Scope.** `FleetEventSource`'s own SSE-over-fetch parser, per-subscriber
  * filtering, and client-side reconnect/`Last-Event-ID`/backoff logic are
@@ -22,12 +21,24 @@
  */
 import { describe, expect, test } from 'bun:test';
 
-import { FleetEventSource, type FleetEventFrame } from './fleet-event-source.svelte.ts';
-import { startLiveSourceTestServer } from './live-source-test-server.test-support.ts';
+import {
+  FleetEventSource,
+  type FleetEventFrame,
+  type FleetEventSourceConfig,
+} from './fleet-event-source.svelte.ts';
+import {
+  startLiveSourceTestServer,
+  type LiveSourceTestServer,
+} from './live-source-test-server.test-support.ts';
 
 async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
   const { waitFor } = await import('@testing-library/svelte');
   return waitFor;
+}
+
+/** `/v1/events/sse` (the fleet feed) declares `access: { kind: 'scoped', scopes: { anyOf: ['events:read'] } }` — an anonymous request 401s. */
+function authorizedFleetConfig(server: LiveSourceTestServer): FleetEventSourceConfig {
+  return { baseUrl: server.baseUrl, headers: { Authorization: `Bearer ${server.token}` } };
 }
 
 describe('FleetEventSource (integration, real server)', () => {
@@ -35,11 +46,10 @@ describe('FleetEventSource (integration, real server)', () => {
     const server = await startLiveSourceTestServer();
     try {
       const workflowId = 'fes-integration-catchup-live';
-      server.bridgeWorkflowEvents(workflowId);
       await server.engine.start('signal-stepped', { steps: 2 }, { id: workflowId });
       await new Promise((resolve) => setTimeout(resolve, 30)); // let workflow:started commit before subscribing
 
-      const source = new FleetEventSource({ baseUrl: server.baseUrl });
+      const source = new FleetEventSource(authorizedFleetConfig(server));
       const received: FleetEventFrame[] = [];
       source.subscribe((frame) => received.push(frame));
 
@@ -62,7 +72,7 @@ describe('FleetEventSource (integration, real server)', () => {
 
       source.close();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -71,10 +81,8 @@ describe('FleetEventSource (integration, real server)', () => {
     try {
       const workflowIdA = 'fes-integration-fanout-a';
       const workflowIdB = 'fes-integration-fanout-b';
-      server.bridgeWorkflowEvents(workflowIdA);
-      server.bridgeWorkflowEvents(workflowIdB);
 
-      const source = new FleetEventSource({ baseUrl: server.baseUrl });
+      const source = new FleetEventSource(authorizedFleetConfig(server));
       const onlyA: FleetEventFrame[] = [];
       const onlyStarted: FleetEventFrame[] = [];
       const everything: FleetEventFrame[] = [];
@@ -100,7 +108,7 @@ describe('FleetEventSource (integration, real server)', () => {
 
       source.close();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -108,12 +116,11 @@ describe('FleetEventSource (integration, real server)', () => {
     const server = await startLiveSourceTestServer();
     try {
       const workflowId = 'fes-integration-cursor-resume';
-      server.bridgeWorkflowEvents(workflowId);
       await server.engine.start('signal-stepped', { steps: 2 }, { id: workflowId });
 
       const waitFor = await waitForCondition();
 
-      const firstSource = new FleetEventSource({ baseUrl: server.baseUrl });
+      const firstSource = new FleetEventSource(authorizedFleetConfig(server));
       const firstReceived: FleetEventFrame[] = [];
       firstSource.subscribe((frame) => firstReceived.push(frame));
       await firstSource.whenConnected();
@@ -130,7 +137,7 @@ describe('FleetEventSource (integration, real server)', () => {
       // connection's last-seen cursor sees exactly the new activity, not
       // a full replay from the beginning.
       const resumedSource = new FleetEventSource({
-        baseUrl: server.baseUrl,
+        ...authorizedFleetConfig(server),
         filter: { workflowId },
       });
       const resumedReceived: FleetEventFrame[] = [];
@@ -152,7 +159,7 @@ describe('FleetEventSource (integration, real server)', () => {
 
       resumedSource.close();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -160,9 +167,8 @@ describe('FleetEventSource (integration, real server)', () => {
     const server = await startLiveSourceTestServer();
     try {
       const workflowId = 'fes-integration-close';
-      server.bridgeWorkflowEvents(workflowId);
 
-      const source = new FleetEventSource({ baseUrl: server.baseUrl });
+      const source = new FleetEventSource(authorizedFleetConfig(server));
       const received: FleetEventFrame[] = [];
       source.subscribe((frame) => received.push(frame));
       await source.whenConnected();
@@ -175,7 +181,7 @@ describe('FleetEventSource (integration, real server)', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
       expect(received.length).toBe(countAtClose);
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 });

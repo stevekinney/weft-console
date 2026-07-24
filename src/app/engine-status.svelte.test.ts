@@ -1,7 +1,7 @@
 /**
  * `EngineStatusController` integration tests against a REAL in-process weft
- * server (`live-source-test-server.test-support.ts`, T1.4's harness — see
- * its module doc for why `handleRequest` is used instead of `serve()`).
+ * server (`live-source-test-server.test-support.ts`, T1.4's harness — a
+ * plain `serve()` as of `@lostgradient/weft@0.12.0`).
  *
  * Scope: `FleetEventSource`'s own wire/reconnect behavior is exhaustively
  * covered by T1.4's own test suites; what this file proves is the
@@ -28,7 +28,7 @@ async function waitForCondition(): Promise<typeof import('@testing-library/svelt
   return waitFor;
 }
 
-/** A bare `Bun.serve()` that always fails `/v1/events/sse` (mirrors the dev harness's real 501 — `handleRequest` with no `fleetEventFeed` configured) but keeps `/v1/health` reachable, so `EngineStatusController`'s health-poll fallback has somewhere to succeed. */
+/** A bare `Bun.serve()` that always fails `/v1/events/sse` (simulating an unreachable fleet feed) but keeps `/v1/health` reachable, so `EngineStatusController`'s health-poll fallback has somewhere to succeed. */
 function startUnreachableFleetServer(): { baseUrl: string; stop: () => void } {
   const server = Bun.serve({
     port: 0,
@@ -51,7 +51,7 @@ describe('EngineStatusController (integration, real server)', () => {
     const server = await startLiveSourceTestServer();
     const notifications = new NotificationStore();
     const controller = new EngineStatusController(
-      { baseUrl: server.baseUrl, headers: {} },
+      { baseUrl: server.baseUrl, headers: { Authorization: `Bearer ${server.token}` } },
       notifications,
     );
 
@@ -73,15 +73,15 @@ describe('EngineStatusController (integration, real server)', () => {
       });
     } finally {
       controller.dispose();
-      server.stop();
+      await server.stop();
     }
   });
 
   test('caughtUp becomes true against a real server (the toast-gate primitive actually opens, not just "no crash")', async () => {
     // `notifyForNotification`'s gate (`if (item && this.fleetSource.caughtUp)
     // toastForNotification(item)`) is only worth anything if `caughtUp` ever
-    // flips true against the real `handleRequest`/fleet-SSE path the dev
-    // harness and `serve()` both use — a fake/no-op `replayComplete` ping
+    // flips true against the real fleet-SSE path `serve()` serves — a
+    // fake/no-op `replayComplete` ping
     // would make this pass trivially by never toasting anything, ever, which
     // "0 toasts on load" alone can't distinguish from "the gate correctly
     // suppressed replay". This proves the real server actually sends the
@@ -89,7 +89,7 @@ describe('EngineStatusController (integration, real server)', () => {
     const server = await startLiveSourceTestServer();
     const notifications = new NotificationStore();
     const controller = new EngineStatusController(
-      { baseUrl: server.baseUrl, headers: {} },
+      { baseUrl: server.baseUrl, headers: { Authorization: `Bearer ${server.token}` } },
       notifications,
     );
 
@@ -100,7 +100,7 @@ describe('EngineStatusController (integration, real server)', () => {
       });
     } finally {
       controller.dispose();
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -108,7 +108,7 @@ describe('EngineStatusController (integration, real server)', () => {
     const server = await startLiveSourceTestServer();
     const notifications = new NotificationStore();
     const controller = new EngineStatusController(
-      { baseUrl: server.baseUrl, headers: {} },
+      { baseUrl: server.baseUrl, headers: { Authorization: `Bearer ${server.token}` } },
       notifications,
       { healthPollIntervalMs: 5 },
     );
@@ -123,7 +123,7 @@ describe('EngineStatusController (integration, real server)', () => {
 
       expect(controller.fleetSource.status).toBe('closed');
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -156,7 +156,7 @@ describe('EngineStatusController (integration, real server)', () => {
       expect(controller.fleetSource.status).not.toBe('closed');
     } finally {
       controller.dispose();
-      server.stop();
+      await server.stop();
     }
   });
 });

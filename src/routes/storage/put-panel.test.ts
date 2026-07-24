@@ -5,6 +5,7 @@
 import type { HttpClient } from '@lostgradient/weft/client';
 import { afterEach, describe, expect, test } from 'bun:test';
 
+import { typeIntoPayloadEditor } from '../../lib/payload-editor/payload-editor.test-support.ts';
 import PutPanelHarness from './put-panel-test-harness.test-harness.svelte';
 import { stubStorageFetch, type StubbedFetchCall } from './storage-fetch-stub.test-support.ts';
 
@@ -29,7 +30,7 @@ describe('PutPanel', () => {
     });
 
     await fireEvent.input(getByLabelText('Key'), { target: { value: 'app:config' } });
-    await fireEvent.input(getByLabelText('Value'), { target: { value: '{"a":1}' } });
+    await typeIntoPayloadEditor(getByLabelText('Value'), '{"a":1}');
     await fireEvent.click(getByText('Put · confirm'));
 
     const dialog = await findByRole('dialog');
@@ -46,7 +47,7 @@ describe('PutPanel', () => {
     });
 
     await fireEvent.input(getByLabelText('Key'), { target: { value: 'app:config' } });
-    await fireEvent.input(getByLabelText('Value'), { target: { value: 'hello' } });
+    await typeIntoPayloadEditor(getByLabelText('Value'), 'hello');
     await fireEvent.click(getByText('Put · confirm'));
     await findByRole('dialog');
     await fireEvent.click(getByText('Write'));

@@ -107,13 +107,18 @@ export function timelineEntryLabel(entry: WorkflowTimelineEntry): string {
   if (structuralLabel === undefined) return entry.operationLabel;
 
   const operationCount = parseOperationCount(entry.inputSummary);
-  return operationCount === null ? structuralLabel : `${structuralLabel} · ${operationCount} branches`;
+  return operationCount === null
+    ? structuralLabel
+    : `${structuralLabel} · ${operationCount} branches`;
 }
 
 /** True for the structural coordination operation types that degrade to one opaque step (see module doc). */
 export function isDegradedCoordinationEntry(entry: WorkflowTimelineEntry): boolean {
-  return entry.operationType === 'race' || entry.operationType === 'parallel' ||
-    entry.operationType === 'speculate';
+  return (
+    entry.operationType === 'race' ||
+    entry.operationType === 'parallel' ||
+    entry.operationType === 'speculate'
+  );
 }
 
 /** `compensate:<name>` → the forward step's real name, or `null` when this entry isn't a saga compensation. */

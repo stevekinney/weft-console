@@ -10,24 +10,29 @@
  * than invented independently, so the mapping cannot silently drift from the
  * wire contract.
  *
- * ## What `HttpClientError` does and doesn't carry (verified against
- * `weft/src/client/http-request.ts` and `weft/src/client/http-operations.ts`,
- * v0.11.0)
+ * ## What `HttpClientError` does and doesn't carry (verified against the
+ * installed `@lostgradient/weft@0.12.0`, `dist/client/http-request.d.ts`)
  *
  * `HttpClientError` exposes `status`, `message`, an optional coarse
- * `faultCode` (`FaultCode`), and an optional fine-grained `weftCode`
- * (`WeftErrorCode`, e.g. `IdempotencyKeyPurgedError`) — but never the wire
- * fault's typed `data` payload (field-level `issues`, the conflicting
- * `resource`/`identifier`, `missingTypes`, …). Both the REST body parser
- * (`parseErrorBody`) and the JSON-RPC-over-HTTP transport
- * (`httpClientCatalogTransport`) read `data` off the wire only to pull
- * `weftCode`/`httpStatus` back out, then discard the rest. That means this
- * module's `invalid.fieldErrors` is always `[]` today (no per-field paths to
- * show) and `conflict`/`not-found` cannot attach a resource link beyond what
- * the server's `message` string already says in prose. Filed upstream:
- * https://github.com/stevekinney/weft/issues/711 — the shapes below are kept
- * exactly as the plan specifies so nothing here needs to change the day that
- * ships, only `classifyFault`'s implementation.
+ * `faultCode` (`FaultCode`), an optional fine-grained `weftCode`
+ * (`WeftErrorCode`, e.g. `IdempotencyKeyPurgedError`), and — as of
+ * `@lostgradient/weft@0.12.0` — an optional `data?: Readonly<Record<string,
+ * unknown>>` carrying the wire fault's typed payload (field-level `issues`,
+ * the conflicting `resource`/`identifier`, …). That closed the
+ * JSON-RPC-over-HTTP half of https://github.com/stevekinney/weft/issues/711
+ * (fixed upstream #721) — confirmed live: `POST /jsonrpc` with invalid
+ * params now returns `error.data.issues` on the wire and `HttpClientError`
+ * surfaces it. **REST did not move**: every production REST binding still
+ * uses `shapeRestFault`, which emits a flat `{ error: string }` body with no
+ * `data` for any fault code (confirmed live: the same invalid input over
+ * REST returns only `{"error":"Missing required field: type"}`) — tracked
+ * separately upstream as #720. This module's `invalid.fieldErrors` stays
+ * `[]` regardless: `classifyFault` doesn't yet read the now-real
+ * `error.data` for JSON-RPC-routed calls, so wiring it up (JSON-RPC-only,
+ * still `[]` for REST) is a genuine, scoped follow-up now that the wire
+ * data exists — not implemented here to keep this change to the import-path
+ * fix. `conflict`/`not-found` still cannot attach a resource link beyond
+ * what `message` says in prose, for the same REST-side reason.
  *
  * `weftCode` (and therefore `isSpentIdempotencyKey` below) is REST-only: the
  * JSON-RPC fault envelope writes its own coarse `weftCode: fault.code` (e.g.
@@ -38,22 +43,14 @@
  * upstream design, not a bug to fix here: don't "fix" the JSON-RPC path to
  * try to recover it.
  */
-// `isWeftFault` (and the rest of the `isWeftError*` family) is exported only
-// from the package ROOT, not `@lostgradient/weft/client` — the root barrel
-// also re-exports server-only code (`createAuthenticator` et al., which
-// reaches `node:crypto`), so this import makes `vite build` print a
-// "node:crypto externalized for browser compatibility" warning. That warning
-// is build-log noise, not a shipped-bytes problem today: `@lostgradient/weft`
-// declares `sideEffects: false`, so Rollup tree-shakes the unused
-// server-only bindings out of the final bundle (verified by grepping the
-// built `dist/assets/index-*.js` for `constant-time`/`createAuthenticator`/
-// `node:crypto` — no matches). It's fragile rather than fixed, since it
-// depends on tree-shaking continuing to prove those bindings dead. Filed
-// upstream to export the error-classification helpers from `/client`
-// directly: https://github.com/stevekinney/weft/issues/722.
-import type { FaultCode, WeftErrorCode } from '@lostgradient/weft';
-import { isWeftFault } from '@lostgradient/weft';
-import { HttpClientError } from '@lostgradient/weft/client';
+// `isWeftFault` (and the rest of the `isWeftError*` family) is exported from
+// `@lostgradient/weft/client` as of `@lostgradient/weft@0.12.0`
+// (https://github.com/stevekinney/weft/issues/722, fixed upstream #733) —
+// importing it from there, rather than the package root (whose barrel also
+// re-exports server-only code reaching `node:crypto`), is what actually
+// keeps this module's dependency graph browser-only end to end.
+import type { FaultCode } from '@lostgradient/weft';
+import { HttpClientError, isWeftFault, type WeftErrorCode } from '@lostgradient/weft/client';
 
 /** The six `FaultDisplay` UI treatment buckets (plan §10.4). */
 export type FaultTreatmentKind =

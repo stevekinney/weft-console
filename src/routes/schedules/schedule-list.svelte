@@ -6,6 +6,7 @@
    */
   import Badge from '@lostgradient/cinder/badge';
   import Button from '@lostgradient/cinder/button';
+  import ConfirmDialog from '@lostgradient/cinder/confirm-dialog';
   import { Dropdown } from '@lostgradient/cinder/dropdown';
   import EmptyState from '@lostgradient/cinder/empty-state';
   import Input from '@lostgradient/cinder/input';
@@ -137,6 +138,26 @@
     router.navigate(`/schedules?id=${encodeURIComponent(id)}`);
   }
 
+  /**
+   * Keyboard-accessible path to the detail view (T9.4 accessibility pass).
+   * `Table.Row`'s own `onclick` below is mouse-only — Cinder's `<tr>` gets no
+   * `tabindex`/keydown handling (`table-row.svelte` just spreads `...rest`
+   * onto a bare element), so before this the entire row was unreachable by
+   * keyboard. Mirrors `workflow-table.svelte`'s `onIdLinkClick`: a real
+   * anchor carries the keyboard path and modifier-click passthrough (open in
+   * new tab, etc.); `stopPropagation` matches this row's own convention for
+   * every other nested interactive element (`togglePause`/`openEdit`/
+   * `requestCancel`) so the click isn't also seen by the row's `onclick`.
+   */
+  function onIdLinkClick(event: MouseEvent, id: string): void {
+    event.stopPropagation();
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    openDetail(id);
+  }
+
   function openEdit(id: string, event?: Event): void {
     event?.stopPropagation();
     router.navigate(`/schedules?id=${encodeURIComponent(id)}&edit=1`);
@@ -151,9 +172,28 @@
     }
   }
 
-  function cancel(id: string, event: Event): void {
+  /**
+   * Tier-2 confirm before cancel (plan §10.6, T8.2 tier sweep). Previously
+   * mutated directly on click with no confirmation at all — a real gap:
+   * `../../schedules/schedule-detail.svelte`'s own row-equivalent action
+   * already required this exact `ConfirmDialog` ("This can't be undone —
+   * create a new schedule to resume this cadence."); the list's row action
+   * cancels the same schedule the same irreversible way and needs the same
+   * gate.
+   */
+  let cancelDialogOpen = $state(false);
+  let cancelTargetId = $state<string | null>(null);
+
+  function requestCancel(id: string, event: Event): void {
     event.stopPropagation();
-    $cancelMutation.mutate(id);
+    cancelTargetId = id;
+    cancelDialogOpen = true;
+  }
+
+  function confirmCancel(): void {
+    if (cancelTargetId === null) return;
+    $cancelMutation.mutate(cancelTargetId);
+    cancelDialogOpen = false;
   }
 </script>
 
@@ -269,7 +309,15 @@
             <Table.Cell as="th">
               <Badge variant={status.variant}>{status.label}</Badge>
             </Table.Cell>
-            <Table.Cell class="weft-schedule-list__id">{schedule.id}</Table.Cell>
+            <Table.Cell class="weft-schedule-list__id">
+              <a
+                class="weft-schedule-list__id-link"
+                href={router.href(`/schedules?id=${encodeURIComponent(schedule.id)}`)}
+                onclick={(event) => onIdLinkClick(event, schedule.id)}
+              >
+                {schedule.id}
+              </a>
+            </Table.Cell>
             <Table.Cell>{schedule.workflowType}</Table.Cell>
             <Table.Cell>{describeCadence(schedule)}</Table.Cell>
             <Table.Cell class="weft-schedule-list__mono">
@@ -312,7 +360,7 @@
                     <Dropdown.Item
                       variant="danger"
                       disabled={writeGate.disabled}
-                      onclick={(event) => cancel(schedule.id, event)}
+                      onclick={(event) => requestCancel(schedule.id, event)}
                     >
                       <XCircle aria-hidden="true" size={14} /> Cancel
                     </Dropdown.Item>
@@ -326,6 +374,17 @@
     </Table>
   {/if}
 </div>
+
+<ConfirmDialog
+  bind:open={cancelDialogOpen}
+  title="Cancel this schedule?"
+  description={cancelTargetId
+    ? `"${cancelTargetId}" will stop firing. This can't be undone — create a new schedule to resume this cadence.`
+    : ''}
+  confirmLabel="Cancel schedule"
+  destructive
+  onconfirm={confirmCancel}
+/>
 
 <style>
   .weft-schedule-list {
@@ -401,6 +460,15 @@
   :global(.weft-schedule-list__id) {
     font-family: var(--cinder-font-mono);
     font-size: var(--cinder-text-sm);
+  }
+
+  .weft-schedule-list__id-link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .weft-schedule-list__id-link:hover {
+    text-decoration: underline;
   }
 
   :global(.weft-schedule-list__mono) {

@@ -13,34 +13,6 @@ import type { WeftConsoleRuntimeConfig } from './config.ts';
 
 const CLIENT_CONTEXT_KEY = Symbol('weft-console-client');
 
-/**
- * `@lostgradient/weft/client`'s `HttpClient` constructor unconditionally
- * reads `Bun.env['WEFT_PROFILE']` while resolving its connection (no
- * `HttpClientOptions` field lets a caller skip this), which throws
- * `ReferenceError: Bun is not defined` in any real browser — confirmed via a
- * live in-browser repro (built with Vite, loaded in Chromium). Filed
- * upstream: https://github.com/stevekinney/weft/issues/713. This shim is the
- * console's interim workaround, not a fork of weft's code: it supplies the
- * one property (`Bun.env`) the resolver reads before any explicit
- * `baseUrl`/`token` this module always passes takes effect, so every lookup
- * resolves to `undefined` (the same outcome as a real, empty environment)
- * instead of crashing. Never overwrites a real `Bun` global (`??=`), so this
- * is a no-op under Bun (`bun test`, `bun run dev:server`).
- *
- * `as unknown as` is deliberate here, not a shortcut: `@types/bun` declares
- * the ambient `Bun` global as the full Bun runtime namespace, which this
- * shim does not and should not attempt to satisfy — it only needs to survive
- * the property reads weft's resolver performs.
- */
-interface BunEnvironmentShim {
-  env: Record<string, string | undefined>;
-}
-
-function ensureBunEnvironmentShim(): void {
-  const target = globalThis as unknown as { Bun?: BunEnvironmentShim };
-  target.Bun ??= { env: {} };
-}
-
 function isAbsoluteUrl(value: string): boolean {
   return URL.canParse(value);
 }
@@ -80,8 +52,6 @@ export function createClient(
   config: WeftConsoleRuntimeConfig,
   sameOriginBaseUrl: string = window.location.origin,
 ): HttpClient {
-  ensureBunEnvironmentShim();
-
   // `HttpClientOptions.token`/`.headers` are `string | undefined` /
   // `Record<string, string> | undefined` WITHOUT `undefined` in their
   // declared types, so under `exactOptionalPropertyTypes` each key must be

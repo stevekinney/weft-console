@@ -5,6 +5,21 @@
    * recover-all (Tier-2 confirm), a codegen preview, and the CLI-only
    * conformance panel.
    *
+   * ## Recover-all is `ConfirmDialog`, not `AlertDialog` (plan §13/§10.6
+   * tier sweep)
+   *
+   * Fixed here as part of the T8.1/T8.2 tier sweep: this previously used
+   * `AlertDialog`, which is reserved for SYSTEM-initiated, must-acknowledge
+   * interruptions with no safe Escape/backdrop exit (its own README: "For
+   * user-initiated actions (even high-impact ones), use `ConfirmDialog`
+   * instead"). Recover-all is a user-initiated action the operator opened
+   * from a button click — plan §7.1/§10.6 maps Tier 2 to `ConfirmDialog`
+   * specifically, and `../workers/clear-dead-letter-dialog.svelte`'s
+   * doc comment draws the identical distinction for its own Tier-3 flow.
+   * Escape/backdrop-dismiss is a safe "never mind" here, exactly like any
+   * other Tier-2 confirm in the console (`../workflows/detail/header.svelte`'s
+   * cancel/force-timeout, `../storage/delete-panel.svelte`'s delete).
+   *
    * ## Lease status has no live signal to bind to — flagged, not faked
    *
    * Verified against `weft` v0.11.0 (`src/core/engine/lease-manager.ts` and
@@ -22,8 +37,8 @@
    * future implementation (here or on the Dashboard mirror) has one shared
    * key to invalidate together the day a real endpoint exists.
    */
-  import AlertDialog from '@lostgradient/cinder/alert-dialog';
   import Button from '@lostgradient/cinder/button';
+  import ConfirmDialog from '@lostgradient/cinder/confirm-dialog';
   import CodeBlock from '@lostgradient/cinder/code-block';
   import CopyButton from '@lostgradient/cinder/copy-button';
   import DescriptionList from '@lostgradient/cinder/description-list';
@@ -172,13 +187,12 @@
   </div>
 </div>
 
-<AlertDialog
+<ConfirmDialog
   open={confirmOpen}
   title="Recover all workflows?"
   description="This resumes every workflow this engine believes should be running. Safe to run repeatedly, but may generate a burst of activity if many workflows were stalled."
-  acknowledgeLabel="Recover all"
-  cancelLabel="Cancel"
-  onacknowledge={() => {
+  confirmLabel="Recover all"
+  onconfirm={() => {
     confirmOpen = false;
     $recoverAll.mutate();
   }}

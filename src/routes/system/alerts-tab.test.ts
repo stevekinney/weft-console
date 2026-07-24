@@ -47,7 +47,13 @@ describe('AlertsTab', () => {
   test('renders an ingested alert:fired frame as a Firing row', async () => {
     scripted = new ScriptedFetch();
     scripted.routeSseStream('/v1/events/sse', [
-      sseFrame({ kind: 'alert:fired', sequence: 1, cursor: 'c1', emittedAtMs: 1000, payload: { name: 'dlq-backlog', message: 'Dead-letter queue backlog exceeds threshold.' } }),
+      sseFrame({
+        kind: 'alert:fired',
+        sequence: 1,
+        cursor: 'c1',
+        emittedAtMs: 1000,
+        payload: { name: 'dlq-backlog', message: 'Dead-letter queue backlog exceeds threshold.' },
+      }),
     ]);
 
     const { findByText } = await renderAlertsTab();
@@ -58,7 +64,13 @@ describe('AlertsTab', () => {
   test('renders an operational warning as a Warning row', async () => {
     scripted = new ScriptedFetch();
     scripted.routeSseStream('/v1/events/sse', [
-      sseFrame({ kind: 'storage:size-reported', sequence: 1, cursor: 'c1', emittedAtMs: 1000, payload: { message: 'Storage crossed 80% of budget.' } }),
+      sseFrame({
+        kind: 'storage:size-reported',
+        sequence: 1,
+        cursor: 'c1',
+        emittedAtMs: 1000,
+        payload: { message: 'Storage crossed 80% of budget.' },
+      }),
     ]);
 
     const { findByText } = await renderAlertsTab();

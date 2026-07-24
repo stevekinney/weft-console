@@ -52,11 +52,7 @@ describe('WorkflowLiveObservations', () => {
   test('records an activity:async-pending frame with a well-formed payload', () => {
     const fleet = new FakeFleet();
     const queryClient = fakeQueryClient();
-    const observations = new WorkflowLiveObservations(
-      fleet,
-      queryClient,
-      'wf-1',
-    );
+    const observations = new WorkflowLiveObservations(fleet, queryClient, 'wf-1');
 
     fleet.emit(
       frame({
@@ -103,7 +99,7 @@ describe('WorkflowLiveObservations', () => {
     expect(observations.pendingAsyncActivities).toHaveLength(1);
   });
 
-  test('forgetToken drops the observation locally (the console\'s own drawer resolved it)', () => {
+  test("forgetToken drops the observation locally (the console's own drawer resolved it)", () => {
     const fleet = new FakeFleet();
     const queryClient = fakeQueryClient();
     const observations = new WorkflowLiveObservations(fleet, queryClient, 'wf-1');

@@ -50,10 +50,47 @@
  * - `batch`/`conditional-batch` request bodies: JSON, `value`/`expectedValue`
  *   fields base64.
  * - `conditional-batch` response body: JSON `{ applied: boolean }`.
+ *
+ * ## `isFaultCode` is a local copy, not the `@lostgradient/weft` export
+ *
+ * `isFaultCode` (root export, `core/fault-code.ts`) is a pure runtime check
+ * with no server dependency of its own, but importing any value from the
+ * bare `@lostgradient/weft` root forces a bundler to resolve the package's
+ * top-level barrel (`dist/index.js`), which also re-exports `handleRequest`/
+ * `createAuthenticator` from server-only modules reaching `node:crypto`
+ * (`server/authentication/constant-time-api-key.js`) — the same class of
+ * browser-bundle leak `isWeftFault`/`isWeftError*` had before
+ * `@lostgradient/weft@0.12.0` moved them to `/client` (weft#722, fixed
+ * upstream #733). `isFaultCode` hasn't made that move yet — filed upstream:
+ * https://github.com/stevekinney/weft/issues/751. `KNOWN_FAULT_CODES` below
+ * is the local stand-in: the `satisfies Record<FaultCode, true>` forces a
+ * compile error the moment `@lostgradient/weft` adds a `FaultCode` this set
+ * doesn't account for, so it can't silently drift out of sync. `FaultCode`
+ * itself stays `import type`-only — types are erased at compile time and
+ * never reach the bundler's module graph.
  */
 import type { FaultCode } from '@lostgradient/weft';
-import { isFaultCode } from '@lostgradient/weft';
 import { HttpClientError, type HttpClient } from '@lostgradient/weft/client';
+
+const KNOWN_FAULT_CODES = {
+  Unauthorized: true,
+  Forbidden: true,
+  NotFound: true,
+  Conflict: true,
+  Unprocessable: true,
+  InvalidParams: true,
+  MethodNotFound: true,
+  Timeout: true,
+  PayloadTooLarge: true,
+  SubscriptionOverflow: true,
+  NotImplemented: true,
+  UnsupportedTransport: true,
+  EngineFailure: true,
+} as const satisfies Record<FaultCode, true>;
+
+function isFaultCode(value: string): value is FaultCode {
+  return value in KNOWN_FAULT_CODES;
+}
 
 /** The slice of `HttpClient` this module needs — its resolved connection, never a typed operation. */
 export type StorageConnection = Pick<HttpClient, 'baseUrl' | 'headers'>;

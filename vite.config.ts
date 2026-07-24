@@ -4,37 +4,33 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig } from 'vite';
 
 /**
- * `@lostgradient/weft/client`'s `HttpClient` transitively imports
- * `node:fs`/`node:fs/promises` (`connection.ts`, for its CLI-oriented
- * `~/.weft/config`/run-lockfile resolution) and `node:module`
- * (`core/types/definition-schema-to-json.ts`, for an optional Valibot schema
- * adapter) — none of which exist in a browser. Confirmed via a live
- * in-browser repro (both `vite build` + a static server, and `bun run dev`);
- * filed upstream: https://github.com/stevekinney/weft/issues/713.
- *
- * Aliased (not a `resolveId`/`load` plugin hook) because `bun run dev`
- * pre-bundles dependencies like `@lostgradient/weft` with esbuild
- * (`optimizeDeps`), a pass that does not run normal Vite/Rolldown plugin
- * hooks — a plugin-hook stub alone left `node:fs` externalized (and the app
- * blank) under `bun run dev` even though the equivalent `vite build` output
- * was clean. `resolve.alias` is consulted by both the esbuild optimizer and
- * the production Rolldown build, so this covers both. See
- * `scripts/node-builtin-browser-stubs.ts` for the actual replacement
- * implementations (real, on-disk exports of exactly the names weft's
- * bundled code reads) — same category of workaround as `src/lib/client.ts`'s
- * `Bun.env` shim, which documents the full upstream issue; this is not a
- * fork of weft's own logic.
- */
-const nodeBuiltinBrowserStubsPath = fileURLToPath(
-  new URL('./scripts/node-builtin-browser-stubs.ts', import.meta.url),
-);
-
-/**
  * Dev proxy target: a local `weft` server started by `bun run dev:server`
  * (`scripts/dev-server.ts`). Override with `WEFT_API_BASE_URL` to point the
  * dev console at a different server without editing this file.
  */
 const devServerTarget = process.env['WEFT_API_BASE_URL'] ?? 'http://localhost:7233';
+
+/**
+ * Redirects the bare `shiki` specifier to a curated highlighter shim (plan
+ * §12, T9.3). See `scripts/shiki-curated-highlighter.ts` for the full
+ * rationale: `<CodeBlock language="…" />`'s default highlighter falls back
+ * to `import('shiki')`, whose default entry is the ~253-grammar,
+ * ~50-theme `bundle-full.mjs` — several individual grammar/engine chunks
+ * from that bundle exceed Rollup's 500 kB per-chunk warning even though
+ * none of them enter the initial page load. The regex matches the exact
+ * specifier `shiki` only, never a subpath like `shiki/core` or
+ * `shiki/wasm` — cinder's own markdown-rendering Web Worker imports those
+ * directly for unrelated (legitimate, out-of-scope-here) reasons and must
+ * stay on them.
+ *
+ * Filed upstream as stevekinney/cinder#773 — already fixed in cinder's
+ * source tree, not yet in a published npm release. Delete this alias and
+ * the shim file once the installed `@lostgradient/cinder` version has it.
+ */
+const shikiAlias = {
+  find: /^shiki$/,
+  replacement: fileURLToPath(new URL('./scripts/shiki-curated-highlighter.ts', import.meta.url)),
+};
 
 // Everything functional is served under `/api`; a handful of discovery and
 // health routes stay root-relative (see plan §0 / Appendix A). Both groups —
@@ -66,17 +62,7 @@ const proxiedApiPaths = [
 export default defineConfig({
   plugins: [svelte()],
   resolve: {
-    // Array form with exact-match `RegExp` `find` patterns, not the object
-    // shorthand: Vite's object-key aliasing treats a string key as a
-    // directory-style prefix, so a `'node:fs'` key also matches
-    // `'node:fs/promises'` and rewrites it to
-    // `<stub-path>/promises` — a real, on-disk path that doesn't exist.
-    // `^…$` anchors force each of the three specifiers to match only itself.
-    alias: [
-      { find: /^node:fs$/, replacement: nodeBuiltinBrowserStubsPath },
-      { find: /^node:fs\/promises$/, replacement: nodeBuiltinBrowserStubsPath },
-      { find: /^node:module$/, replacement: nodeBuiltinBrowserStubsPath },
-    ],
+    alias: [shikiAlias],
   },
   server: {
     proxy: Object.fromEntries(
@@ -102,6 +88,14 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+    // Written to `dist/.vite/manifest.json`: maps each source entry (e.g.
+    // `src/routes/dashboard/index.svelte`) to its exact built `file` and
+    // associated `css`. `scripts/check-bundle-size.ts` (plan §12, T9.3)
+    // reads this to resolve each route's real output file precisely —
+    // hashed chunk names can't be pattern-matched safely (Rollup's hash
+    // alphabet includes `-`, so `workers-<hash>.js` and
+    // `workers-data-<hash>.js` aren't reliably distinguishable by prefix).
+    manifest: true,
     rollupOptions: {
       output: {
         // Hashed filenames for cache-busting; per-route code-splitting is

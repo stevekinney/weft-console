@@ -24,7 +24,8 @@ describe('AuthModeBanner', () => {
       props: { mode: 'unauthenticated-warn' },
     });
 
-    expect(getByText(/Running in unauthenticated mode/)).not.toBeNull();
+    expect(getByText(/Running without authentication/)).not.toBeNull();
+    expect(getByText(/scopes this session doesn't have/)).not.toBeNull();
     expect(container.querySelector('[data-variant="warn"]')).not.toBeNull();
   });
 
@@ -34,7 +35,7 @@ describe('AuthModeBanner', () => {
       props: { mode: 'unauthenticated-allow' },
     });
 
-    expect(getByText(/intentionally open for this deployment/)).not.toBeNull();
+    expect(getByText(/by deployment choice/)).not.toBeNull();
     expect(container.querySelector('[data-variant="allow"]')).not.toBeNull();
   });
 

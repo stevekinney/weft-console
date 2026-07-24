@@ -115,7 +115,10 @@ function compareCodepoint(a: string, b: string): number {
   return 0;
 }
 
-function catalogRowTags(rest: RestBindingInfo | undefined, rpc: OpenRpcMethodLike | undefined): readonly string[] {
+function catalogRowTags(
+  rest: RestBindingInfo | undefined,
+  rpc: OpenRpcMethodLike | undefined,
+): readonly string[] {
   if (rpc?.tags) return rpc.tags.map((tag) => tag.name);
   return rest?.tags ?? [];
 }

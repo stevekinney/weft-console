@@ -36,7 +36,7 @@ describe('Reviews data layer (integration, real server)', () => {
   test('lists a pending sectioned review and moves it to completed after a decision', async () => {
     const server = await startLiveSourceTestServer();
     try {
-      const client = new HttpClient({ baseUrl: server.baseUrl });
+      const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
       const workflowId = 'reviews-integration-basic';
       const handle = await server.engine.start(
         'content-review',
@@ -69,8 +69,7 @@ describe('Reviews data layer (integration, real server)', () => {
         reviewer: 'ops@example.com',
         feedback: 'Tighten the CTA.',
         // sectionDecisions is included on every real submission the console
-        // sends (`reviews-data.ts`'s `submitReviewDecisionMutation` doc) —
-        // see the assertion below for what actually round-trips today.
+        // sends (`reviews-data.ts`'s `submitReviewDecisionMutation` doc).
         sectionDecisions: { headline: 'approved', body: 'rejected' },
         workflowId,
       });
@@ -86,24 +85,20 @@ describe('Reviews data layer (integration, real server)', () => {
       expect(completed?.reviewer).toBe('ops@example.com');
       expect(completed?.feedback).toBe('Tighten the CTA.');
 
-      // Confirmed upstream gap (github.com/stevekinney/weft/issues/724):
-      // `submitReviewDecisionOperation` never reads `sectionDecisions` off
-      // the wire for either REST or JSON-RPC, so it never reaches
-      // `engine.submitReview()` even though the console sent it. This
-      // assertion pins TODAY's real behavior — the day #724 ships and
-      // `@lostgradient/weft` is bumped, `sectionDecisions` should start
-      // round-tripping and this specific expectation should flip to
-      // `toEqual({ headline: 'approved', body: 'rejected' })`.
-      expect(completed?.sectionDecisions).toBeUndefined();
+      // Fixed upstream in @lostgradient/weft@0.12.0
+      // (github.com/stevekinney/weft/issues/724, #731):
+      // `submitReviewDecisionOperation` now reads `sectionDecisions` off the
+      // wire and passes it through to `engine.submitReview()`.
+      expect(completed?.sectionDecisions).toEqual({ headline: 'approved', body: 'rejected' });
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('a review not created by this test (fixtures/workflows.ts review-gate) is also visible unsectioned', async () => {
     const server = await startLiveSourceTestServer();
     try {
-      const client = new HttpClient({ baseUrl: server.baseUrl });
+      const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
       const workflowId = 'reviews-integration-unsectioned';
       await server.engine.start(
         'review-gate',
@@ -117,7 +112,7 @@ describe('Reviews data layer (integration, real server)', () => {
       expect(found?.artifact).toBe('Plain-string artifact for the unsectioned case.');
       expect(found?.allowPartial).toBe(false);
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 });

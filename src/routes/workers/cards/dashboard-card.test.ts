@@ -5,20 +5,18 @@
  * `{ jsonrpc: '2.0', method, params, id: method }` → `{ jsonrpc: '2.0', id,
  * result }`).
  *
- * Not a real-server integration test: `client.operations[...]` — the only
- * way to call `weft.workers.list`/`weft.tasks.diagnostics` (neither has an
- * `HttpClient` ergonomic method) — is JSON-RPC-over-HTTP-only, and
- * `startLiveSourceTestServer()`'s `handleRequest`-based harness does not
- * serve `/jsonrpc` at all (confirmed by direct repro: every
- * `client.operations[...]` call against it fails with "Invalid JSON-RPC
- * response"). This is the SAME already-documented, already-filed gap
- * `scripts/dev-server.ts`'s own doc comment calls out ("`client.operations[...]`
- * calls … will 404 against this dev harness"), downstream of #710 (`serve()`
- * — the only JSON-RPC-capable path — is broken for any
- * `Engine.create({ workflows })` instance). A stubbed transport is the only
- * way to exercise this card's real query/render logic deterministically
- * today; `dead-letter-request.integration.test.ts` covers the one Workers
- * data path that genuinely round-trips through the real-server harness
+ * Not a real-server integration test, though it could be one now:
+ * `client.operations[...]` — the only way to call
+ * `weft.workers.list`/`weft.tasks.diagnostics` (neither has an `HttpClient`
+ * ergonomic method) — is JSON-RPC-over-HTTP-only, which
+ * `startLiveSourceTestServer()`'s harness does serve as of
+ * `@lostgradient/weft@0.12.0` (a real `serve()`, fixing the #710 gap this
+ * comment used to describe). A stubbed transport stays the better choice
+ * for THIS card specifically — it exercises deterministic aggregate shapes
+ * and error bodies a real registry can't be coaxed into producing on
+ * demand — but a real-server variant is now a viable follow-up, unlike
+ * before. `dead-letter-request.integration.test.ts` covers the one Workers
+ * data path that already round-trips through the real-server harness
  * (plain REST, no JSON-RPC).
  */
 import { HttpClient, HttpClientError } from '@lostgradient/weft/client';

@@ -18,7 +18,7 @@ describe('ScheduleDetail', () => {
   test('renders the not-found state for an unknown id', async () => {
     const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText } = render(ScheduleDetailHarness, {
@@ -28,7 +28,7 @@ describe('ScheduleDetail', () => {
       const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('Schedule not found')).not.toBeNull());
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -42,7 +42,7 @@ describe('ScheduleDetail', () => {
       input: { warehouseId: 'wh-main' },
       overlapPolicy: 'queue',
     });
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText } = render(ScheduleDetailHarness, {
@@ -55,7 +55,7 @@ describe('ScheduleDetail', () => {
       expect(getByText('Overlap policy: Queue')).not.toBeNull();
       expect(getByText(/Queue can grow unbounded during outages/)).not.toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -68,7 +68,7 @@ describe('ScheduleDetail', () => {
       cron: '0 2 * * *',
       input: { warehouseId: 'wh-main' },
     });
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText } = render(ScheduleDetailHarness, {
@@ -79,7 +79,7 @@ describe('ScheduleDetail', () => {
       await waitFor(() => expect(getByText('No active or queued runs.')).not.toBeNull());
       expect(getByText(/No fires observed yet this session\./)).not.toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -93,7 +93,7 @@ describe('ScheduleDetail', () => {
       input: { warehouseId: 'wh-main' },
     });
     await handle.pause();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText } = render(ScheduleDetailHarness, {
@@ -103,7 +103,7 @@ describe('ScheduleDetail', () => {
       const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('Not scheduled — schedule is paused.')).not.toBeNull());
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -116,7 +116,7 @@ describe('ScheduleDetail', () => {
       cron: '0 2 * * *',
       input: { warehouseId: 'wh-main' },
     });
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole } = render(ScheduleDetailHarness, {
@@ -129,7 +129,7 @@ describe('ScheduleDetail', () => {
 
       await waitFor(() => expect(getByRole('button', { name: /Resume/ })).not.toBeNull());
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -142,7 +142,7 @@ describe('ScheduleDetail', () => {
       cron: '0 2 * * *',
       input: { warehouseId: 'wh-main' },
     });
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole } = render(ScheduleDetailHarness, {
@@ -155,7 +155,7 @@ describe('ScheduleDetail', () => {
       });
       expect((getByRole('button', { name: /Cancel/ }) as HTMLButtonElement).disabled).toBe(true);
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -168,7 +168,7 @@ describe('ScheduleDetail', () => {
       cron: '0 2 * * *',
       input: { warehouseId: 'wh-main' },
     });
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole, getByText } = render(ScheduleDetailHarness, {
@@ -184,7 +184,7 @@ describe('ScheduleDetail', () => {
 
       await waitFor(() => expect(getByText('Cancelled')).not.toBeNull());
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 

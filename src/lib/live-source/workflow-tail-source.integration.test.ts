@@ -1,8 +1,7 @@
 /**
  * Integration tests for `WorkflowTailSource` against a REAL in-process weft
- * server (`live-source-test-server.test-support.ts`) — no mock server. See
- * that module's doc comment for why `serve()` isn't used, why the feeds are
- * genuinely engine-backed, and the auth/transport caveats.
+ * server (`live-source-test-server.test-support.ts`, a plain `serve()`) — no
+ * mock server.
  *
  * Uses the `signal-stepped` fixture (`fixtures/workflows.ts`) specifically
  * so this suite can drive checkpoint commits deterministically —
@@ -22,7 +21,7 @@
  * drop has no test-side hook here (Bun's `fetch`/`ReadableStream` gives no
  * way to sever an in-flight SSE response without either killing the whole
  * server or reaching into the operation's own internal `AbortController`,
- * which `handleRequest` does not expose) — "reconnect resume without
+ * which weft's server does not expose) — "reconnect resume without
  * dup/skip" is proven instead by opening a second, independent tail after
  * more events have committed and confirming its OWN catch-up (the same
  * mechanism a reconnect's fresh `client.tail()` call relies on) delivers
@@ -43,9 +42,14 @@ async function waitForCondition(): Promise<typeof import('@testing-library/svelt
   return waitFor;
 }
 
-/** `client.tail()` defaults to `eventTransport: 'auto'` (WebSocket first) — WS upgrades are unavailable through bare `handleRequest` (module doc). Force SSE. */
+/**
+ * `client.tail()` defaults to `eventTransport: 'auto'` (WebSocket first, real
+ * `serve()` supports both) — this suite forces SSE deliberately so the SSE
+ * transport keeps dedicated coverage rather than being shadowed by the
+ * default WS path every run.
+ */
 function sseClient(server: LiveSourceTestServer): HttpClient {
-  return new HttpClient({ baseUrl: server.baseUrl, eventTransport: 'sse' });
+  return new HttpClient({ baseUrl: server.baseUrl, token: server.token, eventTransport: 'sse' });
 }
 
 async function startSignalStepped(
@@ -53,7 +57,6 @@ async function startSignalStepped(
   workflowId: string,
   steps: number,
 ): Promise<void> {
-  server.bridgeWorkflowEvents(workflowId);
   await server.engine.start('signal-stepped', { steps }, { id: workflowId });
 }
 
@@ -90,7 +93,7 @@ describe('WorkflowTailSource (integration, real server)', () => {
 
       source.close();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -134,7 +137,7 @@ describe('WorkflowTailSource (integration, real server)', () => {
 
       secondSource.close();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -170,7 +173,7 @@ describe('WorkflowTailSource (integration, real server)', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
       expect(received.length).toBe(countAtClose);
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 });

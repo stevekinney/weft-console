@@ -31,9 +31,17 @@
   import { onDestroy } from 'svelte';
 
   import { getClient } from '../../lib/client.ts';
-  import { FleetEventSource, type FleetEventFrame } from '../../lib/live-source/fleet-event-source.svelte.ts';
+  import {
+    FleetEventSource,
+    type FleetEventFrame,
+  } from '../../lib/live-source/fleet-event-source.svelte.ts';
   import { router } from '../../lib/router.svelte.ts';
-  import { AlertsStore, isAlertEventKind, type AlertRow, type AlertRowState } from './alerts-store.svelte.ts';
+  import {
+    AlertsStore,
+    isAlertEventKind,
+    type AlertRow,
+    type AlertRowState,
+  } from './alerts-store.svelte.ts';
 
   const client = getClient();
   const store = new AlertsStore();
@@ -67,7 +75,11 @@
   }
 
   function formatTime(atMs: number): string {
-    return new Date(atMs).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return new Date(atMs).toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
   }
 </script>
 
@@ -82,7 +94,10 @@
   </p>
 
   {#if store.isEmpty}
-    <EmptyState title="No alerts since page load" description="New alerts and warnings will appear here as they fire.">
+    <EmptyState
+      title="No alerts since page load"
+      description="New alerts and warnings will appear here as they fire."
+    >
       {#snippet icon()}
         <BellOff aria-hidden="true" size={20} />
       {/snippet}
@@ -102,7 +117,11 @@
     <ul class="weft-alerts-tab__list">
       {#each store.rows as row (row.id)}
         {@const badge = STATE_BADGE[row.state]}
-        <li class="weft-alerts-tab__row" style={`border-left-color:${EDGE_COLOR[row.state]}`} data-dim={row.state === 'resolved'}>
+        <li
+          class="weft-alerts-tab__row"
+          style={`border-left-color:${EDGE_COLOR[row.state]}`}
+          data-dim={row.state === 'resolved'}
+        >
           <div class="weft-alerts-tab__row-body">
             <div class="weft-alerts-tab__row-title">{row.title}</div>
             <div class="weft-alerts-tab__row-detail">{row.body}</div>
@@ -177,10 +196,6 @@
     border-bottom: 0;
   }
 
-  .weft-alerts-tab__row[data-dim='true'] {
-    opacity: 0.6;
-  }
-
   .weft-alerts-tab__row-body {
     flex: 1;
     min-width: 0;
@@ -189,6 +204,27 @@
   .weft-alerts-tab__row-title {
     font-size: var(--cinder-text-xs);
     font-weight: 600;
+  }
+
+  /**
+   * T9.4 accessibility pass: this used to be a blanket `opacity: 0.6` on the
+   * whole `.weft-alerts-tab__row` (design §D: "resolved rows dim to 0.6").
+   * Measured in a real browser with `ctx.globalAlpha` (canvas 2D composites
+   * exactly like CSS `opacity`, in gamma-encoded sRGB — a naive
+   * `color-mix(in oklch, …)` stand-in reads noticeably higher and is NOT
+   * trustworthy near a 4.5:1 threshold), both themes: the row's title
+   * inherits `--cinder-text`, which holds AA at 0.6 opacity (4.71:1 light /
+   * 5.30:1 dark) — but `.weft-alerts-tab__row-detail` (`--cinder-text-subtle`)
+   * and `.weft-alerts-tab__row-time` (`--cinder-text-disabled`) were
+   * ALREADY marginal at full opacity and dropped to ~3:1 once dimmed, under
+   * WCAG AA's 4.5:1 for normal text. Scoping the opacity to the title only
+   * keeps the resolved/firing distinction — already carried by the
+   * Firing/Resolved `Badge`, a non-color/non-opacity signal — without
+   * taking the detail/time text below AA. Same fix, same measurement, as
+   * `../../app/shell/notification-bell.svelte`'s read-item title.
+   */
+  .weft-alerts-tab__row[data-dim='true'] .weft-alerts-tab__row-title {
+    opacity: 0.6;
   }
 
   .weft-alerts-tab__row-detail {

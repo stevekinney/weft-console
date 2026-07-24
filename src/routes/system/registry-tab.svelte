@@ -7,9 +7,9 @@
    * (no ergonomic `HttpClient` method exists for it), which is JSON-RPC-only
    * transport (see `discovery-client.ts`'s module doc for the same
    * observation about a different surface) — correct, sanctioned usage per
-   * PROJECT-BRIEF even though it can't be exercised against the
-   * `handleRequest()`-only dev harness until the upstream `serve()` bug
-   * blocking `/jsonrpc` there is fixed (noted in the track's final report).
+   * PROJECT-BRIEF, and exercisable end-to-end against `bun run dev:server`
+   * as of `@lostgradient/weft@0.12.0` (`scripts/dev-server.ts`'s plain
+   * `serve()` now routes `/jsonrpc`).
    */
   import EmptyState from '@lostgradient/cinder/empty-state';
   import { Table } from '@lostgradient/cinder/table';

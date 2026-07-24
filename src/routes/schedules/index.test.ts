@@ -31,14 +31,14 @@ describe('Schedules index router', () => {
     resetLocation('/schedules');
     const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole } = render(IndexHarness, { props: { client } });
       const waitFor = await waitForCondition();
       await waitFor(() => expect(getByRole('heading', { name: 'Schedules' })).not.toBeNull());
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -52,7 +52,7 @@ describe('Schedules index router', () => {
     });
     resetLocation('/schedules?id=nightly-rollup');
     const { render } = await import('@testing-library/svelte');
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText, queryByRole } = render(IndexHarness, { props: { client } });
@@ -60,7 +60,7 @@ describe('Schedules index router', () => {
       await waitFor(() => expect(getByText('nightly-rollup')).not.toBeNull());
       expect(queryByRole('heading', { name: 'Schedules' })).toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -68,7 +68,7 @@ describe('Schedules index router', () => {
     resetLocation('/schedules?create=1');
     const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole } = render(IndexHarness, { props: { client } });
@@ -76,7 +76,7 @@ describe('Schedules index router', () => {
       await waitFor(() => expect(getByRole('heading', { name: 'Schedules' })).not.toBeNull());
       expect(getByRole('dialog')).not.toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -90,7 +90,7 @@ describe('Schedules index router', () => {
     });
     resetLocation('/schedules?id=nightly-rollup&edit=1');
     const { render } = await import('@testing-library/svelte');
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText, getByRole } = render(IndexHarness, { props: { client } });
@@ -99,7 +99,7 @@ describe('Schedules index router', () => {
       expect(getByRole('dialog')).not.toBeNull();
       expect(getByRole('heading', { name: 'Edit schedule' })).not.toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -107,7 +107,7 @@ describe('Schedules index router', () => {
     resetLocation('/schedules?create=1');
     const { render, fireEvent } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole } = render(IndexHarness, { props: { client } });
@@ -118,7 +118,7 @@ describe('Schedules index router', () => {
 
       await waitFor(() => expect(window.location.search).toBe(''));
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 });

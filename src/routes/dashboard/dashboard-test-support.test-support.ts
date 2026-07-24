@@ -9,13 +9,15 @@
  *
  * Needed because `client.operations['weft.<name>']` always dispatches
  * JSON-RPC-over-HTTP (`httpClientCatalogTransport`, `weft/src/client/
- * http-operations.ts`) — and the real in-process test server this repo's
- * `LiveSource` tests use (`live-source-test-server.test-support.ts`) is
- * built on `handleRequest`, which is REST/SSE/WS-only by design (never
- * routes `/jsonrpc` — verified against `weft/src/server/handler/index.ts`'s
- * own module doc). Scripting `fetch` against a REAL `HttpClient` instance
- * exercises the real JSON-RPC request/response encoding without needing a
- * server that can't exist yet (tracked upstream: weft#710).
+ * http-operations.ts`), and Dashboard card tests want deterministic,
+ * per-scenario control over that response (aggregate shapes, error bodies,
+ * malformed payloads) that a real engine can't be coaxed into producing on
+ * demand. `live-source-test-server.test-support.ts`'s real `serve()`
+ * instance does route `/jsonrpc` as of `@lostgradient/weft@0.12.0` (fixed
+ * upstream: weft#710), so this module is a deliberate choice for
+ * determinism, not a workaround for a missing route. Scripting `fetch`
+ * against a REAL `HttpClient` instance exercises the real JSON-RPC
+ * request/response encoding either way.
  */
 import { HttpClient } from '@lostgradient/weft/client';
 

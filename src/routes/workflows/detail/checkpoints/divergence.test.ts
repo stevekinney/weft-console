@@ -22,8 +22,14 @@ function entry(overrides: Partial<WorkflowTimelineEntry>): WorkflowTimelineEntry
 
 describe('alignTimelinesForDivergence', () => {
   test('identical timelines through the fork point are all "same"', () => {
-    const original = [entry({ step: 1, operationLabel: 'a' }), entry({ step: 2, operationLabel: 'b' })];
-    const forked = [entry({ step: 1, operationLabel: 'a' }), entry({ step: 2, operationLabel: 'b' })];
+    const original = [
+      entry({ step: 1, operationLabel: 'a' }),
+      entry({ step: 2, operationLabel: 'b' }),
+    ];
+    const forked = [
+      entry({ step: 1, operationLabel: 'a' }),
+      entry({ step: 2, operationLabel: 'b' }),
+    ];
 
     const rows = alignTimelinesForDivergence(original, forked);
 
@@ -32,7 +38,10 @@ describe('alignTimelinesForDivergence', () => {
 
   test('a step present only in the forked run past the fork point is "forked-only"', () => {
     const original = [entry({ step: 1, operationLabel: 'a' })];
-    const forked = [entry({ step: 1, operationLabel: 'a' }), entry({ step: 2, operationLabel: 'c' })];
+    const forked = [
+      entry({ step: 1, operationLabel: 'a' }),
+      entry({ step: 2, operationLabel: 'c' }),
+    ];
 
     const rows = alignTimelinesForDivergence(original, forked);
 
@@ -41,7 +50,10 @@ describe('alignTimelinesForDivergence', () => {
   });
 
   test('a step present only in the original is "original-only"', () => {
-    const original = [entry({ step: 1, operationLabel: 'a' }), entry({ step: 2, operationLabel: 'b' })];
+    const original = [
+      entry({ step: 1, operationLabel: 'a' }),
+      entry({ step: 2, operationLabel: 'b' }),
+    ];
     const forked = [entry({ step: 1, operationLabel: 'a' })];
 
     const rows = alignTimelinesForDivergence(original, forked);
@@ -69,7 +81,7 @@ describe('alignTimelinesForDivergence', () => {
 });
 
 describe('divergedOriginalStepIds / divergedForkedStepIds', () => {
-  test('collects only diverged/one-sided rows, in each timeline\'s own step-id space', () => {
+  test("collects only diverged/one-sided rows, in each timeline's own step-id space", () => {
     const original = [
       entry({ step: 1, operationLabel: 'a' }),
       entry({ step: 2, operationLabel: 'b', status: 'failed' }),

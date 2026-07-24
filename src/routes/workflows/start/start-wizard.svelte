@@ -120,7 +120,7 @@
       {startGate.title}
     </p>
   {:else}
-    <Steps steps={STEPS} currentStep={currentStep} label="Start workflow progress" />
+    <Steps steps={STEPS} {currentStep} label="Start workflow progress" />
 
     {#if currentStep === 0}
       <TypeStep
@@ -149,7 +149,7 @@
         {advanced}
         {submitState}
         onBack={onReviewBack}
-        onSubmit={onSubmit}
+        {onSubmit}
       />
     {/if}
   {/if}

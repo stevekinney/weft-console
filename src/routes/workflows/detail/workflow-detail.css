@@ -154,6 +154,10 @@
   gap: 12px;
 }
 
+.weft-workflow-detail__not-found {
+  padding: 20px 22px;
+}
+
 /* ---------------------------------------------------------------------- */
 /* Inline fault (query errors — see faults.ts module doc: query errors     */
 /* render inline here, not via <FaultBoundary>).                          */

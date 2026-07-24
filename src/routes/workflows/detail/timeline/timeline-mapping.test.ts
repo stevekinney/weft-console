@@ -24,9 +24,9 @@ function entry(overrides: Partial<WorkflowTimelineEntry>): WorkflowTimelineEntry
 
 describe('timelineEntryLabel', () => {
   test('activity uses the activity name verbatim', () => {
-    expect(timelineEntryLabel(entry({ operationType: 'activity', operationLabel: 'chargeCard' }))).toBe(
-      'chargeCard',
-    );
+    expect(
+      timelineEntryLabel(entry({ operationType: 'activity', operationLabel: 'chargeCard' })),
+    ).toBe('chargeCard');
   });
 
   test('wait-signal is prefixed with "Signal"', () => {
@@ -69,7 +69,9 @@ describe('timelineEntryLabel', () => {
 
   test('an unrecognized structural operation type falls back to operationLabel, not a fabricated title', () => {
     expect(
-      timelineEntryLabel(entry({ operationType: 'some-future-op', operationLabel: 'some-future-op' })),
+      timelineEntryLabel(
+        entry({ operationType: 'some-future-op', operationLabel: 'some-future-op' }),
+      ),
     ).toBe('some-future-op');
   });
 });
@@ -89,17 +91,23 @@ describe('isDegradedCoordinationEntry', () => {
 describe('compensatedActivityName', () => {
   test('extracts the forward activity name from a compensate: label', () => {
     expect(
-      compensatedActivityName(entry({ operationType: 'activity', operationLabel: 'compensate:reserveHotel' })),
+      compensatedActivityName(
+        entry({ operationType: 'activity', operationLabel: 'compensate:reserveHotel' }),
+      ),
     ).toBe('reserveHotel');
   });
 
   test('a plain activity is not a compensation', () => {
-    expect(compensatedActivityName(entry({ operationType: 'activity', operationLabel: 'reserveHotel' }))).toBeNull();
+    expect(
+      compensatedActivityName(entry({ operationType: 'activity', operationLabel: 'reserveHotel' })),
+    ).toBeNull();
   });
 
   test('a non-activity operation type is never a compensation, even with a matching label', () => {
     expect(
-      compensatedActivityName(entry({ operationType: 'wait-signal', operationLabel: 'compensate:x' })),
+      compensatedActivityName(
+        entry({ operationType: 'wait-signal', operationLabel: 'compensate:x' }),
+      ),
     ).toBeNull();
   });
 });
@@ -138,7 +146,9 @@ describe('mapTimelineToSteps', () => {
   });
 
   test('an unmatched compensate: name renders in place with no compensates link (never guesses)', () => {
-    const entries = [entry({ step: 1, operationLabel: 'compensate:neverHappened', status: 'completed' })];
+    const entries = [
+      entry({ step: 1, operationLabel: 'compensate:neverHappened', status: 'completed' }),
+    ];
 
     const steps = mapTimelineToSteps(entries);
 
@@ -162,9 +172,7 @@ describe('mapTimelineToSteps', () => {
   });
 
   test('a failed step labels its output detail "Error"', () => {
-    const entries = [
-      entry({ step: 1, status: 'failed', outputSummary: '"boom"' }),
-    ];
+    const entries = [entry({ step: 1, status: 'failed', outputSummary: '"boom"' })];
 
     const steps = mapTimelineToSteps(entries);
     expect(steps[0]?.details?.find((detail) => detail.id === 'step-1-output')?.label).toBe('Error');

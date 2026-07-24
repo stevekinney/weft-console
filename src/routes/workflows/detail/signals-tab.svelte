@@ -11,7 +11,6 @@
   import Button from '@lostgradient/cinder/button';
   import Input from '@lostgradient/cinder/input';
   import Skeleton from '@lostgradient/cinder/skeleton';
-  import Textarea from '@lostgradient/cinder/textarea';
   import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
   import type { HttpClient } from '@lostgradient/weft/client';
   import type { WorkflowState } from '@lostgradient/weft';
@@ -19,6 +18,7 @@
   import { toStore } from 'svelte/store';
 
   import { formatRelativeTime } from '../../../lib/format/index.ts';
+  import PayloadEditor from '../../../lib/payload-editor/payload-editor.svelte';
   import { signalHistoryFromTimeline, workflowTimelineQueryKey } from './workflow-timeline-data.ts';
 
   interface SignalsTabProps {
@@ -111,7 +111,7 @@
       placeholder="addItem"
       bind:value={signalName}
     />
-    <Textarea
+    <PayloadEditor
       id={`signal-payload-${workflow.id}`}
       label="Payload"
       description="JSON, optional"

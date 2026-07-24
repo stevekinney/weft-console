@@ -30,7 +30,11 @@ function routeBaseline(fetch: ScriptedFetch): void {
     registryVersion: 1,
     workflows: {
       'order-processing': {
-        inputSchema: { type: 'object', required: ['orderId'], properties: { orderId: { type: 'string' } } },
+        inputSchema: {
+          type: 'object',
+          required: ['orderId'],
+          properties: { orderId: { type: 'string' } },
+        },
       },
     },
     activities: {},
@@ -118,9 +122,7 @@ describe('HealthTab', () => {
     expect(buttons.length).toBe(2);
     await fireEvent.click(buttons[buttons.length - 1]!);
 
-    expect(
-      await findToastByText('Recovery triggered — 1 workflow(s) recovered.'),
-    ).not.toBeNull();
+    expect(await findToastByText('Recovery triggered — 1 workflow(s) recovered.')).not.toBeNull();
 
     const bodies = scripted.calls
       .map((call) => (typeof call.init?.body === 'string' ? call.init.body : ''))

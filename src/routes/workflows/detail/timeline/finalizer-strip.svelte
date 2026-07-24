@@ -10,9 +10,7 @@
   import StatusDot from '@lostgradient/cinder/status-dot';
   import { CircleX, Loader, Paintbrush, TriangleAlert } from 'lucide-svelte';
 
-  import type {
-    FinalizerTeardownObservation,
-  } from './workflow-live-observations.svelte.ts';
+  import type { FinalizerTeardownObservation } from './workflow-live-observations.svelte.ts';
 
   interface FinalizerStripProps {
     readonly finalizingLive: boolean;
@@ -57,7 +55,9 @@
             showLabel={false}
           />
           <span class="weft-finalizer-strip__row-name">
-            Teardown {teardown.status === 'completed' ? 'completed' : teardown.status.replace('-', ' ')}
+            Teardown {teardown.status === 'completed'
+              ? 'completed'
+              : teardown.status.replace('-', ' ')}
             {#if teardown.attempts > 1}
               · {teardown.attempts} attempts
             {/if}
@@ -74,9 +74,9 @@
         <p class="weft-finalizer-strip__error">{teardown.error}</p>
       {/if}
       <p class="weft-finalizer-strip__caveat">
-        Observed via the live event feed for this session only — weft has no durable field
-        recording finalizer status, so this section is empty on a page reload once the moment
-        has passed. See the workflow detail track report for the upstream request.
+        Observed via the live event feed for this session only — weft has no durable field recording
+        finalizer status, so this section is empty on a page reload once the moment has passed. See
+        the workflow detail track report for the upstream request.
       </p>
     </div>
   </div>

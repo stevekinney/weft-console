@@ -11,11 +11,14 @@
  */
 import { Engine, MemoryStorage, type Storage } from '@lostgradient/weft';
 import { HttpClientError } from '@lostgradient/weft/client';
-import { principalFromStdioLocal } from '@lostgradient/weft/mcp';
-import { handleRequest } from '@lostgradient/weft/server/handler';
+import { serve } from '@lostgradient/weft/server';
 import { describe, expect, test } from 'bun:test';
 
-import { startLiveSourceTestServer } from '../../lib/live-source/live-source-test-server.test-support.ts';
+import {
+  startLiveSourceTestServer,
+  type LiveSourceTestServer,
+} from '../../lib/live-source/live-source-test-server.test-support.ts';
+import { AUTHORIZATION_SCOPES } from '../../lib/scopes.svelte.ts';
 import {
   probeConditionalBatchSupported,
   storageBatch,
@@ -27,8 +30,9 @@ import {
   type StorageConnection,
 } from './storage-client.ts';
 
-function connectionFor(baseUrl: string): StorageConnection {
-  return { baseUrl, headers: {} };
+/** Storage REST operations declare `access: 'scoped'` (`storage:{read,write,admin}`) — an anonymous request 401s. */
+function connectionFor(server: { baseUrl: string; token: string }): StorageConnection {
+  return { baseUrl: server.baseUrl, headers: { Authorization: `Bearer ${server.token}` } };
 }
 
 /**
@@ -53,20 +57,22 @@ function storageWithoutConditionalBatch(): Storage {
   } as Storage;
 }
 
-/** A minimal `handleRequest`-backed server over a caller-supplied `Storage`, granting every scope (mirrors `startLiveSourceTestServer`'s auth posture, scoped down to just what these tests need). */
-function startServerOverStorage(storage: Storage): { baseUrl: string; stop: () => void } {
+const STORAGE_HARNESS_API_KEY = 'storage-client-test-server-key';
+
+/** A minimal `serve()`-backed server over a caller-supplied `Storage`, with the same full-scope static API key posture as `startLiveSourceTestServer` (mirrors its auth setup, scoped down to just what these tests need). */
+function startServerOverStorage(
+  storage: Storage,
+): Pick<LiveSourceTestServer, 'baseUrl' | 'token' | 'stop'> {
   const engine = new Engine({ storage });
-  const server = Bun.serve({
+  const server = serve({
+    engine,
     port: 0,
-    fetch(request) {
-      return handleRequest(request, engine, {
-        authContext: { method: 'public', principal: principalFromStdioLocal() },
-      });
-    },
+    auth: { apiKeys: [STORAGE_HARNESS_API_KEY], defaultApiKeyScopes: AUTHORIZATION_SCOPES },
   });
   return {
-    baseUrl: server.url.toString().replace(/\/+$/, ''),
-    stop: () => server.stop(true),
+    baseUrl: server.url.replace(/\/+$/, ''),
+    token: STORAGE_HARNESS_API_KEY,
+    stop: () => server.stop(),
   };
 }
 
@@ -74,10 +80,10 @@ describe('storage-client (integration, real server)', () => {
   test('get returns null for a missing key', async () => {
     const server = await startLiveSourceTestServer();
     try {
-      const value = await storageGet(connectionFor(server.baseUrl), 'app:does-not-exist');
+      const value = await storageGet(connectionFor(server), 'app:does-not-exist');
       expect(value).toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -85,34 +91,34 @@ describe('storage-client (integration, real server)', () => {
     const server = await startLiveSourceTestServer();
     try {
       const written = new TextEncoder().encode('{"owner":"ops"}');
-      await storagePut(connectionFor(server.baseUrl), 'app:my-service:config', written);
+      await storagePut(connectionFor(server), 'app:my-service:config', written);
 
-      const read = await storageGet(connectionFor(server.baseUrl), 'app:my-service:config');
+      const read = await storageGet(connectionFor(server), 'app:my-service:config');
       expect(read).not.toBeNull();
       expect(Array.from(read ?? [])).toEqual(Array.from(written));
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('put then delete then get returns null', async () => {
     const server = await startLiveSourceTestServer();
     try {
-      const connection = connectionFor(server.baseUrl);
+      const connection = connectionFor(server);
       await storagePut(connection, 'app:temp-key', new TextEncoder().encode('x'));
       expect(await storageGet(connection, 'app:temp-key')).not.toBeNull();
 
       await storageDelete(connection, 'app:temp-key');
       expect(await storageGet(connection, 'app:temp-key')).toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('scan returns entries under a prefix with decoded values, and pagination cursor advances via gt', async () => {
     const server = await startLiveSourceTestServer();
     try {
-      const connection = connectionFor(server.baseUrl);
+      const connection = connectionFor(server);
       await storagePut(connection, 'app:scan:a', new TextEncoder().encode('1'));
       await storagePut(connection, 'app:scan:b', new TextEncoder().encode('2'));
       await storagePut(connection, 'app:scan:c', new TextEncoder().encode('3'));
@@ -131,14 +137,14 @@ describe('storage-client (integration, real server)', () => {
       expect(secondPage.entries.map((entry) => entry.key)).toEqual(['app:scan:c']);
       expect(secondPage.nextCursor).toBeUndefined();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('batch applies put and delete operations atomically', async () => {
     const server = await startLiveSourceTestServer();
     try {
-      const connection = connectionFor(server.baseUrl);
+      const connection = connectionFor(server);
       await storagePut(connection, 'app:batch:remove-me', new TextEncoder().encode('gone'));
 
       await storageBatch(connection, [
@@ -150,14 +156,14 @@ describe('storage-client (integration, real server)', () => {
       const added = await storageGet(connection, 'app:batch:added');
       expect(new TextDecoder().decode(added ?? new Uint8Array())).toBe('new');
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('conditionalBatch applies when the expected value matches and rejects (applied: false) when it does not', async () => {
     const server = await startLiveSourceTestServer();
     try {
-      const connection = connectionFor(server.baseUrl);
+      const connection = connectionFor(server);
       await storagePut(connection, 'app:cas:key', new TextEncoder().encode('before'));
 
       const staleResult = await storageConditionalBatch(
@@ -180,14 +186,14 @@ describe('storage-client (integration, real server)', () => {
         new TextDecoder().decode((await storageGet(connection, 'app:cas:key')) ?? new Uint8Array()),
       ).toBe('after');
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('probeConditionalBatchSupported returns true against MemoryStorage without writing anything', async () => {
     const server = await startLiveSourceTestServer();
     try {
-      const connection = connectionFor(server.baseUrl);
+      const connection = connectionFor(server);
       const before = await storageScan(connection, { prefix: '', limit: 10_000 });
 
       const supported = await probeConditionalBatchSupported(connection);
@@ -198,24 +204,24 @@ describe('storage-client (integration, real server)', () => {
         before.entries.map((entry) => entry.key),
       );
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('probeConditionalBatchSupported returns false when the backend reports conditionalBatch: false, without throwing', async () => {
     const server = startServerOverStorage(storageWithoutConditionalBatch());
     try {
-      const supported = await probeConditionalBatchSupported(connectionFor(server.baseUrl));
+      const supported = await probeConditionalBatchSupported(connectionFor(server));
       expect(supported).toBe(false);
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('conditionalBatch on an unsupported backend rejects with HttpClientError status 501', async () => {
     const server = startServerOverStorage(storageWithoutConditionalBatch());
     try {
-      const connection = connectionFor(server.baseUrl);
+      const connection = connectionFor(server);
       const rejection = storageConditionalBatch(
         connection,
         [],
@@ -224,7 +230,7 @@ describe('storage-client (integration, real server)', () => {
       await expect(rejection).rejects.toBeInstanceOf(HttpClientError);
       await expect(rejection).rejects.toMatchObject({ status: 501 });
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 });

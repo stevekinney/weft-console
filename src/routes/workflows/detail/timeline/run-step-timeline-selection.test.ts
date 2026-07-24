@@ -43,7 +43,9 @@ describe('attachRunStepTimelineClickSelection', () => {
     const selected: string[] = [];
     attachRunStepTimelineClickSelection(container, (id) => selected.push(id));
 
-    const label = container.querySelector('[data-cinder-path="step-2"] .cinder-run-step-timeline__label');
+    const label = container.querySelector(
+      '[data-cinder-path="step-2"] .cinder-run-step-timeline__label',
+    );
     dispatchClick(label as EventTarget);
 
     expect(selected).toEqual(['step-2']);
@@ -86,12 +88,16 @@ describe('applyRunStepTimelineSelectionHighlight', () => {
     const container = buildTimelineDom(['step-1', 'step-2']);
     applyRunStepTimelineSelectionHighlight(container, 'step-2');
 
-    expect(container.querySelector('[data-cinder-path="step-1"]')?.hasAttribute('data-weft-timeline-selected')).toBe(
-      false,
-    );
-    expect(container.querySelector('[data-cinder-path="step-2"]')?.hasAttribute('data-weft-timeline-selected')).toBe(
-      true,
-    );
+    expect(
+      container
+        .querySelector('[data-cinder-path="step-1"]')
+        ?.hasAttribute('data-weft-timeline-selected'),
+    ).toBe(false);
+    expect(
+      container
+        .querySelector('[data-cinder-path="step-2"]')
+        ?.hasAttribute('data-weft-timeline-selected'),
+    ).toBe(true);
   });
 
   test('clearing the selection removes the attribute from every row', () => {
@@ -99,9 +105,11 @@ describe('applyRunStepTimelineSelectionHighlight', () => {
     applyRunStepTimelineSelectionHighlight(container, 'step-1');
     applyRunStepTimelineSelectionHighlight(container, null);
 
-    expect(container.querySelector('[data-cinder-path="step-1"]')?.hasAttribute('data-weft-timeline-selected')).toBe(
-      false,
-    );
+    expect(
+      container
+        .querySelector('[data-cinder-path="step-1"]')
+        ?.hasAttribute('data-weft-timeline-selected'),
+    ).toBe(false);
   });
 
   test('re-applying moves the attribute rather than stacking it', () => {
@@ -110,9 +118,11 @@ describe('applyRunStepTimelineSelectionHighlight', () => {
     applyRunStepTimelineSelectionHighlight(container, 'step-2');
 
     expect(container.querySelectorAll('[data-weft-timeline-selected]')).toHaveLength(1);
-    expect(container.querySelector('[data-cinder-path="step-2"]')?.hasAttribute('data-weft-timeline-selected')).toBe(
-      true,
-    );
+    expect(
+      container
+        .querySelector('[data-cinder-path="step-2"]')
+        ?.hasAttribute('data-weft-timeline-selected'),
+    ).toBe(true);
   });
 });
 
@@ -121,15 +131,21 @@ describe('applyRunStepTimelineDivergenceHighlight', () => {
     const container = buildTimelineDom(['step-1', 'step-2', 'step-3']);
     applyRunStepTimelineDivergenceHighlight(container, new Set(['step-2', 'step-3']));
 
-    expect(container.querySelector('[data-cinder-path="step-1"]')?.hasAttribute('data-weft-timeline-diverged')).toBe(
-      false,
-    );
-    expect(container.querySelector('[data-cinder-path="step-2"]')?.hasAttribute('data-weft-timeline-diverged')).toBe(
-      true,
-    );
-    expect(container.querySelector('[data-cinder-path="step-3"]')?.hasAttribute('data-weft-timeline-diverged')).toBe(
-      true,
-    );
+    expect(
+      container
+        .querySelector('[data-cinder-path="step-1"]')
+        ?.hasAttribute('data-weft-timeline-diverged'),
+    ).toBe(false);
+    expect(
+      container
+        .querySelector('[data-cinder-path="step-2"]')
+        ?.hasAttribute('data-weft-timeline-diverged'),
+    ).toBe(true);
+    expect(
+      container
+        .querySelector('[data-cinder-path="step-3"]')
+        ?.hasAttribute('data-weft-timeline-diverged'),
+    ).toBe(true);
   });
 
   test('uses a distinct attribute from the selection highlight — the two never collide', () => {

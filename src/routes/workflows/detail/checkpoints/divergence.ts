@@ -30,7 +30,11 @@ export interface DivergenceRow {
 }
 
 function entryDiffers(a: WorkflowTimelineEntry, b: WorkflowTimelineEntry): boolean {
-  return a.operationType !== b.operationType || a.operationLabel !== b.operationLabel || a.status !== b.status;
+  return (
+    a.operationType !== b.operationType ||
+    a.operationLabel !== b.operationLabel ||
+    a.status !== b.status
+  );
 }
 
 /** Aligns two timelines by step number and classifies each row. Sorted by step, ascending. */
@@ -56,20 +60,30 @@ export function alignTimelinesForDivergence(
             ? 'diverged'
             : 'same';
 
-    return { step, stepId: timelineStepId(step), original: originalEntry, forked: forkedEntry, kind };
+    return {
+      step,
+      stepId: timelineStepId(step),
+      original: originalEntry,
+      forked: forkedEntry,
+      kind,
+    };
   });
 }
 
 /** Step ids (as minted by `timeline-mapping.ts`) that diverge in the ORIGINAL timeline's own step-id space. */
 export function divergedOriginalStepIds(rows: readonly DivergenceRow[]): ReadonlySet<string> {
   return new Set(
-    rows.filter((row) => row.kind === 'diverged' || row.kind === 'original-only').map((row) => row.stepId),
+    rows
+      .filter((row) => row.kind === 'diverged' || row.kind === 'original-only')
+      .map((row) => row.stepId),
   );
 }
 
 /** Step ids that diverge in the FORKED timeline's own step-id space. */
 export function divergedForkedStepIds(rows: readonly DivergenceRow[]): ReadonlySet<string> {
   return new Set(
-    rows.filter((row) => row.kind === 'diverged' || row.kind === 'forked-only').map((row) => row.stepId),
+    rows
+      .filter((row) => row.kind === 'diverged' || row.kind === 'forked-only')
+      .map((row) => row.stepId),
   );
 }

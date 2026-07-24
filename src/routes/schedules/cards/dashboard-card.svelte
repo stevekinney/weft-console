@@ -49,7 +49,10 @@
     for (const schedule of items) {
       if (schedule.status === 'active') active += 1;
       else if (schedule.status === 'paused') paused += 1;
-      if (schedule.lastMissedFireAt !== undefined && now - schedule.lastMissedFireAt < MISSED_WITHIN_MS) {
+      if (
+        schedule.lastMissedFireAt !== undefined &&
+        now - schedule.lastMissedFireAt < MISSED_WITHIN_MS
+      ) {
         missedWithin24h += 1;
       }
     }
@@ -111,7 +114,10 @@
         onclick={() => openList()}
       >
         <span class="weft-schedules-dashboard-card__segment-label">
-          <StatusDot status={summary.missedWithin24h > 0 ? 'warning' : 'neutral'} showLabel={false} />
+          <StatusDot
+            status={summary.missedWithin24h > 0 ? 'warning' : 'neutral'}
+            showLabel={false}
+          />
           Missed 24h
         </span>
         <span

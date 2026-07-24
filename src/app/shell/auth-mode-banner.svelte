@@ -19,11 +19,19 @@
 
   let dismissed = $state(false);
 
+  // Copy corrected against the actual per-request behavior (`scopes.svelte.ts`
+  // module doc): the server issues an anonymous principal with ZERO scopes
+  // regardless of `warn` vs `allow` — only `access: 'public'` operations
+  // (mostly workflow reads and single-item actions) actually succeed
+  // uncredentialed; scoped/authenticated operations still 401/403. The
+  // previous "all operations are accessible" wording overclaimed access this
+  // banner's own page can visibly contradict (e.g. a "authentication
+  // required" schedule/worker/review card next to it).
   const COPY: Readonly<Record<'unauthenticated-warn' | 'unauthenticated-allow', string>> = {
     'unauthenticated-warn':
-      'Running in unauthenticated mode. All operations are accessible without credentials.',
+      "Running without authentication. Public workflow reads are open; other operations require scopes this session doesn't have.",
     'unauthenticated-allow':
-      'Running in unauthenticated mode. Access is intentionally open for this deployment.',
+      "Running without authentication by deployment choice. Public workflow reads are open; other operations require scopes this session doesn't have.",
   };
 
   $effect(() => {

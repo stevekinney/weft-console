@@ -69,7 +69,12 @@
     <span>Deployment groups</span>
   </div>
 
-  {#if deployments.length === 0}
+  {#if deployments.length === 0 && workers.length === 0}
+    <EmptyState
+      title="No workers connected"
+      description="Connect a RemoteWorker to this queue to see it here — see the SDK docs for `RemoteWorker`."
+    />
+  {:else if deployments.length === 0}
     <EmptyState
       title="No deployment metadata"
       description="Connected workers haven't reported a deploymentName/buildId — they still appear in the Workers tab."

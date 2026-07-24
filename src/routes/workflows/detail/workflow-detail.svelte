@@ -40,11 +40,13 @@
    *    that arrive live (after mount), which is a real, tested behavior
    *    independent of the replay-timing gap.
    */
+  import EmptyState from '@lostgradient/cinder/empty-state';
   import Skeleton from '@lostgradient/cinder/skeleton';
   import Tabs from '@lostgradient/cinder/tabs';
   import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
   import type { HttpClient } from '@lostgradient/weft/client';
-  import { onDestroy } from 'svelte';
+  import { SearchX } from 'lucide-svelte';
+  import { onDestroy, untrack } from 'svelte';
   import { toStore } from 'svelte/store';
 
   import { getClient } from '../../../lib/client.ts';
@@ -87,17 +89,24 @@
   // `id` is read as a plain value here deliberately, not reactively: the
   // route outlet's `{#key router.pathname}` guarantees a fresh mount (and
   // therefore a fresh subscription) on every workflow id change, so `id`
-  // cannot change under a live subscription.
+  // cannot change under a live subscription. `untrack()` makes that
+  // one-time read explicit to Svelte (mirrors `shell.svelte`'s identical
+  // `untrack()` convention for its own once-at-init props) instead of
+  // triggering the `state_referenced_locally` compiler warning.
   const unsubscribeFleet = getFleetEventSource().subscribe(
     (frame) => applyFleetEventFrame(queryClient, frame),
-    { workflowId: id },
+    { workflowId: untrack(() => id) },
   );
   onDestroy(unsubscribeFleet);
 
   // See the module doc above: started here (not lazily inside the Timeline
   // tab panel) to maximize the odds of catching the fleet feed's one-time
   // replay of this workflow's async-activity/finalizer-teardown events.
-  const liveObservations = new WorkflowLiveObservations(getFleetEventSource(), queryClient, id);
+  const liveObservations = new WorkflowLiveObservations(
+    getFleetEventSource(),
+    queryClient,
+    untrack(() => id),
+  );
   onDestroy(() => liveObservations.dispose());
 
   let pendingAction = $state<WorkflowContextualAction | null>(null);
@@ -168,8 +177,24 @@
       <Skeleton height="8rem" />
     </div>
   {:else if notFound}
-    <div class="weft-workflow-detail__loading">
-      <p>No workflow found with id <code>{id}</code>.</p>
+    <div class="weft-workflow-detail__not-found">
+      <EmptyState
+        title="No workflow found"
+        description={`No workflow found with id "${id}". It may have been purged, or the id may be mistyped.`}
+      >
+        {#snippet icon()}<SearchX aria-hidden="true" size={22} />{/snippet}
+        {#snippet action()}
+          <a
+            href={router.href('/workflows')}
+            onclick={(event) => {
+              event.preventDefault();
+              router.navigate('/workflows');
+            }}
+          >
+            Back to workflows
+          </a>
+        {/snippet}
+      </EmptyState>
     </div>
   {:else if treatment}
     <div
@@ -214,10 +239,14 @@
 
         <div class="weft-workflow-detail__content">
           <Tabs.Panel value="overview"><OverviewTab {client} {workflow} /></Tabs.Panel>
-          <Tabs.Panel value="timeline"><TimelineTab {client} {workflow} {liveObservations} /></Tabs.Panel>
+          <Tabs.Panel value="timeline"
+            ><TimelineTab {client} {workflow} {liveObservations} /></Tabs.Panel
+          >
           <Tabs.Panel value="events"><EventsTab {client} {workflow} /></Tabs.Panel>
           <Tabs.Panel value="logs"><LogsTab /></Tabs.Panel>
-          <Tabs.Panel value="checkpoints"><CheckpointsTab {client} workflowId={workflow.id} /></Tabs.Panel>
+          <Tabs.Panel value="checkpoints"
+            ><CheckpointsTab {client} workflowId={workflow.id} /></Tabs.Panel
+          >
           <Tabs.Panel value="signals"><SignalsTab {client} {workflow} /></Tabs.Panel>
           <Tabs.Panel value="updates"><UpdatesTab {client} {workflow} /></Tabs.Panel>
           <Tabs.Panel value="children"><ChildrenTab {client} {workflow} /></Tabs.Panel>

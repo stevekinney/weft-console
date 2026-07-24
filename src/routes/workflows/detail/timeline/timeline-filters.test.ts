@@ -26,7 +26,12 @@ function entry(overrides: Partial<WorkflowTimelineEntry>): WorkflowTimelineEntry
 
 describe('filterTimelineEntries', () => {
   const entries = [
-    entry({ step: 1, operationType: 'activity', operationLabel: 'reserveFlight', status: 'completed' }),
+    entry({
+      step: 1,
+      operationType: 'activity',
+      operationLabel: 'reserveFlight',
+      status: 'completed',
+    }),
     entry({ step: 2, operationType: 'activity', operationLabel: 'chargeCard', status: 'failed' }),
     entry({ step: 3, operationType: 'race', operationLabel: 'race', status: 'running' }),
     entry({

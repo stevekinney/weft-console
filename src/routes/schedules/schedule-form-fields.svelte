@@ -18,7 +18,6 @@
   import ScheduleBuilder from '@lostgradient/cinder/schedule-builder';
   import type { ScheduleValue } from '@lostgradient/cinder/schedule-builder';
   import Select from '@lostgradient/cinder/select';
-  import Textarea from '@lostgradient/cinder/textarea';
   import Toggle from '@lostgradient/cinder/toggle';
   import { TriangleAlert } from 'lucide-svelte';
   import { untrack } from 'svelte';
@@ -26,6 +25,7 @@
   import type { ScheduleOverlapPolicy } from '@lostgradient/weft';
 
   import { computeNextFires } from '../../lib/format/cron-preview.ts';
+  import PayloadEditor from '../../lib/payload-editor/payload-editor.svelte';
   import { OVERLAP_POLICIES } from './overlap-policy.ts';
   import type { ScheduleFormState } from './schedule-form-state.svelte.ts';
 
@@ -104,7 +104,7 @@
       />
     {/if}
     {#if mode === 'create'}
-      <Textarea
+      <PayloadEditor
         id="weft-schedule-form-input"
         label="Input (JSON)"
         description="The payload passed to each launched run."

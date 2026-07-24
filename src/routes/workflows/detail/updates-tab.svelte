@@ -27,13 +27,13 @@
   import Badge from '@lostgradient/cinder/badge';
   import Button from '@lostgradient/cinder/button';
   import Input from '@lostgradient/cinder/input';
-  import Textarea from '@lostgradient/cinder/textarea';
   import type { HttpClient } from '@lostgradient/weft/client';
   import type { WorkflowState } from '@lostgradient/weft';
   import { CircleCheck, CircleX } from 'lucide-svelte';
   import { onDestroy } from 'svelte';
 
   import { formatRelativeTime } from '../../../lib/format/index.ts';
+  import PayloadEditor from '../../../lib/payload-editor/payload-editor.svelte';
   import { TickingClock } from './ticking-clock.svelte.ts';
 
   interface UpdatesTabProps {
@@ -184,7 +184,7 @@
       placeholder="applyDiscount"
       bind:value={updateName}
     />
-    <Textarea
+    <PayloadEditor
       id={`update-payload-${workflow.id}`}
       label="Payload"
       description="JSON, optional"

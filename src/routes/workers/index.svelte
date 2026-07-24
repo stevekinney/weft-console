@@ -44,7 +44,7 @@
   import { useQueryClient } from '@tanstack/svelte-query';
 
   import { getClient } from '../../lib/client.ts';
-  import { faultTreatment } from '../../lib/faults.ts';
+  import { FAULT_TREATMENT_TITLE, faultTreatment } from '../../lib/faults.ts';
   import { FleetEventSource } from '../../lib/live-source/index.ts';
   import { queryKeys } from '../../lib/query.ts';
   import { router } from '../../lib/router.svelte.ts';
@@ -293,7 +293,7 @@
           </div>
         {:else if fleetError}
           <EmptyState
-            title="Something went wrong"
+            title={FAULT_TREATMENT_TITLE[faultTreatment(fleetError).kind]}
             description={faultTreatment(fleetError).message}
           />
         {:else}
@@ -315,7 +315,7 @@
           </div>
         {:else if fleetError}
           <EmptyState
-            title="Something went wrong"
+            title={FAULT_TREATMENT_TITLE[faultTreatment(fleetError).kind]}
             description={faultTreatment(fleetError).message}
           />
         {:else if selectedWorker}
@@ -342,7 +342,7 @@
           </div>
         {:else if queuesError}
           <EmptyState
-            title="Something went wrong"
+            title={FAULT_TREATMENT_TITLE[faultTreatment(queuesError).kind]}
             description={faultTreatment(queuesError).message}
           />
         {:else if selectedQueue}
@@ -374,7 +374,7 @@
           </div>
         {:else if diagnosticsErrorValue}
           <EmptyState
-            title="Something went wrong"
+            title={FAULT_TREATMENT_TITLE[faultTreatment(diagnosticsErrorValue).kind]}
             description={faultTreatment(diagnosticsErrorValue).message}
           />
         {:else}

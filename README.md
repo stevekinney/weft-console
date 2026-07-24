@@ -19,47 +19,45 @@ bun run dev
 
 Open <http://localhost:5173>.
 
-**Known upstream blocker (`@lostgradient/weft@0.11.0`)**: `scripts/dev-server.ts` does **not** call
-`serve()` from `@lostgradient/weft/server` — doing so throws `Error: Engine internals not
-initialized` for any `Engine` built via the documented root import (`new Engine()` or
-`Engine.create({...})`, no difference). Root cause: weft's `scripts/build.ts` bundles
-`./src/server/index.ts` into a single self-contained `dist/server/index.js` via `Bun.build()`,
-which inlines its own private copy of `core/engine/internals.ts`'s module-scoped `WeakMap` —
-separate from the one the _unbundled_ `dist/core/engine.js` (behind the root export) registers an
-`Engine`'s internals into at construction. Reproduces with the published npm tarball and a
-from-source build off `weft`'s current `main` (commit `4d758a67`); minimal repro is `new Engine()`
+`scripts/dev-server.ts` boots a real, unwrapped `serve()` from `@lostgradient/weft/server` — no
+hand-rolled `Bun.serve()`, no `handleRequest()` workaround, no manual `/api`-prefix stripping, no
+reimplemented event feed. WebSocket upgrades, the per-workflow SSE/WS tail, and JSON-RPC over HTTP
+(`/jsonrpc`) all work against `bun run dev:server` as a result. (An earlier `@lostgradient/weft@0.11.0`
+bug made that impossible — `serve({ engine })` threw for any root-imported `Engine`
+(https://github.com/stevekinney/weft/issues/710); fixed upstream in `0.12.0` (#716), the version this
+package is pinned to. See `scripts/dev-server.ts`'s module doc if you need the full history.) The
+production mount path this package exists for — `serve({ dashboard: weftConsole() })` — is
+runtime-verified the same way: a real `serve({ engine, dashboard: weftConsole() })` instance returns
+the built shell (`index.html` with its `weft-console-config` block) at `200`.
 
-- `serve({ engine })`, nothing console-specific. `dev-server.ts` uses
-  `@lostgradient/weft/server/handler`'s `handleRequest()` directly instead (also a bundled
-  entrypoint, but one that reads engine state only through `Engine`'s own public methods, not an
-  externally-called `getInternals(engine)` — verified working) behind a thin `Bun.serve()` that
-  strips the `/api` prefix. This is the PROJECT-BRIEF-sanctioned "minimal app-local composition, file
-  upstream" response — see the full comment at the top of `scripts/dev-server.ts` for the complete
-  diagnosis and the auth/scope gap from bypassing `serve()`'s `unauthenticatedAccess` handling.
-  **Fleet SSE (`/api/v1/events/sse`) is genuinely wired against real engine events** — `dev-server.ts`
-  calls `wireEventBroadcasting()` (the same function `serve()` itself uses, unaffected by the bug
-  above) directly. What stays unavailable until the upstream fix lands: WebSocket upgrades, the
-  per-workflow tail (`/api/v1/workflows/:id/events/sse` — its production constructor isn't exported
-  from any public subpath either, tracked separately), and JSON-RPC over HTTP (`/jsonrpc`, both live
-  only inside `serve()`'s own pipeline, not `handleRequest`) — `client.operations[...]` calls (e.g.
-  the sidebar's worker-health badge) 404 against this dev harness in the meantime. **File this
-  upstream against `weft` before Phase 1** and delete the workaround for a plain
-  `serve({ engine, port, unauthenticatedAccess: 'warn' })` once fixed and released. The _production_
-  mount path this package exists for — `serve({ dashboard: weftConsole() })` — is blocked by the
-  same bug and cannot be runtime-verified until then; `mount.test-d.ts` only proves `weftConsole()`'s
-  return type, not that `serve()` can actually run with it.
+**A real dev harness needs a real credential, not `unauthenticatedAccess`.** `unauthenticatedAccess`
+only controls whether `serve()` refuses to _start_ with no `auth` configured — it has no per-request
+effect once running. A credential-less request always resolves to a zero-scope anonymous principal,
+so only `access: 'public'` operations (most workflow reads and single-item actions) succeed against
+`bun run dev:server` out of the box; `access: 'scoped'`/`'authenticated'` operations (schedules,
+reviews, storage, system/registry, …) correctly 401 — confirmed live
+(`curl localhost:7233/api/v1/schedules` → `401 {"error":"authentication required"}`). This is
+narrower than `@lostgradient/weft@0.11.0`'s workaround, which hand-injected a full-scope principal
+on every request regardless of credentials; `serve()` has no equivalent hook. `src/lib/scopes.svelte.ts`
+already designs the console around exactly this (optimistic scope grant, graceful 401/403 degrade),
+so the console itself renders correctly either way — it just shows real auth-required states for
+those surfaces in the dev harness until a real `auth` config (and a matching token the console
+sends) is wired up, which is a deliberate follow-up, not done here.
 
 ## Scripts
 
-| Script               | What it does                                                               |
-| -------------------- | -------------------------------------------------------------------------- |
-| `bun run dev`        | Vite dev server with full HMR.                                             |
-| `bun run dev:server` | Boots a seeded local `weft` server (`scripts/dev-server.ts`) on port 7233. |
-| `bun run build`      | Production build (Vite) → `dist/`.                                         |
-| `bun run typecheck`  | `svelte-check` over the whole project.                                     |
-| `bun run lint`       | `oxlint`.                                                                  |
-| `bun run format`     | `prettier --write` (Svelte + import-organizing plugins).                   |
-| `bun run test`       | `bun test` with the Svelte 5 compile plugin + happy-dom preload.           |
+| Script                 | What it does                                                                                                                              |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `bun run dev`          | Vite dev server with full HMR.                                                                                                            |
+| `bun run dev:server`   | Boots a seeded local `weft` server (`scripts/dev-server.ts`) on port 7233.                                                                |
+| `bun run build`        | Production build (Vite) → `dist/`, then `bun run check:bundle` (hard-fails on a budget miss).                                             |
+| `bun run check:bundle` | Gzip-measures every route/lazy chunk against `scripts/check-bundle-size.ts`'s budgets — run standalone for a quick recheck after a build. |
+| `bun run typecheck`    | `svelte-check` over the whole project.                                                                                                    |
+| `bun run lint`         | `oxlint`.                                                                                                                                 |
+| `bun run lint:fix`     | `oxlint --fix`.                                                                                                                           |
+| `bun run format`       | `prettier --write` (Svelte + import-organizing plugins).                                                                                  |
+| `bun run format:check` | `prettier --check` — what CI/pre-commit should run instead of `format`.                                                                   |
+| `bun run test`         | `bun test` with the Svelte 5 compile plugin + happy-dom preload.                                                                          |
 
 ## Deployment modes
 
@@ -105,10 +103,14 @@ proxy or private network.
     object or a real store.
   - **For options that must react to changing component state** (a filter, a page offset, an id
     from the route — the common case for every list/detail route this console builds), a plain
-    object is captured once and never updates. Wrap it in an actual `svelte/store` (`readable`/
-    `derived`), not a `$derived` rune value passed as a plain object and not a getter function —
-    Phase 1's data-layer tracks (`src/routes/*/`) need to establish this bridge once and reuse it;
-    it is out of scope for this Phase-0 scaffold's static smoke test.
+    object is captured once and never updates. The resolved bridge, used consistently across every
+    domain track: `toStore(() => ({ queryKey, queryFn, ... }))` from `svelte/store`, wrapping a
+    getter that reads whatever `$derived`/`$state` values the query depends on — e.g.
+    `src/routes/schedules/schedule-list.svelte`'s `createQuery(toStore(() => ({ queryKey:
+queryKeys.schedules.list(filter), queryFn: () => fetchScheduleList(client, filter) })))`. A bare
+    `$derived` object or a plain getter function passed directly to `createQuery` both fail the same
+    way the footgun above describes; `toStore()` is what actually satisfies `createQuery`'s
+    `StoreOrVal<T>` parameter type reactively.
 - **Bun test + a hand-rolled Svelte-compile plugin, not Vitest** — `tests/setup.ts` +
   `scripts/svelte-test-plugin.ts` port the proven `cinder/packages/components` pattern: a Bun
   plugin compiles `.svelte` (client generate) and `.svelte.ts` rune modules
@@ -127,7 +129,7 @@ available on the server` for every component test — not a real regression, jus
   env-var equivalent for `--conditions` (checked: a top-level `conditions` key and `BUN_CONDITIONS`
   are both silently no-ops for `bun test`/`bun run`); the CLI flags are a hard requirement, per the
   comment at the top of `scripts/svelte-test-plugin.ts`.
-- **Cinder v0.16.1, `@lostgradient/weft` v0.11.0** — pinned exact versions per the scaffolding task
+- **Cinder v0.16.1, `@lostgradient/weft` v0.12.0** — pinned exact versions per the scaffolding task
   (ahead of the plan document's recorded v0.9.0/v0.11.0 ground-truth pass at authoring time).
   `lucide-svelte` is pinned inside Cinder's declared peer range (`>=0.400.0 <1`) rather than the
   latest `1.x` line, which falls outside that peer contract.
@@ -142,15 +144,53 @@ See plan §2 for the authoritative layout description. The short version:
   Phase 1 Foundation gate).
 - `src/routes/<domain>/` — one directory per domain (`dashboard`, `workflows`, `schedules`,
   `workers`, `reviews`, `storage`, `system`). Each domain track owns its own directory
-  exclusively (currently scaffolded `EmptyState` placeholders awaiting their Phase 2+ track);
-  `src/routes/dashboard/cards.ts` is the one shared card-slot registry.
+  exclusively; all seven are fully implemented (list/detail surfaces, mutations, live updates,
+  fault/empty/loading states, colocated tests) — see plan Appendix B for the per-surface
+  acceptance checklist. `src/routes/dashboard/cards.ts` is the one shared card-slot registry.
 - `src/lib/` — framework-free (or `.svelte.ts` rune-based) modules: `client.ts`, `config.ts`,
   `scopes.svelte.ts`, `router.svelte.ts`, `filters.ts`, `faults.ts`, `format/`, `live-source/`.
   Frozen after the Phase 1 Foundation gate.
-- `src/styles/` — `index.css` (shared entry, Cinder base styles + theme contract) plus one empty
-  per-track stylesheet each domain owns exclusively.
-- `fixtures/workflows.ts` — deterministic demo workflows for the dev server, integration tests,
-  and Playwright seeds. Append-only.
+- `src/styles/` — `index.css` (shared entry, Cinder base styles + theme contract) plus one
+  per-track stylesheet each domain owns exclusively (`@lostgradient/cinder/<component>/styles`
+  imports plus route-local rules — never added to `index.css`).
+- `fixtures/` — deterministic demo data for the dev server and integration tests, split by
+  concern (`workflows.ts` is the base module + orchestrating `seed()`; `coordination.ts`,
+  `saga.ts`, `finalizer.ts`, `async-activity.ts`, `children.ts`, `history.ts`, `tagged.ts`,
+  `failures.ts`, `reviews.ts`, `schedules.ts` each seed one domain-specific specimen). Append-only
+  — see the Development section below for a tour. Playwright E2E (plan §11.4) is not yet built in
+  this repository; there are no Playwright seeds today despite what an earlier draft of this file
+  claimed.
 - `scripts/dev-server.ts` — boots the seeded local `weft` server `bun run dev` proxies to.
+- `scripts/check-bundle-size.ts` — the CI-facing bundle-size gate (plan §12), chained onto
+  `bun run build`.
 - `tests/` — the test harness (`setup.ts`) plus integration/proving tests that don't belong to a
   single domain track.
+
+## Development
+
+- **Two-terminal dev harness.** `bun run dev:server` (port 7233) and `bun run dev` (port 5173) —
+  see Quickstart above. Kill both when you're done; `bun run dev:server` holds an in-memory engine
+  with no persistence between restarts.
+- **Test conditions flags are load-bearing.** Always run `bun run test`, never bare `bun test` —
+  it runs `bun test --conditions browser --conditions svelte`, and without those two flags Bun
+  resolves both Cinder and Svelte itself to their non-browser (`dist`/SSR-only) export conditions,
+  which fails every component test with `lifecycle_function_unavailable`. See the "Toolchain
+  decisions" section above for the full diagnosis.
+- **Fixture tour** (`fixtures/*.ts`, all started by `seed()` in `fixtures/workflows.ts` against
+  `bun run dev:server`'s engine): `order-processing` (completes), `payment-failing` (always
+  fails), `long-sleeper` / `review-gate` / `signal-stepped` (deliberately left running),
+  `checkout-coordination` (`coordination.ts` — `ctx.race`/`ctx.all`/`ctx.speculate` in one run,
+  for the Timeline's branch-group rendering), `trip-booking-saga` (`saga.ts` — a failing final
+  step so `ctx.saga` compensates in reverse order), `sandbox-session` (`finalizer.ts` — cancelled
+  mid-run so the finalizer sub-states render), `ship-package-async` (`async-activity.ts` — a
+  never-externally-completed `ctx.completeAsync()` token, for the async-completion drawer),
+  `fulfillment-parent` + `validate-shipment`/`monitor-delivery` (`children.ts` — one awaited
+  child, one detached long-running child), `audit-trail-sweep` (`history.ts` — 200+ durable steps,
+  for timeline/checkpoint pagination), `customer-outreach-campaign` ×4 (`tagged.ts` — varied
+  run-level tags and search attributes), the `timeout`/`cancellation`/`resource`/`system` failure
+  demos (`failures.ts` — one run per failure-category taxonomy value), `content-review` ×3
+  (`reviews.ts` — a pending sectioned/partial review, a completed decision, a timed-out review),
+  and two schedules over `inventory-sync-sweep` (`schedules.ts` — one active every-5-minutes cron,
+  one paused). Extend a
+  module or add a new one for a new demo state; never mutate an existing specimen another track's
+  tests or the dev harness itself already assert against.

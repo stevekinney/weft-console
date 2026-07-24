@@ -4,25 +4,26 @@
    * checkpoint → Replay (read-only) view + Fork dialog, and a "Compare
    * divergence" link once a fork has been created from this session.
    *
-   * ## `client.operations[...]` is JSON-RPC-only, and this dev harness has
-   * no JSON-RPC transport
+   * ## `client.operations[...]` is JSON-RPC-only
    *
    * `weft.workflows.checkpoints.list`/`.get` have a REST binding
    * (`transports.http: true`), but `HttpClient.operations[name](input)`
    * always speaks JSON-RPC over the wire regardless — confirmed against
    * `weft/src/cli/operation-client-runtime.ts`'s module doc ("The HTTP
    * transport speaks JSON-RPC over the wire") — there is no REST fallback
-   * to opt into from the console. `scripts/dev-server.ts`'s own module doc
-   * says its thin `Bun.serve()` (standing in for weft's real `serve()` due
-   * to an upstream bug) does not wire up `/jsonrpc` at all — the same
-   * documented gap as `WorkflowTailSource`'s 501 (weft#714). Verified live:
-   * a request to this tab in the dev harness gets a real `404 Not Found:
-   * POST /jsonrpc` from the server, so `$checkpointsQuery.isError` is the
-   * expected, honest outcome here — NOT "no checkpoints exist." This tab
-   * therefore renders the real fault treatment rather than folding an error
+   * to opt into from the console. This didn't work against a real `POST
+   * /jsonrpc` in the dev harness at all before
+   * `@lostgradient/weft@0.12.0` (weft#710's `serve({ engine })` bug forced
+   * `scripts/dev-server.ts` onto a bare `handleRequest()` workaround, which
+   * has no JSON-RPC-over-HTTP route — `serve()`-pipeline-only, per that
+   * file's own module doc; fixed upstream #716); verified live post-bump:
+   * `weft.workflows.checkpoints.list` round-trips real checkpoint data
+   * through `bun run dev:server`. `$checkpointsQuery.isError`
+   * still renders the real fault treatment rather than folding an error
    * into the empty state (an earlier draft did exactly that and silently
-   * mislabeled a 404 as "no checkpoint history retained" — fixed once this
-   * was caught against the live harness).
+   * mislabeled a 404 as "no checkpoint history retained") — that stays
+   * correct for genuine faults, it just isn't the dev harness's steady
+   * state anymore.
    */
   import Badge from '@lostgradient/cinder/badge';
   import Button from '@lostgradient/cinder/button';
@@ -45,7 +46,9 @@
   import ReplayView from './replay-view.svelte';
 
   interface CheckpointsTabProps {
-    readonly client: CheckpointsOperationsClient & Pick<HttpClient, 'replayTo' | 'getTimeline'> & ForkClient;
+    readonly client: CheckpointsOperationsClient &
+      Pick<HttpClient, 'replayTo' | 'getTimeline'> &
+      ForkClient;
     readonly workflowId: string;
   }
 
@@ -58,7 +61,9 @@
     })),
   );
 
-  const treatment = $derived($checkpointsQuery.isError ? faultTreatment($checkpointsQuery.error) : null);
+  const treatment = $derived(
+    $checkpointsQuery.isError ? faultTreatment($checkpointsQuery.error) : null,
+  );
 
   let selectedStep = $state<number | null>(null);
   let panel = $state<'replay' | 'fork'>('replay');
@@ -102,7 +107,9 @@
             onclick={() => selectCheckpoint(checkpoint.step)}
           >
             <span class="weft-checkpoints-tab__row-step">step {checkpoint.step}</span>
-            <span class="weft-checkpoints-tab__row-time">{formatRelativeTime(checkpoint.timestamp)}</span>
+            <span class="weft-checkpoints-tab__row-time"
+              >{formatRelativeTime(checkpoint.timestamp)}</span
+            >
             <span class="weft-checkpoints-tab__row-size">{formatBytes(checkpoint.sizeBytes)}</span>
           </button>
         {/each}
@@ -110,7 +117,10 @@
 
       <div class="weft-checkpoints-tab__detail">
         {#if selectedStep === null}
-          <EmptyState title="Select a checkpoint" description="Choose a step to replay or fork from." />
+          <EmptyState
+            title="Select a checkpoint"
+            description="Choose a step to replay or fork from."
+          />
         {:else}
           <div class="weft-checkpoints-tab__tabs">
             <Button
@@ -144,7 +154,7 @@
     {#if forkedWorkflowId !== null}
       <div class="weft-checkpoints-tab__divergence">
         <div class="weft-checkpoints-tab__divergence-label">Divergence from the forked run</div>
-        <DivergenceView {client} originalWorkflowId={workflowId} forkedWorkflowId={forkedWorkflowId} />
+        <DivergenceView {client} originalWorkflowId={workflowId} {forkedWorkflowId} />
       </div>
     {/if}
   {/if}

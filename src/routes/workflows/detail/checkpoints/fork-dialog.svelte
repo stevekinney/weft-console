@@ -24,6 +24,14 @@
 
   let { client, workflowId, initialStep, onForked }: ForkDialogProps = $props();
 
+  // Intentional one-shot capture, not a bug: `checkpoints-tab.svelte` always
+  // destroys and remounts this dialog (it lives behind an `{#if panel ===
+  // 'fork'}` block gated by `selectCheckpoint()`, which resets `panel` to
+  // 'replay' on every selection change), so a fresh instance always sees the
+  // current `initialStep` at construction. Tracking it reactively here would
+  // stomp the operator's in-progress edit to the target-step field whenever
+  // `initialStep` happened to change out from under a still-mounted instance.
+  // svelte-ignore state_referenced_locally
   let targetStepText = $state(String(initialStep));
 
   const forkMutation = createMutation({
@@ -62,7 +70,9 @@
 
   {#if $forkMutation.isError}
     <p class="weft-fork-dialog__error">
-      {$forkMutation.error instanceof Error ? $forkMutation.error.message : 'Failed to fork the workflow.'}
+      {$forkMutation.error instanceof Error
+        ? $forkMutation.error.message
+        : 'Failed to fork the workflow.'}
     </p>
   {/if}
 

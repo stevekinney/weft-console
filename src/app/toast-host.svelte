@@ -47,14 +47,36 @@
     return toastApi.show(message, options);
   }
 
-  /** Toast variant per treatment kind — `invalid`/`unauthorized`/`internal` are failures the operator must act on; `not-found`/`conflict`/`not-supported` are lower-stakes state mismatches. */
-  const FAULT_TOAST_VARIANT: Readonly<Record<FaultTreatmentKind, ToastVariant>> = {
+  /** Toast variant per treatment kind — `invalid`/`unauthorized`/`internal` are failures the operator must act on; `not-found`/`conflict`/`not-supported` are lower-stakes state mismatches. Exported so tests can assert the fault→toast policy directly rather than only through Cinder's rendered DOM. */
+  export const FAULT_TOAST_VARIANT: Readonly<Record<FaultTreatmentKind, ToastVariant>> = {
     'not-found': 'warning',
     conflict: 'warning',
     invalid: 'danger',
     unauthorized: 'danger',
     'not-supported': 'warning',
     internal: 'danger',
+  };
+
+  /**
+   * Duration per toast variant (T9.4 accessibility pass, design §C: "high
+   * urgency `role=alert` (danger left edge, persists) vs normal
+   * `role=status` (auto-dismiss 6s)"). Mirrors
+   * `../app/engine-status.svelte.ts`'s `toastForNotification` exactly —
+   * that module already gets this right for fleet-notification toasts;
+   * `showFault` previously left `duration` unset for every kind, so a
+   * danger-variant fault (the operator-must-act case) silently inherited
+   * Cinder's uniform 5s default and auto-dismissed like a low-stakes one.
+   * `0` means "persist until manually dismissed" (Cinder's own `duration`
+   * contract — `toast-region.svelte`'s `armTimer` never schedules removal
+   * when `duration <= 0`), never "invisible"/"instant".
+   */
+  export const FAULT_TOAST_DURATION_MS: Readonly<Record<FaultTreatmentKind, number>> = {
+    'not-found': 6_000,
+    conflict: 6_000,
+    invalid: 0,
+    unauthorized: 0,
+    'not-supported': 6_000,
+    internal: 0,
   };
 
   /**
@@ -68,6 +90,7 @@
   export function showFault(treatment: FaultTreatment): string | undefined {
     return showToast(`${FAULT_TREATMENT_TITLE[treatment.kind]}: ${treatment.message}`, {
       variant: FAULT_TOAST_VARIANT[treatment.kind],
+      duration: FAULT_TOAST_DURATION_MS[treatment.kind],
     });
   }
 </script>

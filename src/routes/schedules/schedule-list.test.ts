@@ -36,7 +36,7 @@ describe('ScheduleList', () => {
   test('shows the onboarding empty state when no schedules exist', async () => {
     const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText } = render(ScheduleListHarness, {
@@ -47,7 +47,7 @@ describe('ScheduleList', () => {
       await waitFor(() => expect(getByText('No schedules')).not.toBeNull());
       expect(getByText('Create one to run workflows on a cadence.')).not.toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -60,7 +60,7 @@ describe('ScheduleList', () => {
       cron: '0 2 * * *',
       input: { warehouseId: 'wh-main' },
     });
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText, getByRole } = render(ScheduleListHarness, {
@@ -74,7 +74,7 @@ describe('ScheduleList', () => {
       expect(getByText('Every day at 02:00')).not.toBeNull();
       expect(getByTextInTable('inventory-sync-sweep')).not.toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -88,7 +88,7 @@ describe('ScheduleList', () => {
       input: { warehouseId: 'wh-main' },
     });
     await handle.pause();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText, getByRole } = render(ScheduleListHarness, {
@@ -100,7 +100,40 @@ describe('ScheduleList', () => {
       const { getByText: getByTextInTable } = within(getByRole('table'));
       expect(getByTextInTable('Paused')).not.toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
+    }
+  });
+
+  /**
+   * T9.4 accessibility pass: before this fix, the row's ONLY navigation
+   * affordance was `Table.Row`'s `onclick` — Cinder's `table-row.svelte`
+   * spreads `onclick` straight onto a bare `<tr>` with no `tabindex`/keydown
+   * handling, so the row was reachable by mouse only. A real `<a href>` is
+   * the keyboard path (Tab reaches it, Enter activates it natively — no app
+   * JS needed for that part), mirroring `workflow-table.svelte`'s identical
+   * id-link pattern.
+   */
+  test('the schedule id renders as a real link to the detail URL (keyboard-reachable, not row-onclick-only)', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const server = await startLiveSourceTestServer();
+    await server.engine.schedule({
+      workflow: 'inventory-sync-sweep',
+      id: 'nightly-rollup',
+      cron: '0 2 * * *',
+      input: { warehouseId: 'wh-main' },
+    });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
+
+    try {
+      const { getByRole } = render(ScheduleListHarness, {
+        props: { client },
+      });
+
+      const waitFor = await waitForCondition();
+      const link = await waitFor(() => getByRole('link', { name: 'nightly-rollup' }));
+      expect(link.getAttribute('href')).toContain('id=nightly-rollup');
+    } finally {
+      await server.stop();
     }
   });
 
@@ -113,7 +146,7 @@ describe('ScheduleList', () => {
       cron: '0 2 * * *',
       input: { warehouseId: 'wh-main' },
     });
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText } = render(ScheduleListHarness, {
@@ -130,14 +163,14 @@ describe('ScheduleList', () => {
 
       expect(window.location.search).toContain('id=nightly-rollup');
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('the Create schedule button is disabled with a reason when schedules:write is missing', async () => {
     const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole, getByText } = render(ScheduleListHarness, {
@@ -152,14 +185,14 @@ describe('ScheduleList', () => {
       });
       expect(getByText('Requires schedules:write')).not.toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('the Create schedule button is enabled with schedules:write granted', async () => {
     const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole, queryByText } = render(ScheduleListHarness, {
@@ -174,7 +207,7 @@ describe('ScheduleList', () => {
       });
       expect(queryByText('Requires schedules:write')).toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -187,7 +220,7 @@ describe('ScheduleList', () => {
       cron: '0 2 * * *',
       input: { warehouseId: 'wh-main' },
     });
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText, getByRole } = render(ScheduleListHarness, {
@@ -207,7 +240,89 @@ describe('ScheduleList', () => {
       });
       expect(getByText('nightly-rollup')).not.toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
+    }
+  });
+
+  test('cancelling a schedule requires Tier-2 confirmation before it takes effect (T8.2 tier sweep)', async () => {
+    const { render, fireEvent, within } = await import('@testing-library/svelte');
+    const server = await startLiveSourceTestServer();
+    await server.engine.schedule({
+      workflow: 'inventory-sync-sweep',
+      id: 'nightly-rollup',
+      cron: '0 2 * * *',
+      input: { warehouseId: 'wh-main' },
+    });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
+
+    try {
+      const { getByText, getByRole, queryByText } = render(ScheduleListHarness, {
+        props: { client },
+      });
+
+      const waitFor = await waitForCondition();
+      await waitFor(() => {
+        expect(within(getByRole('table')).getByText('Active')).not.toBeNull();
+      });
+
+      await fireEvent.click(getByRole('button', { name: 'Actions for nightly-rollup' }));
+      await fireEvent.click(await waitFor(() => getByRole('menuitem', { name: /Cancel/ })));
+
+      // Opening the menu item shows the confirm dialog — the schedule must
+      // NOT be cancelled yet (this is exactly the gap the tier sweep fixed:
+      // the row action previously mutated on click with no confirm step at
+      // all).
+      await waitFor(() => {
+        expect(getByText('Cancel this schedule?')).not.toBeNull();
+      });
+      expect(within(getByRole('table')).getByText('Active')).not.toBeNull();
+
+      await fireEvent.click(getByRole('button', { name: 'Cancel schedule' }));
+
+      await waitFor(() => {
+        expect(within(getByRole('table')).getByText('Cancelled')).not.toBeNull();
+      });
+      expect(queryByText('Cancel this schedule?')).toBeNull();
+    } finally {
+      await server.stop();
+    }
+  });
+
+  test('dismissing the cancel confirm dialog leaves the schedule active', async () => {
+    const { render, fireEvent, within } = await import('@testing-library/svelte');
+    const server = await startLiveSourceTestServer();
+    await server.engine.schedule({
+      workflow: 'inventory-sync-sweep',
+      id: 'nightly-rollup',
+      cron: '0 2 * * *',
+      input: { warehouseId: 'wh-main' },
+    });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
+
+    try {
+      const { getByText, getByRole, queryByText } = render(ScheduleListHarness, {
+        props: { client },
+      });
+
+      const waitFor = await waitForCondition();
+      await waitFor(() => {
+        expect(within(getByRole('table')).getByText('Active')).not.toBeNull();
+      });
+
+      await fireEvent.click(getByRole('button', { name: 'Actions for nightly-rollup' }));
+      await fireEvent.click(await waitFor(() => getByRole('menuitem', { name: /Cancel/ })));
+      await waitFor(() => {
+        expect(getByText('Cancel this schedule?')).not.toBeNull();
+      });
+
+      await fireEvent.click(getByRole('button', { name: 'Cancel' }));
+
+      await waitFor(() => {
+        expect(queryByText('Cancel this schedule?')).toBeNull();
+      });
+      expect(within(getByRole('table')).getByText('Active')).not.toBeNull();
+    } finally {
+      await server.stop();
     }
   });
 
@@ -242,7 +357,7 @@ describe('ScheduleList', () => {
       cron: '0 2 * * *',
       input: { warehouseId: 'wh-main' },
     });
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole, getByText, queryByText } = render(ScheduleListHarness, {
@@ -252,11 +367,9 @@ describe('ScheduleList', () => {
       const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('weekly-digest')).not.toBeNull());
       expect(queryByText('nightly-rollup')).toBeNull();
-      expect((getByRole('combobox', { name: 'Status' }) as HTMLSelectElement).value).toBe(
-        'paused',
-      );
+      expect((getByRole('combobox', { name: 'Status' }) as HTMLSelectElement).value).toBe('paused');
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -264,7 +377,7 @@ describe('ScheduleList', () => {
     resetLocation('/schedules');
     const { render, fireEvent } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole } = render(ScheduleListHarness, { props: { client } });
@@ -275,7 +388,7 @@ describe('ScheduleList', () => {
 
       expect(window.location.search).toBe('?status=active');
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 });

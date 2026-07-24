@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 
 import { HttpClientError } from '@lostgradient/weft/client';
 
-import type { AttachedPendingActivity } from './async-activity-matching.ts';
 import AsyncActivityDrawerHarness from './async-activity-drawer.test-harness.svelte';
+import type { AttachedPendingActivity } from './async-activity-matching.ts';
 
 function activity(overrides: Partial<AttachedPendingActivity> = {}): AttachedPendingActivity {
   return {
@@ -20,7 +20,9 @@ function activity(overrides: Partial<AttachedPendingActivity> = {}): AttachedPen
 describe('AsyncActivityDrawer', () => {
   test('shows the token and the "not a secret" label', async () => {
     const { render } = await import('@testing-library/svelte');
-    const client = { activity: { complete: async () => {}, completeExceptionally: async () => {} } };
+    const client = {
+      activity: { complete: async () => {}, completeExceptionally: async () => {} },
+    };
     const { getByText } = render(AsyncActivityDrawerHarness, {
       props: { client, open: true, activity: activity(), onClose: () => {}, onResolved: () => {} },
     });
@@ -80,7 +82,9 @@ describe('AsyncActivityDrawer', () => {
     });
 
     await fireEvent.click(getByRole('radio', { name: 'Fail' }));
-    await fireEvent.input(getByLabelText('Error message'), { target: { value: 'printer offline' } });
+    await fireEvent.input(getByLabelText('Error message'), {
+      target: { value: 'printer offline' },
+    });
     await fireEvent.click(getByRole('button', { name: 'Fail activity' }));
 
     await waitFor(() => {

@@ -2,19 +2,8 @@
   /**
    * Start wizard — Configure step (plan §9.2 T2.3, §10.2 payload editor).
    * `SchemaForm` (Cinder) for form mode when the registry published an
-   * `inputSchema`; a monospace `Textarea` for raw-JSON mode.
-   *
-   * **Not CodeMirror.** Plan §1 decision 8 locks CodeMirror 6 for the
-   * raw-JSON mode across every payload-editing surface in the console
-   * (Start/Signal/Update/Query/Fork/Schedule/Storage-put) — a genuinely
-   * shared, cross-cutting dependency spanning multiple tracks running in
-   * parallel (Track A2 detail tabs, Track B schedules, Track E storage).
-   * Adding it here alone risks each track vendoring its own setup and
-   * colliding on `package.json` (outside this track's owned paths). This
-   * ships a plain `Textarea` + `JSON.parse` validation instead — full
-   * functional parity (edit raw JSON, see a validation error), no syntax
-   * highlighting — and the console's final report flags the shared
-   * CodeMirror module as a follow-up foundation task.
+   * `inputSchema`; the shared `PayloadEditor` (`src/lib/payload-editor/`,
+   * CodeMirror 6, lazy-loaded) for raw-JSON mode.
    *
    * **Mode-switch losslessness, honestly scoped.** `SchemaForm` has no way
    * to read its live, uncommitted value outside its own `onsubmit` (its
@@ -32,8 +21,8 @@
    */
   import SchemaForm from '@lostgradient/cinder/schema-form';
   import SegmentedControl, { Segment } from '@lostgradient/cinder/segmented-control';
-  import Textarea from '@lostgradient/cinder/textarea';
 
+  import PayloadEditor from '../../../lib/payload-editor/payload-editor.svelte';
   import AdvancedOptions from './advanced-options.svelte';
   import { parseRawPayload, type AdvancedStartOptionsInput } from './start-wizard-state.ts';
 
@@ -91,15 +80,19 @@
   {/if}
 
   {#if mode === 'form' && schema}
-    <SchemaForm {schema} name="start-input" submitLabel="Continue to review" onsubmit={onContinue} />
+    <SchemaForm
+      {schema}
+      name="start-input"
+      submitLabel="Continue to review"
+      onsubmit={onContinue}
+    />
   {:else}
-    <Textarea
+    <PayloadEditor
       id="weft-start-raw-json"
       label="Payload (JSON)"
       rows={8}
-      value={rawText}
+      bind:value={() => rawText, (next) => onRawTextChange(next)}
       {...!rawParse.ok ? { error: rawParse.error } : {}}
-      oninput={(event) => onRawTextChange((event.currentTarget as HTMLTextAreaElement).value)}
     />
   {/if}
 

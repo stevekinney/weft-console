@@ -17,7 +17,9 @@ function entry(overrides: Partial<WorkflowTimelineEntry>): WorkflowTimelineEntry
   };
 }
 
-function pending(overrides: Partial<PendingAsyncActivityObservation> = {}): PendingAsyncActivityObservation {
+function pending(
+  overrides: Partial<PendingAsyncActivityObservation> = {},
+): PendingAsyncActivityObservation {
   return {
     token: 'tok-1',
     operationId: 'op-1',
@@ -60,7 +62,9 @@ describe('attachPendingActivitiesToSteps', () => {
   });
 
   test('a coordinator-degraded entry (race/parallel/speculate) never matches — operationType is not activity', () => {
-    const entries = [entry({ step: 1, operationType: 'race', operationLabel: 'race', status: 'running' })];
+    const entries = [
+      entry({ step: 1, operationType: 'race', operationLabel: 'race', status: 'running' }),
+    ];
 
     const [attached] = attachPendingActivitiesToSteps([pending()], entries);
 

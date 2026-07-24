@@ -72,6 +72,31 @@ export class ScriptedFetch {
     });
   }
 
+  /**
+   * Standing route for an SSE stream (`FleetEventSource` consumers) that
+   * STAYS OPEN after delivering `chunks` — never closes on its own. Mirrors
+   * `src/routes/system/system-test-support.test-support.ts`'s identical
+   * `routeSseStream` (kept as a separate per-track copy — module doc):
+   * `FleetEventSource` reconnects unconditionally on ANY stream end (no
+   * fleet-level "done" signal), so a finite/closed response would
+   * immediately trigger a reconnect loop instead of staying live for the
+   * test.
+   */
+  routeSseStream(urlSubstring: string, chunks: readonly string[] = []): void {
+    this.#routes.push({
+      matches: (call) => call.url.includes(urlSubstring),
+      respond: () => {
+        const encoder = new TextEncoder();
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) {
+            for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+          },
+        });
+        return new Response(body, { headers: { 'Content-Type': 'text/event-stream' } });
+      },
+    });
+  }
+
   /** Standing route: any JSON-RPC request for `method` gets `result` as a success envelope. */
   routeJsonRpcMethod(method: string, result: unknown): void {
     this.#routes.push({

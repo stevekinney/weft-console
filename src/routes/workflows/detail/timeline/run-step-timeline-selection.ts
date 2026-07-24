@@ -2,6 +2,35 @@
  * App-local DOM composition over `RunStepTimeline` for click-to-select and
  * selection tinting (plan design §E, BINDING).
  *
+ * `attachRunStepTimelineClickSelection` is a MOUSE-ONLY convenience —
+ * clicking anywhere on a step row selects it. The keyboard-accessible path
+ * (Tab + Enter/Space, with `aria-pressed` state) is a real `<button>`
+ * rendered through `RunStepTimeline`'s `children` snippet in
+ * `../timeline-tab.svelte` (T9.4 accessibility pass), since neither this
+ * module's row tint nor Cinder's `<li>` itself is focusable. Keep both: the
+ * button owns correctness (keyboard + ARIA), the row click stays as a
+ * bonus for mouse users, matching `workflow-table.svelte`'s identical
+ * "real interactive element owns the keyboard path, `onclick` is a mouse
+ * bonus" split.
+ *
+ * ## Must attach with `svelte/events`' `on`, not `addEventListener`
+ *
+ * Svelte 5 delegates common events (including `click`) to a single
+ * application-root listener for its declarative `onclick={...}` handlers.
+ * Per Svelte's own docs (`basic-markup.md` "Event delegation"): a listener
+ * attached with plain `addEventListener` on an ancestor runs DURING NATIVE
+ * BUBBLING — i.e. BEFORE a descendant's declarative `onclick`, which only
+ * runs once the (already-bubbled) event reaches the delegated root. That
+ * ordering bit the keyboard-select button below: its own `onclick` called
+ * `event.stopPropagation()`, but by the time it ran, this module's
+ * `addEventListener`-based listener had ALREADY fired — `selectTimelineStep`
+ * toggles, so one click called it twice (once from each handler) and
+ * silently cancelled out (verified empirically: `aria-pressed` never
+ * flipped). Svelte's docs prescribe the fix directly: attach with the `on`
+ * helper from `svelte/events` instead — it participates correctly in the
+ * delegated order, so a descendant's `stopPropagation()` actually prevents
+ * this listener from running.
+ *
  * ## Why this reaches into Cinder's rendered DOM instead of using a prop
  *
  * Verified against Cinder v0.16.1 (`run-step-timeline.types.ts`,
@@ -33,6 +62,8 @@
  * (digits and a hyphen only), so escaping never triggers and the path is the
  * id verbatim — decoding is the identity function, not a fragile unescape.
  */
+import { on } from 'svelte/events';
+
 const RUN_STEP_ITEM_SELECTOR = '.cinder-run-step-timeline__item[data-cinder-path]';
 const SELECTED_ATTRIBUTE = 'data-weft-timeline-selected';
 
@@ -62,8 +93,7 @@ export function attachRunStepTimelineClickSelection(
     onSelectStepId(stepId);
   }
 
-  container.addEventListener('click', handleClick);
-  return () => container.removeEventListener('click', handleClick);
+  return on(container, 'click', handleClick);
 }
 
 /**

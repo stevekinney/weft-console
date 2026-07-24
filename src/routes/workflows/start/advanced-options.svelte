@@ -29,7 +29,10 @@
     patch({ searchAttributes: [...value.searchAttributes, { key: '', value: '' }] });
   }
 
-  function updateAttributeRow(index: number, partial: Partial<{ key: string; value: string }>): void {
+  function updateAttributeRow(
+    index: number,
+    partial: Partial<{ key: string; value: string }>,
+  ): void {
     patch({
       searchAttributes: value.searchAttributes.map((row, i) =>
         i === index ? { ...row, ...partial } : row,
@@ -56,14 +59,16 @@
       label="Idempotency key"
       description="A spent key returns a 409 pointing at the existing run."
       value={value.idempotencyKey}
-      oninput={(event) => patch({ idempotencyKey: (event.currentTarget as HTMLInputElement).value })}
+      oninput={(event) =>
+        patch({ idempotencyKey: (event.currentTarget as HTMLInputElement).value })}
     />
     <Input
       id="weft-start-execution-timeout"
       label="Execution timeout"
       description={'e.g. "1h", "30m"'}
       value={value.executionTimeout}
-      oninput={(event) => patch({ executionTimeout: (event.currentTarget as HTMLInputElement).value })}
+      oninput={(event) =>
+        patch({ executionTimeout: (event.currentTarget as HTMLInputElement).value })}
     />
   </div>
 
@@ -87,7 +92,8 @@
           hideLabel
           placeholder="key"
           value={row.key}
-          oninput={(event) => updateAttributeRow(index, { key: (event.currentTarget as HTMLInputElement).value })}
+          oninput={(event) =>
+            updateAttributeRow(index, { key: (event.currentTarget as HTMLInputElement).value })}
         />
         <Input
           id={`weft-start-attribute-value-${index}`}
@@ -95,7 +101,8 @@
           hideLabel
           placeholder="value"
           value={row.value}
-          oninput={(event) => updateAttributeRow(index, { value: (event.currentTarget as HTMLInputElement).value })}
+          oninput={(event) =>
+            updateAttributeRow(index, { value: (event.currentTarget as HTMLInputElement).value })}
         />
         <button
           type="button"

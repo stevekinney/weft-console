@@ -19,14 +19,15 @@
    *
    * ## Live tail in the dev harness
    *
-   * `scripts/dev-server.ts`'s own module doc: the per-workflow WS/SSE tail
-   * 501s in this harness (weft#714, already filed by Foundation/T1.4 — "no
-   * route consumes WorkflowTailSource yet ... Workflow Detail is still a
-   * Phase-2 placeholder"). This tab is that first consumer. `WorkflowTailSource`
-   * reconnects forever on a 501 (no attempt ceiling, plan §5.1), so the
-   * `ConnectionIndicator` correctly shows `reconnecting` indefinitely against
-   * this harness while the seeded historical events stay visible — the
-   * intended degrade-to-last-known-state behavior, not a bug to work around.
+   * The per-workflow WS/SSE tail works end to end against `bun run
+   * dev:server` as of `@lostgradient/weft@0.12.0` (weft#714, fixed
+   * upstream — `scripts/dev-server.ts`'s plain `serve()` wires the real
+   * per-workflow feed; verified live: `ws://localhost:7233/api/v1/workflows/
+   * :id/watch` upgrades and delivers real checkpoint/lifecycle frames).
+   * `WorkflowTailSource`'s reconnect-forever behavior on a genuinely
+   * unreachable feed (no attempt ceiling, plan §5.1) is still real and
+   * still exercised by a failure — it just isn't the dev harness's steady
+   * state anymore.
    *
    * ## Track A3 addition: linked selection (design §E, BINDING)
    *
@@ -54,7 +55,7 @@
   import type { HttpClient } from '@lostgradient/weft/client';
   import type { WorkflowEvent, WorkflowState } from '@lostgradient/weft';
   import { Filter, X } from 'lucide-svelte';
-  import { onDestroy } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
   import { toStore } from 'svelte/store';
 
   import type { LiveSourceStatus } from '../../../lib/live-source/index.ts';
@@ -65,7 +66,10 @@
   import type { WorkflowEventTailOpener } from '../../../lib/live-source/workflow-tail-source.svelte.ts';
   import { WorkflowTailSource } from '../../../lib/live-source/workflow-tail-source.svelte.ts';
   import { stepNumberFromRunStepId } from './timeline/timeline-mapping.ts';
-  import { clearTimelineSelection, timelineSelectionFor } from './timeline/timeline-selection-store.svelte.ts';
+  import {
+    clearTimelineSelection,
+    timelineSelectionFor,
+  } from './timeline/timeline-selection-store.svelte.ts';
   import {
     buildEventHistoryExport,
     buildEventsAndTimelineExport,
@@ -86,8 +90,11 @@
   // Called once at init, not reactively — see `TimelineTab`'s identical
   // comment: `timelineSelectionFor` conditionally mutates the shared store,
   // which Svelte forbids inside a `$derived`, and `workflow.id` is stable
-  // for this component's whole lifetime regardless.
-  const selection = timelineSelectionFor(workflow.id);
+  // for this component's whole lifetime regardless (a workflow's `id` never
+  // changes once created, and this tab only ever mounts under one fixed
+  // `workflow-detail.svelte` id). `untrack()` makes that explicit instead of
+  // triggering the `state_referenced_locally` compiler warning.
+  const selection = timelineSelectionFor(untrack(() => workflow.id));
 
   const eventsQuery = createQuery(
     toStore(() => ({
@@ -113,7 +120,9 @@
   // toggle `live` independently; it does not keep tracking `workflow.status`
   // after mount, which is intentional (a running workflow that just
   // completed shouldn't yank the toggle out from under the operator).
-  let live = $state(!isTerminalStatus(workflow.status));
+  // `untrack()` makes that one-time read explicit instead of triggering the
+  // `state_referenced_locally` compiler warning.
+  let live = $state(untrack(() => !isTerminalStatus(workflow.status)));
   let tail = $state<WorkflowTailSource | null>(null);
 
   function startTail(): void {
@@ -168,8 +177,7 @@
       : ($eventsQuery.data ?? [])
           .map((event, index) => ({ event, entry: toStreamEntry(event, index) }))
           .filter(
-            ({ event }) =>
-              isRecordWithStep(event.data) && event.data['step'] === selectedStep,
+            ({ event }) => isRecordWithStep(event.data) && event.data['step'] === selectedStep,
           )
           .map(({ entry }) => entry),
   );

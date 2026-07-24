@@ -86,19 +86,6 @@ describe('createClient — headers', () => {
   });
 });
 
-describe('createClient — construction does not crash outside Bun (plan §4 upstream note)', () => {
-  test('repeated construction is safe (the Bun.env shim never overwrites a real Bun global)', () => {
-    expect(() => {
-      createClient({ baseUrl: 'https://weft.example.com' });
-      createClient({ baseUrl: 'https://weft.example.com' });
-    }).not.toThrow();
-    // Confirms the shim in ./client.ts never clobbers Bun's own real global —
-    // if it did, unrelated Bun APIs used elsewhere in this same test process
-    // would start failing after the first createClient() call.
-    expect(typeof Bun.env).toBe('object');
-  });
-});
-
 describe('setApiKey', () => {
   const config: WeftConsoleRuntimeConfig = { baseUrl: 'https://weft.example.com' };
 

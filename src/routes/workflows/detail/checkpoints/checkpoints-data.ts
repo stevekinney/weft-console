@@ -108,9 +108,7 @@ export function replayQueryKey(workflowId: string, step: number): QueryKey {
 /** Narrow surface this module needs off `client.operations` — the two checkpoint operations have no ergonomic method. Matches the REAL generated client type (`output: unknown`) — see module doc. */
 export interface CheckpointsOperationsClient {
   readonly operations: {
-    readonly 'weft.workflows.checkpoints.list': (input: {
-      workflowId: string;
-    }) => Promise<unknown>;
+    readonly 'weft.workflows.checkpoints.list': (input: { workflowId: string }) => Promise<unknown>;
     readonly 'weft.workflows.checkpoints.get': (input: {
       workflowId: string;
       step: number;

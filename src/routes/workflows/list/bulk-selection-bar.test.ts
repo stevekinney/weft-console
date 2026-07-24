@@ -1,101 +1,205 @@
 import { describe, expect, test } from 'bun:test';
 
+import type { WorkflowListQuery } from '../../../lib/filters.ts';
+import type { ScopeGate } from '../../../lib/scopes.svelte.ts';
 import BulkSelectionBar from './bulk-selection-bar.svelte';
+import { realClient, ScriptedFetch } from './workflow-test-support.test-support.ts';
+
+const GRANTED: ScopeGate = { disabled: false, title: undefined };
+const DENIED: ScopeGate = { disabled: true, title: 'Requires workflows:admin' };
+
+function baseProps(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    client: realClient(),
+    filter: { status: 'failed' } as WorkflowListQuery,
+    selectedCount: 3,
+    totalMatchingFilter: 47,
+    onDeselect: () => {},
+    adminGate: GRANTED,
+    onActionComplete: () => {},
+    ...overrides,
+  };
+}
 
 describe('BulkSelectionBar', () => {
   test('renders nothing when nothing is selected', async () => {
     const { render } = await import('@testing-library/svelte');
     const { container } = render(BulkSelectionBar, {
-      props: {
-        selectedCount: 0,
-        totalMatchingFilter: 0,
-        onDeselect: () => {},
-        actionsDisabledReason: 'Bulk operations ship in a later phase',
-      },
+      props: baseProps({ selectedCount: 0 }),
     });
 
     expect(container.querySelector('.weft-bulk-bar')).toBeNull();
   });
 
-  test('shows the selection count', async () => {
+  test('shows the selection count and the select-all-matching banner', async () => {
     const { render } = await import('@testing-library/svelte');
-    const { getByText } = render(BulkSelectionBar, {
-      props: {
-        selectedCount: 3,
-        totalMatchingFilter: 47,
-        onDeselect: () => {},
-        actionsDisabledReason: 'Bulk operations ship in a later phase',
-      },
-    });
+    const { getByText, getByRole } = render(BulkSelectionBar, { props: baseProps() });
 
     expect(getByText('3 selected')).not.toBeNull();
-  });
-
-  test('every bulk action button is disabled', async () => {
-    const { render } = await import('@testing-library/svelte');
-    const { getAllByRole } = render(BulkSelectionBar, {
-      props: {
-        selectedCount: 3,
-        totalMatchingFilter: 47,
-        onDeselect: () => {},
-        actionsDisabledReason: 'Bulk operations ship in a later phase',
-      },
-    });
-
-    // Reads `.disabled` directly rather than jest-dom's `toBeDisabled()` —
-    // this project doesn't import the `bun:test` `Matchers` type
-    // augmentation (`tests/setup.ts` extends `expect` at runtime only), so
-    // `toBeDisabled()` doesn't typecheck even though it works at runtime
-    // (see `src/app/auth/api-key-entry.test.ts`'s identical note).
-    const buttons = getAllByRole('button').filter((button) =>
-      ['Cancel', 'Signal', 'Retry failed', 'Mutate tags'].some((label) =>
-        button.textContent?.includes(label),
-      ),
-    ) as HTMLButtonElement[];
-    expect(buttons.length).toBe(4);
-    for (const button of buttons) expect(button.disabled).toBe(true);
+    expect(getByRole('checkbox', { name: /Select all 47 matching the filter/ })).not.toBeNull();
   });
 
   test('Deselect calls onDeselect', async () => {
     const { render, fireEvent } = await import('@testing-library/svelte');
     let deselected = false;
     const { getByRole } = render(BulkSelectionBar, {
-      props: {
-        selectedCount: 3,
-        totalMatchingFilter: 47,
+      props: baseProps({
         onDeselect: () => {
           deselected = true;
         },
-        actionsDisabledReason: 'Bulk operations ship in a later phase',
-      },
+      }),
     });
 
     await fireEvent.click(getByRole('button', { name: 'Deselect' }));
     expect(deselected).toBe(true);
   });
 
-  test('shows the "select all matching" banner unless already selected-all', async () => {
+  test('missing workflows:admin disables every action with the scope reason', async () => {
     const { render } = await import('@testing-library/svelte');
-    const first = render(BulkSelectionBar, {
-      props: {
-        selectedCount: 3,
-        totalMatchingFilter: 47,
-        onDeselect: () => {},
-        actionsDisabledReason: 'x',
-      },
+    const { getAllByRole } = render(BulkSelectionBar, {
+      props: baseProps({ adminGate: DENIED }),
     });
-    expect(first.getByText(/Select all 47 matching the filter/)).not.toBeNull();
-    first.unmount();
 
-    const second = render(BulkSelectionBar, {
-      props: {
-        selectedCount: 47,
-        totalMatchingFilter: 47,
-        selectedAllMatching: true,
-        onDeselect: () => {},
-        actionsDisabledReason: 'x',
-      },
+    const buttons = getAllByRole('button').filter((button) =>
+      ['Cancel', 'Signal', 'Retry failed', 'Mutate tags', 'Delete', 'Purge'].includes(
+        button.textContent?.trim() ?? '',
+      ),
+    ) as HTMLButtonElement[];
+    expect(buttons.length).toBe(6);
+    for (const button of buttons) expect(button.disabled).toBe(true);
+  });
+
+  test('scope granted but "select all matching" unchecked still disables every action', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const { getAllByRole } = render(BulkSelectionBar, { props: baseProps() });
+
+    const cancelButton = getAllByRole('button').find(
+      (button) => button.textContent?.trim() === 'Cancel',
+    ) as HTMLButtonElement;
+    expect(cancelButton.disabled).toBe(true);
+  });
+
+  test('an unscoped filter disables every action even after selecting all matching', async () => {
+    const { render, fireEvent } = await import('@testing-library/svelte');
+    const { getByRole, getAllByRole } = render(BulkSelectionBar, {
+      props: baseProps({ filter: {} as WorkflowListQuery }),
     });
-    expect(second.queryByText(/Select all 47 matching the filter/)).toBeNull();
+
+    await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+
+    const cancelButton = getAllByRole('button').find(
+      (button) => button.textContent?.trim() === 'Cancel',
+    ) as HTMLButtonElement;
+    expect(cancelButton.disabled).toBe(true);
+  });
+
+  test('granted scope + select-all-matching + a scoped filter enables the actions', async () => {
+    const { render, fireEvent } = await import('@testing-library/svelte');
+    const { getByRole, getAllByRole } = render(BulkSelectionBar, { props: baseProps() });
+
+    await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+
+    const cancelButton = getAllByRole('button').find(
+      (button) => button.textContent?.trim() === 'Cancel',
+    ) as HTMLButtonElement;
+    expect(cancelButton.disabled).toBe(false);
+  });
+
+  test('clicking Cancel (once enabled) opens the bulk cancel dialog and fires its dry run', async () => {
+    const fetch = new ScriptedFetch();
+    fetch.routeJsonRpcMethod('weft.workflows.bulk.cancel', {
+      dryRun: true,
+      action: 'cancel',
+      matched: 5,
+      requestId: 'bulk:req-1',
+      scope: {
+        matched: 5,
+        filter: { status: 'failed' },
+        statuses: ['failed'],
+        workflowTypes: ['checkout'],
+        sampleWorkflowIds: [],
+        sampleLimit: 20,
+      },
+      sampleWorkflowIds: [],
+      confirmationToken: 'bulk:token-abc',
+      confirmationTokenVersion: 1,
+    });
+
+    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
+    const { getByRole, getAllByRole, getByText } = render(BulkSelectionBar, {
+      props: baseProps({ client: realClient() }),
+    });
+
+    await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+    const cancelButton = getAllByRole('button').find(
+      (button) => button.textContent?.trim() === 'Cancel',
+    ) as HTMLButtonElement;
+    await fireEvent.click(cancelButton);
+
+    await waitFor(() => {
+      expect(getByText('5 matching workflows')).not.toBeNull();
+    });
+    fetch.restore();
+  });
+
+  test('clicking Purge (once enabled) opens the purge dialog using the already-known total, no dry run', async () => {
+    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
+    const { getByRole, getAllByRole, getByText } = render(BulkSelectionBar, {
+      props: baseProps(),
+    });
+
+    await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+    const purgeButton = getAllByRole('button').find(
+      (button) => button.textContent?.trim() === 'Purge',
+    ) as HTMLButtonElement;
+    await fireEvent.click(purgeButton);
+
+    await waitFor(() => {
+      expect(getByText('47 terminal workflows')).not.toBeNull();
+    });
+  });
+
+  test('a completed purge calls onActionComplete — the wiring behind "selection clears after a real commit"', async () => {
+    // Regression coverage for the onSuccess/onClose split
+    // (`bulk-action-dialog.svelte`/`bulk-purge-dialog.svelte`'s module
+    // docs): caught via manual dev-harness verification that the bar's
+    // "N selected" banner stayed stale after a successful purge because
+    // `onActionComplete` was only wired to dialog dismissal, not to the
+    // commit actually succeeding.
+    const fetch = new ScriptedFetch();
+    fetch.routeJsonRpcMethod('weft.workflows.purge', { deleted: 47 });
+
+    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
+    let completed = 0;
+    const { getByRole, getAllByRole, getByText, getByLabelText } = render(BulkSelectionBar, {
+      props: baseProps({
+        client: realClient(),
+        onActionComplete: () => {
+          completed += 1;
+        },
+      }),
+    });
+
+    await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+    const purgeButton = getAllByRole('button').find(
+      (button) => button.textContent?.trim() === 'Purge',
+    ) as HTMLButtonElement;
+    await fireEvent.click(purgeButton);
+
+    await waitFor(() => {
+      expect(getByLabelText('Type "purge 47 workflows" to confirm')).not.toBeNull();
+    });
+    expect(completed).toBe(0);
+
+    await fireEvent.input(getByLabelText('Type "purge 47 workflows" to confirm'), {
+      target: { value: 'purge 47 workflows' },
+    });
+    await fireEvent.click(getByRole('button', { name: 'Purge 47 workflows' }));
+
+    await waitFor(() => {
+      expect(getByText('Purged 47 workflows')).not.toBeNull();
+    });
+    expect(completed).toBe(1);
+    fetch.restore();
   });
 });

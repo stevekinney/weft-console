@@ -143,7 +143,10 @@
           <Skeleton height="1.2rem" />
         </div>
       {:else}
-        <p class="weft-activity-feed__empty">No recent activity yet.</p>
+        <p class="weft-activity-feed__empty">
+          No activity since this page loaded. For the connection's replayed history, check the
+          notification bell.
+        </p>
       {/if}
     {:else}
       <Feed live class="weft-activity-feed__list">

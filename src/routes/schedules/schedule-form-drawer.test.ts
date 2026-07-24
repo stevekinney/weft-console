@@ -2,19 +2,18 @@
  * Component tests for `<ScheduleFormDrawer>` against a REAL in-process weft
  * server.
  *
- * The registry-driven workflow-type picker always exercises its free-text
+ * The registry-driven workflow-type picker still exercises its free-text
  * fallback here, not the Select: `client.operations[name]` (the registry
  * query) always goes through `HttpClient`'s JSON-RPC catalog transport
- * (`${baseUrl}/jsonrpc`, verified in `weft/src/client/http-operations.ts`),
- * and `live-source-test-server.test-support.ts`'s `handleRequest()` harness
- * — a deliberate workaround for the confirmed `serve()` bug
- * https://github.com/stevekinney/weft/issues/710 (module doc) — never wires
- * JSON-RPC dispatch, only REST + SSE. That's the same root cause, not a new
- * gap, and it's exactly the scenario plan §7.2/PROJECT-BRIEF calls "the
- * create action itself doesn't require this scope/path" degrade — these
- * tests confirm the degraded path works end-to-end, which is real coverage,
- * not a workaround. The populated-Select path is covered directly against a
- * fake `RegistryProbeClient` in `schedule-form-fields.test.ts`.
+ * (`${baseUrl}/jsonrpc`, verified in `weft/src/client/http-operations.ts`).
+ * `live-source-test-server.test-support.ts`'s harness is a real `serve()` as
+ * of `@lostgradient/weft@0.12.0` and does route `/jsonrpc` now (the
+ * `handleRequest()`-only limitation this comment used to describe, tracked
+ * as weft#710, is fixed) — this file simply hasn't been extended to also
+ * cover the populated-Select path against the real server; that path is
+ * covered against a fake `RegistryProbeClient` in
+ * `schedule-form-fields.test.ts` instead. These tests still confirm the
+ * free-text fallback works end-to-end, which is real coverage on its own.
  */
 import { describe, expect, test } from 'bun:test';
 
@@ -32,7 +31,7 @@ describe('ScheduleFormDrawer — create', () => {
   test('creates a schedule with the selected workflow type and default cadence', async () => {
     const { render, fireEvent } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     let closed = false;
     try {
@@ -55,14 +54,14 @@ describe('ScheduleFormDrawer — create', () => {
       const created = await server.engine.getSchedule('test-created-schedule');
       expect(created?.workflowType).toBe('inventory-sync-sweep');
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('creating with "Start paused" checked leaves the schedule paused', async () => {
     const { render, fireEvent } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     let closed = false;
     try {
@@ -86,14 +85,14 @@ describe('ScheduleFormDrawer — create', () => {
       const created = await server.engine.getSchedule('test-paused-schedule');
       expect(created?.status).toBe('paused');
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('the submit button is disabled with a reason pill when schedules:write is missing', async () => {
     const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole, getByText } = render(ScheduleFormDrawerHarness, {
@@ -113,14 +112,14 @@ describe('ScheduleFormDrawer — create', () => {
       });
       expect(getByText('Requires schedules:write')).not.toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('the submit button stays disabled until the form is valid', async () => {
     const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole } = render(ScheduleFormDrawerHarness, {
@@ -135,7 +134,7 @@ describe('ScheduleFormDrawer — create', () => {
         ).toBe(true);
       });
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 });
@@ -150,7 +149,7 @@ describe('ScheduleFormDrawer — edit', () => {
       cron: '0 2 * * *',
       input: { warehouseId: 'wh-main' },
     });
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     let closed = false;
     try {
@@ -178,14 +177,14 @@ describe('ScheduleFormDrawer — edit', () => {
       // updateSchedule() must succeed against the real server.
       expect(updated?.cronExpression).toBe('0 2 * * *');
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('renders the not-found fault when the schedule no longer exists', async () => {
     const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText } = render(ScheduleFormDrawerHarness, {
@@ -195,7 +194,7 @@ describe('ScheduleFormDrawer — edit', () => {
       const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('Not found')).not.toBeNull());
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 });

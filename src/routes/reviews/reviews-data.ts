@@ -58,15 +58,13 @@ export interface SubmitReviewDecisionVariables {
  * operator submitted from.
  *
  * `SubmitReviewOptions.sectionDecisions` is included in every submission this
- * module builds (`review-decision-form.svelte` populates it) even though the
- * REST operation currently drops it server-side before validation — verified
- * against `weft/src/server/operations/submit-review-decision.ts`
- * (`submitReviewDecisionInput`/`extractInput` never read the field at all,
- * for either transport). Filed upstream:
- * https://github.com/stevekinney/weft/issues/724. Sending the full,
- * documented `SubmitReviewOptions` shape here is not a workaround — it is
- * exactly the client's contract — so nothing in this module needs to change
- * the day that ships; only the field stops being silently dropped.
+ * module builds (`review-decision-form.svelte` populates it). Round-trips as
+ * of `@lostgradient/weft@0.12.0`
+ * (https://github.com/stevekinney/weft/issues/724, fixed upstream #731) —
+ * before that, `submitReviewDecisionOperation` silently dropped the field
+ * server-side for both transports. Sending the full, documented
+ * `SubmitReviewOptions` shape here was never a workaround, so nothing in
+ * this module changed when the fix landed.
  */
 export function submitReviewDecisionMutation(
   client: HttpClient,

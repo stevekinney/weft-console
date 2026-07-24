@@ -46,7 +46,7 @@ describe('Schedules dashboard card', () => {
       input: { warehouseId: 'wh-main' },
     });
     await pausedHandle.pause();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText } = render(DashboardCardHarness, { props: { client } });
@@ -54,7 +54,7 @@ describe('Schedules dashboard card', () => {
       await waitFor(() => expect(getByText('2 schedules')).not.toBeNull());
       expect(getByText('Schedule health')).not.toBeNull();
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
@@ -67,7 +67,7 @@ describe('Schedules dashboard card', () => {
       cron: '0 2 * * *',
       input: { warehouseId: 'wh-main' },
     });
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText } = render(DashboardCardHarness, { props: { client } });
@@ -79,21 +79,21 @@ describe('Schedules dashboard card', () => {
       expect(window.location.pathname).toBe('/schedules');
       expect(window.location.search).toBe('?status=active');
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test('an empty schedule roster shows zero counts, not an error', async () => {
     const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
-    const client = new HttpClient({ baseUrl: server.baseUrl });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText } = render(DashboardCardHarness, { props: { client } });
       const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('0 schedules')).not.toBeNull());
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 

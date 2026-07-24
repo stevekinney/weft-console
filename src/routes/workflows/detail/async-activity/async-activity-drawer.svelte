@@ -25,7 +25,9 @@
   import type { AttachedPendingActivity } from './async-activity-matching.ts';
 
   interface AsyncActivityDrawerProps {
-    readonly client: { readonly activity: Pick<WeftClientActivity, 'complete' | 'completeExceptionally'> };
+    readonly client: {
+      readonly activity: Pick<WeftClientActivity, 'complete' | 'completeExceptionally'>;
+    };
     readonly open: boolean;
     readonly activity: AttachedPendingActivity;
     readonly onClose: () => void;
@@ -40,7 +42,14 @@
   // dismissal affordances (Escape, backdrop click, close button) write back
   // to a bound `open` variable instead. Mirror the controlled `open` prop
   // into a local bindable, and treat "the mirror went false while the
-  // parent still thinks it's open" as the signal to call `onClose`.
+  // parent still thinks it's open" as the signal to call `onClose`. The
+  // `$state(open)` initializer intentionally only captures the prop's value
+  // at mount — it seeds the correct value for the very first render, before
+  // the `$effect` below has run once to take over keeping it in sync on every
+  // later change. A `$derived` can't replace this: `localOpen` must stay
+  // independently mutable so `Drawer`'s own dismissal affordances can write
+  // back to it.
+  // svelte-ignore state_referenced_locally
   let localOpen = $state(open);
   $effect(() => {
     localOpen = open;
@@ -62,7 +71,9 @@
       // A fail-mode payload is allowed to be plain text (the error message),
       // not necessarily JSON — only complete-mode requires valid JSON since
       // it becomes the workflow's actual result value.
-      return mode === 'fail' ? { ok: true, value: trimmed } : { ok: false, error: 'Result must be valid JSON (or left blank).' };
+      return mode === 'fail'
+        ? { ok: true, value: trimmed }
+        : { ok: false, error: 'Result must be valid JSON (or left blank).' };
     }
   }
 
@@ -104,7 +115,9 @@
     <div class="weft-async-activity-drawer__field">
       <span class="weft-async-activity-drawer__label">
         Completion token
-        <span class="weft-async-activity-drawer__label-note">· deterministic identifier, not a secret</span>
+        <span class="weft-async-activity-drawer__label-note"
+          >· deterministic identifier, not a secret</span
+        >
       </span>
       <div class="weft-async-activity-drawer__token">
         <CodeBlock code={activity.token} highlight={false} showLanguageLabel={false} />

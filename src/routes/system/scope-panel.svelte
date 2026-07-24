@@ -101,8 +101,22 @@
     border-bottom: 0;
   }
 
+  /**
+   * T9.4 accessibility pass: this was `opacity: 0.7`. Measured in a real
+   * browser with `ctx.globalAlpha` (canvas 2D composites exactly like CSS
+   * `opacity`, in gamma-encoded sRGB — a naive `color-mix(in oklch, …)`
+   * stand-in reads noticeably higher and is NOT trustworthy near a 4.5:1
+   * threshold): the row's `.weft-scope-panel__unlocks` span renders in
+   * `--cinder-text-subtle`, which was 3.81:1 (light) / 3.82:1 (dark) at 0.7
+   * opacity — under WCAG AA's 4.5:1 for normal text, and this text is a
+   * real description of what the missing scope would unlock, not
+   * decorative. 0.85 is the binding value (dark theme's floor, 4.94:1 —
+   * light theme clears sooner at 5.60:1) that keeps every row's text at or
+   * above AA in both themes; 0.8 was tried first and rejected (dark theme
+   * only reaches 4.55:1, too close to the line to trust across renderers).
+   */
   .weft-scope-panel__list--denied li {
-    opacity: 0.7;
+    opacity: 0.85;
   }
 
   .weft-scope-panel__copy {
