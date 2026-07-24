@@ -239,7 +239,12 @@
     </div>
 
     {#if $listQuery.isPending}
-      <div class="weft-workflow-list__skeleton" aria-busy="true" aria-label="Loading workflows">
+      <div
+        class="weft-workflow-list__skeleton"
+        role="status"
+        aria-busy="true"
+        aria-label="Loading workflows"
+      >
         <Skeleton height="2.5rem" />
         <Skeleton height="2.5rem" />
         <Skeleton height="2.5rem" />

@@ -262,7 +262,12 @@
   {/snippet}
 
   {#if $listQuery.isPending}
-    <div class="weft-schedule-list__skeleton" aria-busy="true" aria-label="Loading schedules">
+    <div
+      class="weft-schedule-list__skeleton"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading schedules"
+    >
       {#each Array(6) as _, index (index)}
         <Skeleton height="42px" />
       {/each}

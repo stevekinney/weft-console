@@ -172,7 +172,12 @@
     </div>
 
     {#if $aggregateQuery.isPending}
-      <div class="weft-aggregate-view__skeleton" aria-busy="true" aria-label="Loading aggregate">
+      <div
+        class="weft-aggregate-view__skeleton"
+        role="status"
+        aria-busy="true"
+        aria-label="Loading aggregate"
+      >
         <Skeleton height="16rem" />
       </div>
     {:else if $aggregateQuery.isError}

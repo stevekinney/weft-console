@@ -172,7 +172,12 @@
   </div>
 
   {#if isLoading}
-    <div class="weft-reviews-inbox__skeleton" aria-busy="true" aria-label="Loading reviews">
+    <div
+      class="weft-reviews-inbox__skeleton"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading reviews"
+    >
       <Skeleton height="4rem" />
       <Skeleton height="4rem" />
       <Skeleton height="4rem" />

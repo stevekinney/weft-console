@@ -42,7 +42,12 @@
   {/snippet}
 
   {#if $query.isPending}
-    <div class="weft-status-card__skeleton" aria-busy="true" aria-label="Loading workflow status">
+    <div
+      class="weft-status-card__skeleton"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading workflow status"
+    >
       <Skeleton height="4.5rem" />
     </div>
   {:else if $query.isError}

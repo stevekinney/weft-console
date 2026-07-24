@@ -147,7 +147,12 @@
     <span>{scopeReason('system:read', 'reviews:read')} to see critical alerts here.</span>
   </div>
 {:else if isLoading}
-  <div class="weft-critical-alerts-band__skeleton" aria-busy="true" aria-label="Loading alerts">
+  <div
+    class="weft-critical-alerts-band__skeleton"
+    role="status"
+    aria-busy="true"
+    aria-label="Loading alerts"
+  >
     <div class="weft-alert-chip-skeleton"></div>
     <div class="weft-alert-chip-skeleton"></div>
     <div class="weft-alert-chip-skeleton"></div>

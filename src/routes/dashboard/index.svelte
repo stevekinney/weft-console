@@ -90,7 +90,12 @@ await engine.start('my-workflow', input);`;
   </div>
 
   {#if isGateLoading}
-    <div class="weft-dashboard__gate-skeleton" aria-busy="true" aria-label="Loading dashboard">
+    <div
+      class="weft-dashboard__gate-skeleton"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading dashboard"
+    >
       <div class="weft-dashboard__gate-skeleton-grid">
         <Skeleton height="7.5rem" />
         <Skeleton height="7.5rem" />

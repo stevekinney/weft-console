@@ -136,7 +136,7 @@
   </button>
 
   {#if $detailQuery.isPending}
-    <div aria-busy="true" aria-label="Loading schedule">
+    <div role="status" aria-busy="true" aria-label="Loading schedule">
       <Skeleton height="120px" />
       <Skeleton height="220px" />
     </div>

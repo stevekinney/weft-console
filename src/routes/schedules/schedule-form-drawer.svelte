@@ -140,7 +140,7 @@
   {/snippet}
 
   {#if mode === 'edit' && $editDetailQuery.isPending}
-    <div aria-busy="true" aria-label="Loading schedule">
+    <div role="status" aria-busy="true" aria-label="Loading schedule">
       <Skeleton height="220px" />
     </div>
   {:else if mode === 'edit' && $editDetailQuery.isError}

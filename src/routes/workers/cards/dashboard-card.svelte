@@ -68,7 +68,12 @@
     {#if locked}
       <EmptyState title="Locked" description={scopeReason('system:read')} headingLevel={4} />
     {:else if isLoading}
-      <div class="weft-workers-card__skeleton" aria-busy="true" aria-label="Loading fleet status">
+      <div
+        class="weft-workers-card__skeleton"
+        role="status"
+        aria-busy="true"
+        aria-label="Loading fleet status"
+      >
         <Skeleton height="3rem" />
       </div>
     {:else if firstError}

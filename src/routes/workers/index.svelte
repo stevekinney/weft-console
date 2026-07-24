@@ -280,7 +280,12 @@
 
       <TabPanel value="fleet">
         {#if fleetLoading}
-          <div class="weft-workers-route__skeleton" aria-busy="true" aria-label="Loading fleet">
+          <div
+            class="weft-workers-route__skeleton"
+            role="status"
+            aria-busy="true"
+            aria-label="Loading fleet"
+          >
             <Skeleton height="1.5rem" width="40%" />
             <Skeleton height="8rem" />
           </div>
@@ -302,7 +307,12 @@
 
       <TabPanel value="list">
         {#if fleetLoading}
-          <div class="weft-workers-route__skeleton" aria-busy="true" aria-label="Loading workers">
+          <div
+            class="weft-workers-route__skeleton"
+            role="status"
+            aria-busy="true"
+            aria-label="Loading workers"
+          >
             <Skeleton height="1.5rem" width="40%" />
             <Skeleton height="8rem" />
           </div>
@@ -327,6 +337,7 @@
         {#if queuesLoading}
           <div
             class="weft-workers-route__skeleton"
+            role="status"
             aria-busy="true"
             aria-label="Loading task queues"
           >
@@ -359,6 +370,7 @@
         {#if diagnosticsLoading}
           <div
             class="weft-workers-route__skeleton"
+            role="status"
             aria-busy="true"
             aria-label="Loading diagnostics"
           >

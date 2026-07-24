@@ -77,6 +77,7 @@
   {#if $query.isPending}
     <div
       class="weft-schedules-dashboard-card__skeleton"
+      role="status"
       aria-busy="true"
       aria-label="Loading schedule health"
     >

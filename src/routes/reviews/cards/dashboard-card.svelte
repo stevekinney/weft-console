@@ -62,7 +62,12 @@
     {#if locked}
       <EmptyState title="Locked" description={scopeReason('reviews:read')} headingLevel={4} />
     {:else if $query.isPending}
-      <div class="weft-reviews-card__skeleton" aria-busy="true" aria-label="Loading reviews">
+      <div
+        class="weft-reviews-card__skeleton"
+        role="status"
+        aria-busy="true"
+        aria-label="Loading reviews"
+      >
         <Skeleton height="3rem" />
       </div>
     {:else if $query.isError}

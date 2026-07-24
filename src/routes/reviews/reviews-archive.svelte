@@ -38,7 +38,12 @@
 </script>
 
 {#if $completedQuery.isPending}
-  <div class="weft-reviews-archive__skeleton" aria-busy="true" aria-label="Loading archive">
+  <div
+    class="weft-reviews-archive__skeleton"
+    role="status"
+    aria-busy="true"
+    aria-label="Loading archive"
+  >
     <Skeleton height="2.5rem" />
     <Skeleton height="2.5rem" />
     <Skeleton height="2.5rem" />

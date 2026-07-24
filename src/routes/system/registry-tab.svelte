@@ -39,7 +39,7 @@
 </script>
 
 {#if $query.isPending}
-  <div class="weft-registry-skeleton" aria-busy="true" aria-label="Loading registry">
+  <div class="weft-registry-skeleton" role="status" aria-busy="true" aria-label="Loading registry">
     <Skeleton height="1.25rem" width="220px" />
     <Skeleton height="220px" />
     <Skeleton height="140px" />

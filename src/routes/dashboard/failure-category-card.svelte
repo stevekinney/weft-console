@@ -86,6 +86,7 @@
   {#if $query.isPending}
     <div
       class="weft-failure-category-card__skeleton"
+      role="status"
       aria-busy="true"
       aria-label="Loading failure categories"
     >
