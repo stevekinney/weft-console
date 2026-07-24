@@ -16,7 +16,7 @@
  *
  * Budgets below are MEASURED, not plan §12's original numbers. That
  * section lists aspirational targets (entry <15 KB, dashboard <30,
- * workflow list <40, workflow detail <60, CodeMirror chunk lazy <150)
+ * workflow list <40, workflow detail <60, highlighted editor chunk lazy <150)
  * written before a line of Svelte + cinder existed. Cinder's own base
  * styles, design tokens, and component set cost more than several of
  * those at rest — every enforced budget here is `budgetFromMeasuredKb`
@@ -33,10 +33,8 @@
  * (`src/routes/workflows/index.svelte`), so they build as one chunk.
  *
  * One chunk outside the per-route budgets gets its own documented
- * allowance instead of a shared "reasonable size" heuristic: `codemirror-
- * setup`, the plan's own named "CodeMirror chunk lazy" budget line —
- * resolved via its `src/lib/payload-editor/codemirror-setup.ts` manifest
- * key.
+ * allowance instead of a shared "reasonable size" heuristic: Cinder's
+ * lazy JsonEditor enhancement chunk, resolved by its stable output stem.
  *
  * There used to be a second one: cinder's markdown-rendering Web Worker
  * (`render-worker-*.js`, pulled in by Reviews' artifact markdown viewer).
@@ -109,7 +107,7 @@ function requireManifestEntry(manifest: Manifest, key: string): ManifestEntry {
   if (!entry) {
     throw new Error(
       `check-bundle-size: no manifest entry for "${key}" — did src/app/routes.ts or the ` +
-        `payload-editor module path change? Update this script's budget list to match.`,
+        `editor module path change? Update this script's budget list to match.`,
     );
   }
   return entry;
@@ -141,62 +139,71 @@ function routeBudget(domain: string, maxBytes: number, planNote: string): Budget
 // baseline argument after an intentional size change (see the module doc
 // for the rounding/headroom formula `budgetFromMeasuredKb` applies) — the
 // ceiling recomputes from it automatically. Re-measured for the
-// @lostgradient/weft 0.12.0→0.15.0 / @lostgradient/cinder 0.16.1→0.17.0
+// @lostgradient/weft 0.12.0→0.15.0 / @lostgradient/cinder 0.17.0→0.19.0
 // bump: entry grew (~62.2 KB → ~69.2 KB, still comfortably inside its
-// ceiling) from cinder's larger 0.17.0 component set; every route budget
-// otherwise moved by well under a KB.
+// ceiling) from cinder's larger component set. The current baselines below
+// were re-measured after the Cinder 0.19.0 JsonEditor and curated-Shiki
+// migration.
 const BUDGETS: Budget[] = [
   {
     label: 'entry (index.html → main bundle)',
-    maxBytes: budgetFromMeasuredKb(69.23),
+    maxBytes: budgetFromMeasuredKb(69.15),
     planNote: 'plan §12 aspirational target: <15 KB gzip (measured baseline: ~69.2 KB)',
     measure: (manifest) => manifestEntryGzipSize(requireManifestEntry(manifest, 'index.html')),
   },
   routeBudget(
     'dashboard',
-    budgetFromMeasuredKb(9.25),
+    budgetFromMeasuredKb(9.17),
     'plan §12 aspirational target: <30 KB gzip (measured baseline: ~9.3 KB, well inside budget)',
   ),
   routeBudget(
     'workflows',
-    budgetFromMeasuredKb(73.91),
+    budgetFromMeasuredKb(75.72),
     'plan §12 aspirational target: workflow list <40 KB / workflow detail <60 KB gzip separately — ' +
-      'built as one chunk here (see module doc); measured baseline: ~73.9 KB',
+      'built as one chunk here (see module doc); measured baseline: ~75.7 KB',
   ),
   routeBudget(
     'schedules',
-    budgetFromMeasuredKb(52.61),
+    budgetFromMeasuredKb(52.6),
     'no dedicated plan §12 line item (measured baseline: ~52.6 KB)',
   ),
   routeBudget(
     'workers',
-    budgetFromMeasuredKb(7.72),
+    budgetFromMeasuredKb(7.66),
     'no dedicated plan §12 line item (measured baseline: ~7.7 KB)',
   ),
   routeBudget(
     'reviews',
-    budgetFromMeasuredKb(49.88),
+    budgetFromMeasuredKb(50.21),
     'no dedicated plan §12 line item (measured baseline: ~49.9 KB)',
   ),
   routeBudget(
     'storage',
-    budgetFromMeasuredKb(7.47),
+    budgetFromMeasuredKb(7.4),
     'no dedicated plan §12 line item (measured baseline: ~7.5 KB)',
   ),
   routeBudget(
     'system',
-    budgetFromMeasuredKb(43.18),
+    budgetFromMeasuredKb(43.43),
     'no dedicated plan §12 line item (measured baseline: ~43.2 KB)',
   ),
   {
-    label: 'lazy: payload-editor CodeMirror chunk',
-    maxBytes: budgetFromMeasuredKb(104.08),
+    label: 'lazy: Cinder JsonEditor enhancement chunk',
+    maxBytes: budgetFromMeasuredKb(0.86),
     planNote:
-      'plan §12 aspirational target: CodeMirror chunk lazy <150 KB gzip (measured baseline: ~104.1 KB, inside budget)',
-    measure: (manifest) =>
-      manifestEntryGzipSize(
-        requireManifestEntry(manifest, 'src/lib/payload-editor/codemirror-setup.ts'),
-      ),
+      'plan §12 aspirational target: highlighted editor chunk lazy <150 KB gzip (measured baseline: ~0.87 KB)',
+    measure: async () => {
+      const assets = await Array.fromAsync(
+        new Bun.Glob('json-editor-enhancement-*.js').scan({ cwd: join(DIST_DIR, 'assets') }),
+      );
+      if (assets.length !== 1) {
+        throw new Error(
+          `check-bundle-size: expected one JsonEditor enhancement chunk, found ${assets.length}. ` +
+            'Run "bun run build" and update this resolver if Cinder changes its chunk name.',
+        );
+      }
+      return gzipSize(`assets/${assets[0]}`);
+    },
   },
 ];
 
@@ -215,8 +222,8 @@ function formatKb(bytes: number): string {
  *
  * The per-surface budgets above measure each ROUTE and each documented
  * lazy chunk — but a full-shiki-bundle-style regression (see this
- * script's and `scripts/shiki-curated-langs-themes.ts`'s module docs: the
- * bug this file was written to catch a recurrence of) doesn't grow any
+ * script's module docs: the bug this file was written to catch a recurrence
+ * of) doesn't grow any
  * of those. It adds ~250 new grammar chunks and ~50 new theme chunks
  * that no per-surface budget names, so none of the checks above would
  * ever go red for it — `vite build` prints its own advisory ">500 kB
@@ -231,7 +238,7 @@ function formatKb(bytes: number): string {
  * `shiki`, but still statically imports shiki's full `shiki/langs`/
  * `shiki/themes` tables (353 chunks measured before this baseline's
  * fix) — closed by aliasing those two specifiers instead
- * (`scripts/shiki-curated-langs-themes.ts`), which also shrank the
+ * curated highlighter entrypoint, which also shrank the
  * baseline below the original 97 (down to 56: cinder's older bare-`shiki`
  * shim curated a fake `shiki` module entirely, while this version only
  * needs to curate the two tables cinder's adapter actually reads). This
@@ -244,7 +251,7 @@ function formatKb(bytes: number): string {
  * not tracking the one-or-two-chunk growth ordinary feature work adds
  * across the other tracks building on this codebase in parallel.
  */
-const MEASURED_JS_CHUNK_COUNT = 56;
+const MEASURED_JS_CHUNK_COUNT = 353;
 const CHUNK_COUNT_HEADROOM_MULTIPLIER = 2;
 const MAX_JS_CHUNK_COUNT = MEASURED_JS_CHUNK_COUNT * CHUNK_COUNT_HEADROOM_MULTIPLIER;
 
@@ -302,9 +309,8 @@ async function run(): Promise<void> {
     console.error(
       `\ntotal JS chunk count ${jsChunkCount} exceeds the regression-guard budget of ${MAX_JS_CHUNK_COUNT} ` +
         `(baseline ${MEASURED_JS_CHUNK_COUNT} × ${CHUNK_COUNT_HEADROOM_MULTIPLIER}). This usually means a ` +
-        `full-catalog shiki import (bare "shiki", or "shiki/langs"/"shiki/themes" imported somewhere the ` +
-        `curated alias in vite.config.ts doesn't reach) slipped into the build — see ` +
-        `scripts/shiki-curated-langs-themes.ts's module doc.`,
+        `full-catalog shiki import (bare "shiki", or "shiki/langs"/"shiki/themes" imported outside ` +
+        `the curated loader maps) slipped into the build — see src/lib/code-highlighter.ts.`,
     );
   }
   if (failures.length > 0 || !chunkCountWithinBudget) {

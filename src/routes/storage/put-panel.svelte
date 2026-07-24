@@ -7,6 +7,7 @@
   import Button from '@lostgradient/cinder/button';
   import ConfirmDialog from '@lostgradient/cinder/confirm-dialog';
   import Input from '@lostgradient/cinder/input';
+  import JsonEditor from '@lostgradient/cinder/json-editor';
   import type { HttpClient } from '@lostgradient/weft/client';
   import { Save } from 'lucide-svelte';
 
@@ -14,7 +15,6 @@
 
   import { showToast } from '../../app/toast-host.svelte';
   import { faultTreatment } from '../../lib/faults.ts';
-  import PayloadEditor from '../../lib/payload-editor/payload-editor.svelte';
   import ReservedPrefixCallout from './reserved-prefix-callout.svelte';
   import { storagePut } from './storage-client.ts';
 
@@ -41,11 +41,14 @@
 <div class="weft-storage-form">
   <Input id="storage-put-key" label="Key" bind:value={key} class="weft-storage-monospace-input" />
   <ReservedPrefixCallout {key} />
-  <PayloadEditor
+  <JsonEditor
     id="storage-put-value"
     label="Value"
-    bind:value
+    {value}
+    onValueChange={(next) => (value = next)}
     rows={5}
+    highlight
+    showValidFeedback={false}
     class="weft-storage-monospace-input"
   />
   <Button

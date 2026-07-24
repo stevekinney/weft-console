@@ -46,6 +46,7 @@
   import { createMutation, createQuery } from '@tanstack/svelte-query';
   import type { RetentionOverview } from '@lostgradient/weft';
 
+  import { codeHighlighter } from '../../lib/code-highlighter.ts';
   import { getClient } from '../../lib/client.ts';
   import { showToast } from '../../app/toast-host.svelte';
   import { codegenPreviewSource, type RegistryLike } from './codegen-preview-source.ts';
@@ -151,7 +152,7 @@
       {:else}
         {@const preview = codegenPreviewSource($registryQuery.data)}
         {#if preview}
-          <CodeBlock code={preview} language="typescript" copyable />
+          <CodeBlock code={preview} language="typescript" highlighter={codeHighlighter} copyable />
           <p class="weft-health-tab__hint">
             Approximate preview of one workflow's input type — run <code>weft codegen</code> for the
             exact, complete <code>.d.ts</code>.

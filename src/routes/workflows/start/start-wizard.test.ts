@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { QueryClient } from '@tanstack/svelte-query';
 import { render } from '@testing-library/svelte';
 
-import { typeIntoPayloadEditor } from '../../../lib/payload-editor/payload-editor.test-support.ts';
 import type { Principal } from '../../../lib/scopes.svelte.ts';
 import { realClient, ScriptedFetch } from '../list/workflow-test-support.test-support.ts';
 import StartWizardHarness from './start-wizard.test-harness.svelte';
@@ -81,7 +80,7 @@ describe('StartWizard', () => {
     await fireEvent.click(nextButton);
 
     const jsonField = await findByLabelText('Payload (JSON)');
-    await typeIntoPayloadEditor(jsonField, '{"orderId":"ord-1"}');
+    await fireEvent.input(jsonField, { target: { value: '{"orderId":"ord-1"}' } });
 
     const continueButton = getByRole('button', { name: 'Continue to review' });
     expect((continueButton as HTMLButtonElement).disabled).toBe(false);

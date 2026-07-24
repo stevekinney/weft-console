@@ -333,7 +333,7 @@ available on the server` for every component test — not a real regression, jus
   env-var equivalent for `--conditions` (checked: a top-level `conditions` key and `BUN_CONDITIONS`
   are both silently no-ops for `bun test`/`bun run`); the CLI flags are a hard requirement, per the
   comment at the top of `scripts/svelte-test-plugin.ts`.
-- **Cinder v0.17.0, `@lostgradient/weft` v0.15.0** — pinned exact versions, bumped from the
+- **Cinder v0.19.0, `@lostgradient/weft` v0.15.0** — pinned exact versions, bumped from the
   scaffolding task's v0.16.1/v0.12.0 (ahead of the plan document's recorded v0.9.0/v0.11.0
   ground-truth pass at authoring time). `lucide-svelte` is pinned inside Cinder's declared peer
   range (`>=0.400.0 <1`) rather than the latest `1.x` line, which falls outside that peer contract.
@@ -342,10 +342,10 @@ available on the server` for every component test — not a real regression, jus
   now imports `@lostgradient/markdown/rendering` directly, and `@lostgradient/markdown` is a
   direct dependency.
 
-## Cinder-first evaluations against landed upstream work (post-0.17.0 bump)
+## Cinder-first evaluations against landed upstream work (post-0.19.0 bump)
 
-Three Cinder additions the console had filed or was tracking landed between 0.16.1 and 0.17.0.
-Each was re-evaluated against the installed component source, not assumed from the issue title:
+The 0.18.0 and 0.19.0 additions were re-evaluated against the installed component source, not
+assumed from the issue title:
 
 - **`RunStepTimeline`'s `timed-out` status (cinder#848, fixed by cinder#853)** — adopted outright.
   `timeline-step-state.ts` previously collapsed Weft's `timed-out` timeline status into Cinder's
@@ -363,21 +363,20 @@ Each was re-evaluated against the installed component source, not assumed from t
   keep the app-local `Combobox`+`Select`+`Input` composition until it lands.
 - **`JsonEditor` (cinder#852)** — evaluated against `src/lib/payload-editor/` (the shared
   CodeMirror 6 editor behind Start/Signal/Update/Schedule/Storage's five payload call sites) and
-  **not adopted**. Read from the installed `json-editor.svelte` source directly: it is a native
-  `<textarea>` with `JSON.parse`-based valid/invalid feedback (`role="status"`/`role="alert"`) and
-  accessible label/description wiring — no syntax highlighting, no inline lint squiggles, and
-  nothing to lazy-load (a bare textarea has no chunk to split out). Cinder's own component
-  metadata frames it as the deliberately lightweight alternative to a code-editor runtime
-  (`@useWhen A lightweight native editor is preferable to shipping a code-editor runtime`), not a
-  richer replacement for one, so this isn't a defect in `JsonEditor` as shipped — it's a different
-  point in the design space than what `payload-editor.svelte` already provides: CodeMirror 6 JSON
-  syntax highlighting, `@codemirror/lint`'s `jsonParseLinter()` inline squiggles, a
-  plain-`<textarea>` progressive-enhancement fallback (functionally close to what `JsonEditor`
-  offers on its own), and a lazy `import('./codemirror-setup.ts')` chunk kept out of every route's
-  own bundle (plan §12's `<150 KB` lazy-chunk budget). `payload-editor.svelte` keeps CodeMirror;
-  `JsonEditor` was not adopted at any of the five payload-editing call sites. Filed a feature
-  request (not a bug) upstream as cinder#866 for a syntax-highlighted `JsonEditor` family member,
-  since that gap is genuine even though today's `JsonEditor` is working exactly as designed.
+  **adopted after cinder#866 → cinder#874**. Cinder 0.18.0's opt-in `highlight` mode keeps the
+  native textarea as the editing and value contract, adds lazy token highlighting and a parse
+  position annotation, and announces parse feedback through the existing `role="status"` /
+  `role="alert"` wiring. Its source uses Cinder tokens in both themes and preserves accessible
+  label/description relationships. The highlighted enhancement chunk measures **0.87 KB gzip**
+  versus the old CodeMirror chunk's **104.08 KB gzip**. All five sites now use the minimal
+  `value`/`onValueChange` contract with their existing labels, rows, and external errors.
+- **Curated Shiki (cinder#876)** — the console now imports
+  `@lostgradient/cinder/highlighters/shiki/curated` with only `json` and `typescript` language
+  loaders and `github-light`/`github-dark` theme loaders. The old local alias shim is deleted.
+  The fresh total JS chunk count is **353** (the previous enforced baseline was 56); the existing
+  count gate remains enabled with a fresh measured baseline because Cinder's separate default
+  `CodeBlock` adapter graph still emits the full registry even when highlighted call sites pass the
+  curated adapter explicitly.
 
 ## Repository layout
 

@@ -12,6 +12,7 @@
   import { Table } from '@lostgradient/cinder/table';
   import { createQuery } from '@tanstack/svelte-query';
 
+  import { codeHighlighter } from '../../lib/code-highlighter.ts';
   import { getClient } from '../../lib/client.ts';
   import { extractAsyncApiChannels, type AsyncApiDocumentLike } from './asyncapi-channels.ts';
   import { fetchDiscoveryDocument } from './discovery-client.ts';
@@ -82,7 +83,12 @@
     {:else if $openapiQuery.isError}
       <QueryFaultBanner error={$openapiQuery.error} onRetry={() => $openapiQuery.refetch()} />
     {:else if showRaw}
-      <CodeBlock code={JSON.stringify($openapiQuery.data, null, 2)} language="json" copyable />
+      <CodeBlock
+        code={JSON.stringify($openapiQuery.data, null, 2)}
+        language="json"
+        highlighter={codeHighlighter}
+        copyable
+      />
     {:else}
       {@const rows = filterOperationCatalog(buildOperationCatalog($openapiQuery.data, null), '')}
       <Table caption="OpenAPI operations" scrollable>
@@ -112,7 +118,12 @@
     {:else if $openrpcQuery.isError}
       <QueryFaultBanner error={$openrpcQuery.error} onRetry={() => $openrpcQuery.refetch()} />
     {:else if showRaw}
-      <CodeBlock code={JSON.stringify($openrpcQuery.data, null, 2)} language="json" copyable />
+      <CodeBlock
+        code={JSON.stringify($openrpcQuery.data, null, 2)}
+        language="json"
+        highlighter={codeHighlighter}
+        copyable
+      />
     {:else}
       {@const rows = filterOperationCatalog(buildOperationCatalog(null, $openrpcQuery.data), '')}
       <Table caption="OpenRPC methods" scrollable>
@@ -140,7 +151,12 @@
     {:else if $asyncapiQuery.isError}
       <QueryFaultBanner error={$asyncapiQuery.error} onRetry={() => $asyncapiQuery.refetch()} />
     {:else if showRaw}
-      <CodeBlock code={JSON.stringify($asyncapiQuery.data, null, 2)} language="json" copyable />
+      <CodeBlock
+        code={JSON.stringify($asyncapiQuery.data, null, 2)}
+        language="json"
+        highlighter={codeHighlighter}
+        copyable
+      />
     {:else}
       {@const rows = extractAsyncApiChannels($asyncapiQuery.data)}
       <Table caption="AsyncAPI channels" scrollable>

@@ -18,7 +18,7 @@
   import { toStore } from 'svelte/store';
 
   import { formatRelativeTime } from '../../../lib/format/index.ts';
-  import PayloadEditor from '../../../lib/payload-editor/payload-editor.svelte';
+  import JsonEditor from '@lostgradient/cinder/json-editor';
   import { signalHistoryFromTimeline, workflowTimelineQueryKey } from './workflow-timeline-data.ts';
 
   interface SignalsTabProps {
@@ -111,12 +111,15 @@
       placeholder="addItem"
       bind:value={signalName}
     />
-    <PayloadEditor
+    <JsonEditor
       id={`signal-payload-${workflow.id}`}
       label="Payload"
       description="JSON, optional"
       rows={4}
-      bind:value={payloadText}
+      value={payloadText}
+      onValueChange={(next) => (payloadText = next)}
+      highlight
+      showValidFeedback={false}
     />
     {#if payloadError}
       <p class="weft-send-tab__error">{payloadError}</p>

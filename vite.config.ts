@@ -1,5 +1,3 @@
-import { fileURLToPath } from 'node:url';
-
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig } from 'vite';
 
@@ -9,23 +7,6 @@ import { defineConfig } from 'vite';
  * dev console at a different server without editing this file.
  */
 const devServerTarget = process.env['WEFT_API_BASE_URL'] ?? 'http://localhost:7233';
-
-/**
- * Redirects the `shiki/langs` and `shiki/themes` specifiers to a curated
- * shim (plan §12, T9.3). See `scripts/shiki-curated-langs-themes.ts` for
- * the full rationale — in short: `<CodeBlock language="…" />`'s default
- * highlighter (Cinder 0.17.0+) statically imports shiki's FULL ~253-grammar
- * `shiki/langs` and ~50-theme `shiki/themes` tables (the bare-`shiki`
- * predecessor of this problem, stevekinney/cinder#773, is fixed; this is
- * the same class of regression surfacing one module deeper). The regex
- * matches those two exact specifiers only, never `shiki/core`, `shiki/wasm`,
- * or `@shikijs/engine-*` — both cinder's and `@lostgradient/markdown`'s
- * highlighters need the real oniguruma/WASM engine and stay on it.
- */
-const shikiLangsThemesAlias = {
-  find: /^shiki\/(langs|themes)$/,
-  replacement: fileURLToPath(new URL('./scripts/shiki-curated-langs-themes.ts', import.meta.url)),
-};
 
 // Everything functional is served under `/api`; a handful of discovery and
 // health routes stay root-relative (see plan §0 / Appendix A). Both groups —
@@ -56,9 +37,6 @@ const proxiedApiPaths = [
 
 export default defineConfig({
   plugins: [svelte()],
-  resolve: {
-    alias: [shikiLangsThemesAlias],
-  },
   server: {
     proxy: Object.fromEntries(
       proxiedApiPaths.map((path) => [

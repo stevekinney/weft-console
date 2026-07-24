@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test';
 
 import type { CoordinatedUpdateResult, WorkflowState } from '@lostgradient/weft';
 
-import { typeIntoPayloadEditor } from '../../../lib/payload-editor/payload-editor.test-support.ts';
 import UpdatesTab from './updates-tab.svelte';
 
 function workflow(overrides: Partial<WorkflowState> = {}): WorkflowState {
@@ -50,7 +49,7 @@ describe('UpdatesTab', () => {
     });
 
     await fireEvent.input(getByLabelText('Update name'), { target: { value: 'applyDiscount' } });
-    await typeIntoPayloadEditor(getByLabelText('Payload'), '{"code":"SAVE10"}');
+    await fireEvent.input(getByLabelText('Payload'), { target: { value: '{"code":"SAVE10"}' } });
     await fireEvent.click(getByRole('button', { name: 'Send update' }));
 
     await waitFor(() => {
@@ -102,7 +101,7 @@ describe('UpdatesTab', () => {
     });
 
     await fireEvent.input(getByLabelText('Update name'), { target: { value: 'applyDiscount' } });
-    await typeIntoPayloadEditor(getByLabelText('Payload'), '{not json');
+    await fireEvent.input(getByLabelText('Payload'), { target: { value: '{not json' } });
     await fireEvent.click(getByRole('button', { name: 'Send update' }));
 
     expect(called).toBe(false);

@@ -124,7 +124,7 @@ describe('showFault', () => {
   /**
    * `role="status"`, not `role="alert"`. Cinder's `toast-region.svelte`
    * `isPolite()` treats `info`/`success`/`warning` as the polite channel as
-   * of Cinder 0.17.0 (fixed upstream:
+   * of Cinder 0.19.0 (fixed upstream:
    * https://github.com/stevekinney/cinder/issues/800 — previously `warning`
    * landed in the assertive channel alongside `danger`), matching the
    * design's warning-is-polite split for a warning-tier fault.

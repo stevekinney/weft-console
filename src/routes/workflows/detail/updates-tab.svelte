@@ -33,7 +33,7 @@
   import { onDestroy } from 'svelte';
 
   import { formatRelativeTime } from '../../../lib/format/index.ts';
-  import PayloadEditor from '../../../lib/payload-editor/payload-editor.svelte';
+  import JsonEditor from '@lostgradient/cinder/json-editor';
   import { TickingClock } from './ticking-clock.svelte.ts';
 
   interface UpdatesTabProps {
@@ -184,12 +184,15 @@
       placeholder="applyDiscount"
       bind:value={updateName}
     />
-    <PayloadEditor
+    <JsonEditor
       id={`update-payload-${workflow.id}`}
       label="Payload"
       description="JSON, optional"
       rows={3}
-      bind:value={payloadText}
+      value={payloadText}
+      onValueChange={(next) => (payloadText = next)}
+      highlight
+      showValidFeedback={false}
     />
     <div class="weft-send-tab__row">
       <Input

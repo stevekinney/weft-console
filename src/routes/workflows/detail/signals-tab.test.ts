@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test';
 
 import type { WorkflowState, WorkflowTimelineEntry } from '@lostgradient/weft';
 
-import { typeIntoPayloadEditor } from '../../../lib/payload-editor/payload-editor.test-support.ts';
 import SignalsTabHarness from './signals-tab.test-harness.svelte';
 
 function workflow(overrides: Partial<WorkflowState> = {}): WorkflowState {
@@ -80,7 +79,7 @@ describe('SignalsTab', () => {
     });
 
     await fireEvent.input(getByLabelText('Signal name'), { target: { value: 'addItem' } });
-    await typeIntoPayloadEditor(getByLabelText('Payload'), '{"sku":"ABC-123"}');
+    await fireEvent.input(getByLabelText('Payload'), { target: { value: '{"sku":"ABC-123"}' } });
     await fireEvent.click(getByRole('button', { name: 'Send signal' }));
 
     expect(sent.call).toEqual({ id: 'wf_1', name: 'addItem', payload: { sku: 'ABC-123' } });
@@ -101,7 +100,7 @@ describe('SignalsTab', () => {
     });
 
     await fireEvent.input(getByLabelText('Signal name'), { target: { value: 'addItem' } });
-    await typeIntoPayloadEditor(getByLabelText('Payload'), '{not json');
+    await fireEvent.input(getByLabelText('Payload'), { target: { value: '{not json' } });
     await fireEvent.click(getByRole('button', { name: 'Send signal' }));
 
     expect(outcome.called).toBe(false);

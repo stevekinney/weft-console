@@ -2,8 +2,7 @@
   /**
    * Start wizard — Configure step (plan §9.2 T2.3, §10.2 payload editor).
    * `SchemaForm` (Cinder) for form mode when the registry published an
-   * `inputSchema`; the shared `PayloadEditor` (`src/lib/payload-editor/`,
-   * CodeMirror 6, lazy-loaded) for raw-JSON mode.
+   * `inputSchema`; Cinder's lazy-highlighted `JsonEditor` for raw-JSON mode.
    *
    * **Mode-switch losslessness, honestly scoped.** `SchemaForm` has no way
    * to read its live, uncommitted value outside its own `onsubmit` (its
@@ -20,9 +19,9 @@
    * scope for this track.
    */
   import SchemaForm from '@lostgradient/cinder/schema-form';
+  import JsonEditor from '@lostgradient/cinder/json-editor';
   import SegmentedControl, { Segment } from '@lostgradient/cinder/segmented-control';
 
-  import PayloadEditor from '../../../lib/payload-editor/payload-editor.svelte';
   import AdvancedOptions from './advanced-options.svelte';
   import { parseRawPayload, type AdvancedStartOptionsInput } from './start-wizard-state.ts';
 
@@ -87,12 +86,14 @@
       onsubmit={onContinue}
     />
   {:else}
-    <PayloadEditor
+    <JsonEditor
       id="weft-start-raw-json"
       label="Payload (JSON)"
       rows={8}
-      bind:value={() => rawText, (next) => onRawTextChange(next)}
-      {...!rawParse.ok ? { error: rawParse.error } : {}}
+      value={rawText}
+      onValueChange={onRawTextChange}
+      highlight
+      showValidFeedback={false}
     />
   {/if}
 

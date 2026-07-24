@@ -17,6 +17,7 @@
   import { Plug } from 'lucide-svelte';
   import { createQuery } from '@tanstack/svelte-query';
 
+  import { codeHighlighter } from '../../lib/code-highlighter.ts';
   import { getClient } from '../../lib/client.ts';
   import { DiscoveryFetchError, fetchDiscoveryDocument } from './discovery-client.ts';
   import McpSessionDiagram from './mcp-session-diagram.svelte';
@@ -98,7 +99,12 @@
         { term: 'stdio command', definition: $mcpQuery.data.transports?.stdio?.command ?? '—' },
       ]}
     />
-    <CodeBlock code={JSON.stringify($mcpQuery.data, null, 2)} language="json" copyable />
+    <CodeBlock
+      code={JSON.stringify($mcpQuery.data, null, 2)}
+      language="json"
+      highlighter={codeHighlighter}
+      copyable
+    />
   {/if}
 
   <div class="weft-mcp-panel__diagram-card">

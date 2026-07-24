@@ -52,7 +52,7 @@ const DEFAULT_HEALTH_POLL_INTERVAL_MS = 20_000;
  * role=status"). Previously (Cinder ≤0.16.1) `warning` was routed to the
  * assertive channel alongside `danger` — filed upstream as
  * https://github.com/stevekinney/cinder/issues/800 and fixed in Cinder
- * 0.17.0's `isPolite()`, so no app-local workaround is needed here anymore.
+ * 0.19.0's `isPolite()`, so no app-local workaround is needed here anymore.
  */
 function toastForNotification(item: NotificationItem): void {
   if (item.tier === 'info') return;
