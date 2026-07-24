@@ -1,82 +1,88 @@
 <script lang="ts">
   /**
-   * Search-attribute query builder UI (plan §9.2 T2.2, §10.3). Wraps the
-   * pure row ↔ `AttributeFilter[]` logic in `query-builder.ts`. See that
-   * module's doc for why this is an app-local composition
-   * (`Combobox`/`Select`/`Input` rows) rather than Cinder's
-   * `InvocationRuleBuilder` (C4) — re-evaluated against Cinder 0.17.0's
-   * `mode="flat-conditions"` (cinder#854), still blocked on the field
-   * selector's lack of free-text entry (filed as cinder#865).
+   * URL-backed adapter for Cinder's flat conditions builder. Cinder owns
+   * condition rows, arbitrary field entry, fixed operators, and typed value
+   * controls; this component retains only the console's visual/raw toggle and
+   * filter serialization boundary.
    */
-  import { Plus, X } from 'lucide-svelte';
-  import { untrack } from 'svelte';
-  import Combobox from '@lostgradient/cinder/combobox';
-  import type { ComboboxOption } from '@lostgradient/cinder/combobox';
-  import Input from '@lostgradient/cinder/input';
+  import InvocationRuleBuilder, {
+    type InvocationRuleCondition,
+    type InvocationRuleFieldType,
+    type InvocationRuleOption,
+  } from '@lostgradient/cinder/invocation-rule-builder';
   import JsonViewer from '@lostgradient/cinder/json-viewer';
   import SegmentedControl, { Segment } from '@lostgradient/cinder/segmented-control';
-  import Select from '@lostgradient/cinder/select';
+  import { untrack } from 'svelte';
 
-  import type { AttributeFilter } from '../../../lib/attribute-filters.ts';
+  import type { AttributeFilter, AttributeScalar } from '../../../lib/attribute-filters.ts';
   import {
-    attributeFiltersToQueryConditionRows,
+    attributeFiltersToInvocationConditions,
     createEmptyQueryConditionRow,
-    QUERY_CONDITION_OPERATORS,
-    queryConditionRowsToAttributeFilters,
-    queryConditionRowsToRawPreview,
-    type QueryConditionRow,
+    invocationConditionsToAttributeFilters,
+    invocationConditionsToRawPreview,
   } from './query-builder.ts';
 
   interface QueryBuilderProps {
     attributes: readonly AttributeFilter[];
     onAttributesChange: (next: AttributeFilter[]) => void;
-    /** Observed attribute names for the field typeahead (plan §10.3: "key typeahead from observed attributes + free text"). */
+    /** Observed attribute names remain typeahead suggestions; Cinder also permits arbitrary keys. */
     knownAttributeKeys: readonly string[];
   }
 
   let { attributes, onAttributesChange, knownAttributeKeys }: QueryBuilderProps = $props();
 
-  /**
-   * Rows are the builder's own editing state, seeded once from `attributes`
-   * and pushed back out via `onAttributesChange` on every edit —
-   * `attributes` is deliberately NOT re-derived from rows on every
-   * keystroke, so an in-progress blank row (no key/value typed yet) doesn't
-   * flicker in and out of the URL/filter object. `untrack()` makes that
-   * one-time read explicit instead of triggering Svelte's "state
-   * referenced locally" warning (same pattern as `shell.svelte`'s
-   * once-only prop capture).
-   */
-  let rows = $state<QueryConditionRow[]>(
-    untrack(() =>
-      attributes.length > 0
-        ? attributeFiltersToQueryConditionRows(attributes)
-        : [createEmptyQueryConditionRow()],
-    ),
-  );
+  function valuesForAttribute(attribute: AttributeFilter): AttributeScalar[] {
+    const exact =
+      attribute.value === undefined
+        ? []
+        : Array.isArray(attribute.value)
+          ? attribute.value
+          : [attribute.value];
+    return [
+      ...exact,
+      ...(attribute.gt === undefined ? [] : [attribute.gt]),
+      ...(attribute.lt === undefined ? [] : [attribute.lt]),
+      ...(attribute.gte === undefined ? [] : [attribute.gte]),
+      ...(attribute.lte === undefined ? [] : [attribute.lte]),
+    ];
+  }
 
-  let mode = $state<'visual' | 'raw'>('visual');
+  function fieldTypeFor(key: string): InvocationRuleFieldType | undefined {
+    const attribute = attributes.find((candidate) => candidate.key === key);
+    if (attribute === undefined) return undefined;
+    const values = valuesForAttribute(attribute);
+    if (values.length > 0 && values.every((value) => typeof value === 'boolean')) return 'boolean';
+    if (values.length > 0 && values.every((value) => typeof value === 'number')) return 'number';
+    return undefined;
+  }
 
   const fieldOptions = $derived(
-    knownAttributeKeys.map((key): ComboboxOption => ({ value: key, label: key })),
+    knownAttributeKeys.map((key): InvocationRuleOption => {
+      const type = fieldTypeFor(key);
+      return { value: key, label: key, ...(type === undefined ? {} : { type }) };
+    }),
   );
-  const rawPreview = $derived(queryConditionRowsToRawPreview(rows));
 
-  function commit(nextRows: QueryConditionRow[]): void {
-    rows = nextRows;
-    onAttributesChange(queryConditionRowsToAttributeFilters(nextRows));
-  }
+  const blankCondition = (): InvocationRuleCondition => {
+    const row = createEmptyQueryConditionRow();
+    return { id: row.id, field: row.key, operator: row.operator, value: row.value };
+  };
 
-  function updateRow(id: string, patch: Partial<QueryConditionRow>): void {
-    commit(rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
-  }
+  let conditions = $state<InvocationRuleCondition[]>(
+    untrack(() => {
+      const seeded = attributeFiltersToInvocationConditions(attributes);
+      return seeded.length > 0 ? seeded : [blankCondition()];
+    }),
+  );
+  let mode = $state<'visual' | 'raw'>('visual');
 
-  function addRow(): void {
-    commit([...rows, createEmptyQueryConditionRow()]);
-  }
+  const rawPreview = $derived(invocationConditionsToRawPreview(conditions));
 
-  function removeRow(id: string): void {
-    const next = rows.filter((row) => row.id !== id);
-    commit(next.length > 0 ? next : [createEmptyQueryConditionRow()]);
+  function handleConditionsChange(nextConditions: InvocationRuleCondition[]): void {
+    // Keep one editable placeholder visible after the last condition is
+    // removed, while blank rows remain excluded from URL serialization.
+    conditions = nextConditions.length > 0 ? nextConditions : [blankCondition()];
+    onAttributesChange(invocationConditionsToAttributeFilters(nextConditions));
   }
 </script>
 
@@ -96,64 +102,14 @@
   </div>
 
   {#if mode === 'visual'}
-    <div class="weft-query-builder__rows">
-      {#each rows as row, index (row.id)}
-        <div class="weft-query-builder__row">
-          <Combobox
-            id={`weft-query-builder-key-${row.id}`}
-            label={`Field for condition ${index + 1}`}
-            options={fieldOptions}
-            placeholder="attribute name"
-            value={row.key}
-            bind:inputValue={() => row.key, (value) => updateRow(row.id, { key: value })}
-          />
-          <Select
-            id={`weft-query-builder-operator-${row.id}`}
-            aria-label={`Operator for condition ${index + 1}`}
-            value={row.operator}
-            options={QUERY_CONDITION_OPERATORS.map((operator) => ({
-              value: operator,
-              label: operator,
-            }))}
-            onchange={(event) =>
-              updateRow(row.id, {
-                operator: (event.currentTarget as HTMLSelectElement)
-                  .value as QueryConditionRow['operator'],
-              })}
-          />
-          <Input
-            id={`weft-query-builder-value-${row.id}`}
-            label={`Value for condition ${index + 1}`}
-            hideLabel
-            value={row.value}
-            oninput={(event) =>
-              updateRow(row.id, { value: (event.currentTarget as HTMLInputElement).value })}
-          />
-          <button
-            type="button"
-            class="weft-query-builder__remove"
-            aria-label={`Remove condition ${index + 1}`}
-            onclick={() => removeRow(row.id)}
-          >
-            <X aria-hidden="true" size={14} />
-          </button>
-        </div>
-        {#if index < rows.length - 1}
-          <div class="weft-query-builder__and">AND</div>
-        {/if}
-      {/each}
-      <button type="button" class="weft-query-builder__add" onclick={addRow}>
-        <Plus aria-hidden="true" size={13} />
-        Add condition
-      </button>
-      <p class="weft-query-builder__hint">Operators: eq · gt · lt · gte · lte only. No OR/LIKE.</p>
-    </div>
+    <InvocationRuleBuilder
+      mode="flat-conditions"
+      {conditions}
+      {fieldOptions}
+      label="Workflow filters"
+      onchange={handleConditionsChange}
+    />
   {:else}
-    <!-- This preview is always a handful of shallow conditions (plan §10.3:
-         AND-only, no nested grouping), so it is fully expanded by default —
-         `JsonViewer`'s own `initialDepth` default of 1 would otherwise hide
-         every condition behind a click for what is meant to be a quick
-         equivalence check against the visual rows above. -->
     <JsonViewer value={rawPreview} initialDepth={6} />
   {/if}
 </div>

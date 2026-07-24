@@ -24,7 +24,7 @@ describe('QueryBuilder', () => {
       props: { attributes: [], onAttributesChange: () => {}, knownAttributeKeys: [] },
     });
 
-    expect(getByLabelText('Field for condition 1')).not.toBeNull();
+    expect(getByLabelText('Field for condition 1 of Conditions')).not.toBeNull();
   });
 
   test('typing a value calls onAttributesChange with the updated filter', async () => {
@@ -40,10 +40,43 @@ describe('QueryBuilder', () => {
       },
     });
 
-    const valueInput = getByLabelText('Value for condition 1') as HTMLInputElement;
+    const valueInput = getByLabelText('Value for condition 1 of Conditions') as HTMLInputElement;
     await fireEvent.input(valueInput, { target: { value: 'silver' } });
 
     expect(latest).toEqual([{ key: 'customerTier', value: 'silver' }]);
+  });
+
+  test('Cinder commits an arbitrary field key through its free-text combobox', async () => {
+    const { render, fireEvent } = await import('@testing-library/svelte');
+    let latest: AttributeFilter[] | undefined;
+    const { getByLabelText } = render(QueryBuilder, {
+      props: {
+        attributes: [{ key: 'customerTier', value: 'gold' }] satisfies AttributeFilter[],
+        onAttributesChange: (next) => {
+          latest = next;
+        },
+        knownAttributeKeys: ['customerTier'],
+      },
+    });
+
+    const fieldInput = getByLabelText('Field for condition 1 of Conditions') as HTMLInputElement;
+    await fireEvent.input(fieldInput, { target: { value: 'custom.owner' } });
+    await fireEvent.keyDown(fieldInput, { key: 'Enter' });
+
+    expect(latest).toEqual([{ key: 'custom.owner', value: 'gold' }]);
+  });
+
+  test('Cinder renders a numeric value control for an observed numeric attribute', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const { getByLabelText } = render(QueryBuilder, {
+      props: {
+        attributes: [{ key: 'retryCount', value: 3 }] satisfies AttributeFilter[],
+        onAttributesChange: () => {},
+        knownAttributeKeys: ['retryCount'],
+      },
+    });
+
+    expect(getByLabelText('Value for condition 1 of Conditions')).toMatchObject({ type: 'number' });
   });
 
   test('"Add condition" appends a blank row', async () => {
@@ -52,10 +85,10 @@ describe('QueryBuilder', () => {
       props: { attributes: [], onAttributesChange: () => {}, knownAttributeKeys: [] },
     });
 
-    await fireEvent.click(getByRole('button', { name: 'Add condition' }));
+    await fireEvent.click(getByRole('button', { name: /Add condition to Conditions/ }));
 
-    expect(getByLabelText('Field for condition 1')).not.toBeNull();
-    expect(getByLabelText('Field for condition 2')).not.toBeNull();
+    expect(getByLabelText('Field for condition 1 of Conditions')).not.toBeNull();
+    expect(getByLabelText('Field for condition 2 of Conditions')).not.toBeNull();
   });
 
   test('removing the only row leaves one blank row rather than zero', async () => {
@@ -71,10 +104,10 @@ describe('QueryBuilder', () => {
       },
     });
 
-    await fireEvent.click(getByRole('button', { name: 'Remove condition 1' }));
+    await fireEvent.click(getByRole('button', { name: 'Remove condition 1 of Conditions' }));
 
     expect(latest).toEqual([]);
-    expect(getByLabelText('Field for condition 1')).not.toBeNull();
+    expect(getByLabelText('Field for condition 1 of Conditions')).not.toBeNull();
   });
 
   test('switching to Raw mode shows the JSON preview', async () => {

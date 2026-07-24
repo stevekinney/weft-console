@@ -1,27 +1,11 @@
 /**
  * Search-attribute query builder — pure logic (plan §9.2 T2.2, §10.3).
  *
- * **Why not `InvocationRuleBuilder` (C4), re-evaluated against Cinder
- * 0.17.0.** The original blocker — `mode="conditions"` (Cinder 0.16.1)
- * groups conditions under independent named "rules" with unconditional
- * label/move/remove chrome, which this console's flat AND-only grammar
- * (plan §10.3, `src/lib/filters.ts` + `attribute-filters.ts`) cannot
- * represent — was filed as cinder#847 and fixed by cinder#854's new
- * `mode="flat-conditions"` (a direct `conditions: InvocationRuleCondition[]`
- * array, no rule-group metadata at all). Re-evaluated against the installed
- * `invocation-rule-builder.types.ts`/`.svelte`, flat-conditions mode still
- * doesn't fit, for a *different*, narrower reason: its field selector is a
- * plain `<select>` populated from the `fieldOptions` prop
- * (`invocation-rule-builder.svelte:635-651`) with no way to type a key that
- * isn't already in that list. This console's grammar allows filtering on
- * ANY search-attribute key, including ones the console has never observed a
- * value for yet, which is exactly what `Combobox`'s free-text
- * `bind:inputValue` gives `query-builder.svelte` today ("key typeahead from
- * observed attributes + free text" per plan §10.3) — a `<select>` cannot
- * do that. Filed upstream as cinder#865. Until it lands, this ships as a
- * minimal app-local composition (`Combobox` + `Select` + `Input` rows,
- * matching `design/Weft Patterns.dc.html`'s query-builder markup exactly)
- * rather than cloning `InvocationRuleBuilder`'s row assembly.
+ * Cinder 0.19.0's `mode="flat-conditions"` now covers this console's
+ * complete UI contract: free-text field entry, the fixed eq/gt/lt/gte/lte
+ * operator set, and type-aware value controls. The component owns row
+ * composition; this module only adapts its string conditions to the frozen
+ * URL filter shape.
  *
  * This module is the pure half: condition rows ↔ `AttributeFilter[]` (the
  * shape `src/lib/attribute-filters.ts` already serializes to/from the URL),
@@ -30,6 +14,8 @@
  * shows no JSON input for this builder, only a read-only equivalent).
  * `query-builder.svelte` is the thin UI wrapper.
  */
+import type { InvocationRuleCondition } from '@lostgradient/cinder/invocation-rule-builder';
+
 import type { AttributeFilter, AttributeScalar } from '../../../lib/attribute-filters.ts';
 
 export type QueryConditionOperator = 'eq' | 'gt' | 'lt' | 'gte' | 'lte';
@@ -191,4 +177,44 @@ export function queryConditionRowsToRawPreview(
     return { [filter.key]: entry };
   });
   return { and };
+}
+
+/** Converts URL-backed filters into Cinder's flat-conditions model. */
+export function attributeFiltersToInvocationConditions(
+  filters: readonly AttributeFilter[],
+): InvocationRuleCondition[] {
+  return attributeFiltersToQueryConditionRows(filters).map(({ id, key, operator, value }) => ({
+    id,
+    field: key,
+    operator,
+    value,
+  }));
+}
+
+/** Converts Cinder's flat conditions back to the URL-backed filter shape. */
+export function invocationConditionsToAttributeFilters(
+  conditions: readonly InvocationRuleCondition[],
+): AttributeFilter[] {
+  return queryConditionRowsToAttributeFilters(
+    conditions.map(({ id, field, operator, value }) => ({
+      id,
+      key: field,
+      operator: operator as QueryConditionOperator,
+      value,
+    })),
+  );
+}
+
+/** Builds the existing read-only raw preview from Cinder conditions. */
+export function invocationConditionsToRawPreview(
+  conditions: readonly InvocationRuleCondition[],
+): Readonly<{ and: Record<string, RawPreviewOperatorMap>[] }> {
+  return queryConditionRowsToRawPreview(
+    conditions.map(({ id, field, operator, value }) => ({
+      id,
+      key: field,
+      operator: operator as QueryConditionOperator,
+      value,
+    })),
+  );
 }
