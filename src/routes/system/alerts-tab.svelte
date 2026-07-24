@@ -5,36 +5,26 @@
    * `alert:resolved`/`constraint:violated` + the four operational-warning
    * kinds — see `alerts-store.svelte.ts`'s module doc for the row model.
    *
-   * ## Why this opens its own `FleetEventSource` connection
+   * ## Why this keeps its own `AlertsStore` instead of `NotificationStore`
    *
-   * The shell's ONE shared fleet connection (plan §5's "one fleet SSE …
-   * never per-row/per-surface connections") lives in
-   * `EngineStatusController.fleetSource` (`src/app/engine-status.svelte.ts`),
-   * but neither it nor the `NotificationStore` it feeds is exposed via
-   * Svelte context — verified across `shell.svelte`/`app.svelte`/
-   * `engine-status.svelte.ts` (no `setContext` for either). `NotificationStore`
-   * also isn't a substitute even if it were exposed: it's a single
-   * 50-item rolling window shared across ALL 31 notification kinds
-   * (`NOTIFICATION_HISTORY_LIMIT`), so a burst of ordinary workflow
-   * lifecycle activity could silently evict real alerts from this view.
-   * This is a genuine Foundation-layer gap (noted in the track's final
-   * report, not filed as a `weft`/`cinder` upstream issue — it's this
-   * console's own internal wiring), worked around locally: a second,
-   * purpose-scoped `FleetEventSource` opened while this tab is mounted and
-   * closed on unmount. It costs one extra SSE connection only while a
-   * System user is actively viewing Alerts, which is an acceptable,
-   * bounded, documented exception to the one-shared-connection rule.
+   * Subscribes to the shell's ONE shared `FleetEventSource`
+   * (`getFleetEventSource()`, `src/app/engine-status.svelte.ts`) rather than
+   * opening a second connection — per plan §5's "one fleet SSE … never
+   * per-row/per-surface connections" budget. `NotificationStore` — the
+   * other consumer fed by that shared source — isn't a substitute for this
+   * tab's own `AlertsStore`: it's a single 50-item rolling window shared
+   * across ALL 31 notification kinds (`NOTIFICATION_HISTORY_LIMIT`), so a
+   * burst of ordinary workflow lifecycle activity could silently evict real
+   * alerts from this view. `AlertsStore` filters the same shared frame
+   * stream down to just the alert/constraint/operational-warning kinds it
+   * cares about, with no shared eviction budget.
    */
   import EmptyState from '@lostgradient/cinder/empty-state';
   import Badge, { type BadgeVariant } from '@lostgradient/cinder/badge';
   import { BellOff, Info } from 'lucide-svelte';
-  import { onDestroy } from 'svelte';
 
-  import { getClient } from '../../lib/client.ts';
-  import {
-    FleetEventSource,
-    type FleetEventFrame,
-  } from '../../lib/live-source/fleet-event-source.svelte.ts';
+  import { getFleetEventSource } from '../../app/engine-status.svelte.ts';
+  import type { FleetEventFrame } from '../../lib/live-source/fleet-event-source.svelte.ts';
   import { router } from '../../lib/router.svelte.ts';
   import {
     AlertsStore,
@@ -43,17 +33,13 @@
     type AlertRowState,
   } from './alerts-store.svelte.ts';
 
-  const client = getClient();
+  const source = getFleetEventSource();
   const store = new AlertsStore();
 
-  const source = new FleetEventSource({ baseUrl: client.baseUrl, headers: client.headers });
-  const unsubscribe = source.subscribe((frame: FleetEventFrame) => {
-    if (isAlertEventKind(frame.kind)) store.ingest(frame);
-  });
-
-  onDestroy(() => {
-    unsubscribe();
-    source.close();
+  $effect(() => {
+    return source.subscribe((frame: FleetEventFrame) => {
+      if (isAlertEventKind(frame.kind)) store.ingest(frame);
+    });
   });
 
   const sessionStartedAtMs = Date.now();

@@ -15,9 +15,11 @@ import {
   fetchRegisteredWorkflowTypes,
   fetchScheduleDetail,
   fetchScheduleList,
+  fetchScheduleRunHistory,
   pauseSchedule,
   resumeSchedule,
   scheduleDetailQueryKey,
+  scheduleRunHistoryQueryKey,
   updateScheduleSpec,
 } from './schedule-queries.ts';
 
@@ -32,7 +34,7 @@ const SUMMARY: ScheduleSummary = {
   updatedAt: 0,
   missedFireCount: 0,
   nextFireAt: 1000,
-  queuedRuns: 0,
+  queuedRuns: [],
 };
 
 describe('scheduleDetailQueryKey', () => {
@@ -42,6 +44,35 @@ describe('scheduleDetailQueryKey', () => {
       'detail',
       'nightly-rollup',
     ]);
+  });
+});
+
+describe('scheduleRunHistoryQueryKey', () => {
+  test('is a distinct tuple from the detail key for the same id', () => {
+    expect(scheduleRunHistoryQueryKey('nightly-rollup')).toEqual([
+      'schedules',
+      'run-history',
+      'nightly-rollup',
+    ]);
+    expect(scheduleRunHistoryQueryKey('nightly-rollup')).not.toEqual(
+      scheduleDetailQueryKey('nightly-rollup'),
+    );
+  });
+});
+
+describe('fetchScheduleRunHistory', () => {
+  test('delegates to client.list with the scheduleId filter and a bounded limit', async () => {
+    let receivedFilter: unknown;
+    const client = {
+      list: async (filter: unknown) => {
+        receivedFilter = filter;
+        return { items: [], total: 0, offset: 0, limit: 10 };
+      },
+    };
+
+    await fetchScheduleRunHistory(client, 'nightly-rollup');
+
+    expect(receivedFilter).toEqual({ scheduleId: 'nightly-rollup', limit: 10 });
   });
 });
 

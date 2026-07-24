@@ -45,15 +45,14 @@ import { showToast } from './toast-host.svelte';
 const DEFAULT_HEALTH_POLL_INTERVAL_MS = 20_000;
 
 /**
- * Cinder's `<ToastRegion>` only has two urgency channels, keyed off
- * `variant`: `info`/`success` are polite (`role="status"`), everything else
- * — including `warning` — is assertive (`role="alert"`,
- * `toast-region.svelte`'s `isPolite()`). The design caption says warning
- * toasts should be `role="status"`; Cinder has no way to get a warning-toned
- * toast into the polite channel. Filed upstream:
- * https://github.com/stevekinney/cinder/issues/800 — shipped here as-is per
- * PROJECT-BRIEF's Cinder-gap policy (degraded-but-correct: a warning toast
- * is momentarily over-announced as assertive, never under-announced).
+ * Cinder's `<ToastRegion>` has two urgency channels, keyed off `variant`:
+ * `info`/`success`/`warning` are polite (`role="status"`), `danger` is
+ * assertive (`role="alert"`, `toast-region.svelte`'s `isPolite()`) — matching
+ * the design caption ("critical → toast role=alert, warning → toast
+ * role=status"). Previously (Cinder ≤0.16.1) `warning` was routed to the
+ * assertive channel alongside `danger` — filed upstream as
+ * https://github.com/stevekinney/cinder/issues/800 and fixed in Cinder
+ * 0.17.0's `isPolite()`, so no app-local workaround is needed here anymore.
  */
 function toastForNotification(item: NotificationItem): void {
   if (item.tier === 'info') return;

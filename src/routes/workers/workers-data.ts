@@ -15,14 +15,12 @@
  *
  * All three poll every 30s (plan §5.3: "the default for low-churn surfaces
  * … workers ~30s") as the baseline freshness guarantee; `index.svelte`
- * layers an opt-in `FleetEventSource` subscription on top for instant
- * invalidation on `worker:connected`/`worker:disconnected`, mirroring the
- * Reviews track's same pattern (`reviews-inbox.svelte`) for the same
- * documented reason: the shell's shared fleet connection is not exposed via
- * Svelte context today (a Foundation-layer gap outside every track's owned
- * paths — plan §5's ≤3-connection budget is respected because this
- * subscription is opt-in and closed on toggle-off/unmount, never a second
- * always-on connection).
+ * layers an opt-in subscription to the shell's ONE shared `FleetEventSource`
+ * (`getFleetEventSource()`, `src/app/engine-status.svelte.ts`) on top for
+ * instant invalidation on `worker:connected`/`worker:disconnected`. The
+ * toggle only gates that subscription — it never opens a second connection —
+ * per plan §5's ≤3-connection budget: "one fleet SSE … never per-row/
+ * per-surface connections".
  */
 import type { HttpClient } from '@lostgradient/weft/client';
 

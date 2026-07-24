@@ -35,7 +35,9 @@
  * (no `attemptCount` — see `timeline-mapping.ts`), there is no "not started
  * yet" entry (an entry only exists once its operation has begun), and
  * `waiting_approval`/`skipped` have no Weft timeline analogue. Only
- * `pending`/`running`/`succeeded`/`failed`/`cancelled` are ever produced.
+ * `running`/`succeeded`/`failed`/`cancelled`/`timed-out` are ever produced
+ * (`pending` is never produced either, for the same "no not-started entry"
+ * reason).
  */
 import type { WorkflowTimelineStatus } from '@lostgradient/weft';
 
@@ -46,11 +48,13 @@ const TIMELINE_STATUS_TO_STEP_STATUS = {
   completed: 'succeeded',
   failed: 'failed',
   cancelled: 'cancelled',
-  // Cinder's `RunStepStatus` has no dedicated timeout state — a timed-out
-  // step is a kind of failure. The raw `'timed-out'` value is preserved
-  // separately (see `timelineStepBadge` in `timeline-mapping.ts`) so the
-  // distinction is not lost, just not encoded in `status` itself.
-  'timed-out': 'failed',
+  // Cinder's `RunStepStatus` has carried a dedicated `'timed-out'` state
+  // (danger tone, terminal) since Cinder 0.17.0 — filed upstream as
+  // https://github.com/stevekinney/cinder/issues/848 against this track's
+  // earlier degraded `'timed-out' → 'failed'` mapping, fixed by
+  // https://github.com/stevekinney/cinder/pull/853. Map it straight through
+  // rather than collapsing it into `'failed'`.
+  'timed-out': 'timed-out',
 } as const satisfies Record<WorkflowTimelineStatus, RunStepStatus>;
 
 /** Maps a single timeline entry's already-resolved status onto Cinder's `RunStepStatus` vocabulary. */

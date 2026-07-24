@@ -207,7 +207,7 @@ export type ArtifactRenderKind =
 
 /**
  * Classifies one artifact/section value into its rendering treatment (plan
- * §9.5: "string→text, markdown→`@lostgradient/cinder/markdown`,
+ * §9.5: "string→text, markdown→`@lostgradient/markdown`,
  * imageUrl/htmlContent keys→media, else PayloadInspector with humanized
  * keys"). Dispatch is by STRUCTURE — a bare string is always plain text; a
  * `markdown`/`imageUrl`/`htmlContent` KEY on an object is what selects the

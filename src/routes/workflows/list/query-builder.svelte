@@ -4,8 +4,9 @@
    * pure row ↔ `AttributeFilter[]` logic in `query-builder.ts`. See that
    * module's doc for why this is an app-local composition
    * (`Combobox`/`Select`/`Input` rows) rather than Cinder's
-   * `InvocationRuleBuilder` (C4) — the upstream ticket is filed and its URL
-   * recorded in the console's final report.
+   * `InvocationRuleBuilder` (C4) — re-evaluated against Cinder 0.17.0's
+   * `mode="flat-conditions"` (cinder#854), still blocked on the field
+   * selector's lack of free-text entry (filed as cinder#865).
    */
   import { Plus, X } from 'lucide-svelte';
   import { untrack } from 'svelte';

@@ -11,25 +11,22 @@ import { defineConfig } from 'vite';
 const devServerTarget = process.env['WEFT_API_BASE_URL'] ?? 'http://localhost:7233';
 
 /**
- * Redirects the bare `shiki` specifier to a curated highlighter shim (plan
- * §12, T9.3). See `scripts/shiki-curated-highlighter.ts` for the full
- * rationale: `<CodeBlock language="…" />`'s default highlighter falls back
- * to `import('shiki')`, whose default entry is the ~253-grammar,
- * ~50-theme `bundle-full.mjs` — several individual grammar/engine chunks
- * from that bundle exceed Rollup's 500 kB per-chunk warning even though
- * none of them enter the initial page load. The regex matches the exact
- * specifier `shiki` only, never a subpath like `shiki/core` or
- * `shiki/wasm` — cinder's own markdown-rendering Web Worker imports those
- * directly for unrelated (legitimate, out-of-scope-here) reasons and must
- * stay on them.
- *
- * Filed upstream as stevekinney/cinder#773 — already fixed in cinder's
- * source tree, not yet in a published npm release. Delete this alias and
- * the shim file once the installed `@lostgradient/cinder` version has it.
+ * Redirects the `shiki/langs` and `shiki/themes` specifiers to a curated
+ * shim (plan §12, T9.3). See `scripts/shiki-curated-langs-themes.ts` for
+ * the full rationale — in short: `<CodeBlock language="…" />`'s default
+ * highlighter (Cinder 0.17.0+) statically imports shiki's FULL ~253-grammar
+ * `shiki/langs` and ~50-theme `shiki/themes` tables (the bare-`shiki`
+ * predecessor of this problem, stevekinney/cinder#773, is fixed; this is
+ * the same class of regression surfacing one module deeper). The regex
+ * matches those two exact specifiers only, never `shiki/core`, `shiki/wasm`,
+ * or `@shikijs/engine-*` — both cinder's and `@lostgradient/markdown`'s
+ * highlighters need the real oniguruma/WASM engine and stay on it.
  */
-const shikiAlias = {
-  find: /^shiki$/,
-  replacement: fileURLToPath(new URL('./scripts/shiki-curated-highlighter.ts', import.meta.url)),
+const shikiLangsThemesAlias = {
+  find: /^shiki\/(langs|themes)$/,
+  replacement: fileURLToPath(
+    new URL('./scripts/shiki-curated-langs-themes.ts', import.meta.url),
+  ),
 };
 
 // Everything functional is served under `/api`; a handful of discovery and
@@ -62,7 +59,7 @@ const proxiedApiPaths = [
 export default defineConfig({
   plugins: [svelte()],
   resolve: {
-    alias: [shikiAlias],
+    alias: [shikiLangsThemesAlias],
   },
   server: {
     proxy: Object.fromEntries(

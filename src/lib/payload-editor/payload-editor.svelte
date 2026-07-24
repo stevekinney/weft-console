@@ -32,6 +32,21 @@
    * Storage's put-panel passes no `error` and stores arbitrary text, not
    * necessarily JSON — the hint there is honest, informational framing
    * ("Not valid JSON"), never a blocking one.
+   *
+   * **Re-evaluated against Cinder 0.17.0's `JsonEditor` (cinder#852) and kept
+   * on CodeMirror.** `JsonEditor` is a native `<textarea>` with `JSON.parse`
+   * feedback and no syntax highlighting — deliberately, per its own
+   * `@useWhen` doc ("a lightweight native editor is preferable to shipping a
+   * code-editor runtime"), not a gap in what shipped. This module's syntax
+   * highlighting, `@codemirror/lint`'s inline squiggles, and lazy-chunked
+   * loading are a different point in the design space this console's
+   * larger/deeply-nested workflow payloads need; see the root README's
+   * "Cinder-first evaluations" section for the full comparison and the
+   * upstream feature-request issue (cinder#866) filed for a syntax-
+   * highlighted `JsonEditor` variant. All five payload call sites (Start's
+   * configure-step, Signals tab, Updates tab, schedule form's "Input
+   * (JSON)" field, and Storage's put-panel) still route through this one
+   * component.
    */
   import type { EditorView } from '@codemirror/view';
 

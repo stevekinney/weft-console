@@ -46,6 +46,12 @@ async function renderSystemRoute() {
     workflows: {},
     activities: {},
   });
+  // The "deep-linking to ?tab=alerts" test below mounts `<AlertsTab>`, which
+  // subscribes to the harness's shared `FleetEventSource` on mount — an
+  // open-ended stream avoids a real fetch failure driving a background
+  // reconnect loop for the rest of the test (`ScriptedFetch.routeSseStream`'s
+  // own doc: "stays open … never closes on its own").
+  scripted.routeSseStream('/v1/events/sse', []);
 
   const { render } = await import('@testing-library/svelte');
   return render(SystemRouteTestHarness, {

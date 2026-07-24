@@ -13,7 +13,7 @@ describe('timelineStepStatus', () => {
       ['completed', 'succeeded'],
       ['failed', 'failed'],
       ['cancelled', 'cancelled'],
-      ['timed-out', 'failed'],
+      ['timed-out', 'timed-out'],
     ];
 
     for (const [input, expected] of cases) {

@@ -122,27 +122,21 @@ describe('showFault', () => {
   });
 
   /**
-   * NOT `role="status"`. Cinder's `toast-region.svelte` `isPolite()` only
-   * treats `info`/`success` variants as the polite channel — `warning` (and
-   * `danger`) both land in the assertive `role="alert"` channel, a known,
-   * already-filed Cinder gap (`../app/engine-status.svelte.ts`'s
-   * `toastForNotification` module doc: "Cinder has no way to get a
-   * warning-toned toast into the polite channel. Filed upstream:
-   * https://github.com/stevekinney/cinder/issues/800"). None of the six
-   * fault kinds map to `info`/`success` (`FAULT_TOAST_VARIANT` is
-   * danger-or-warning only), so every `showFault` toast is currently
-   * assertive — this pins that real, degraded-but-correct behavior rather
-   * than asserting the design's aspirational (but Cinder-unsupported)
-   * warning-is-polite split.
+   * `role="status"`, not `role="alert"`. Cinder's `toast-region.svelte`
+   * `isPolite()` treats `info`/`success`/`warning` as the polite channel as
+   * of Cinder 0.17.0 (fixed upstream:
+   * https://github.com/stevekinney/cinder/issues/800 — previously `warning`
+   * landed in the assertive channel alongside `danger`), matching the
+   * design's warning-is-polite split for a warning-tier fault.
    */
-  test('a warning-variant fault ALSO renders assertive (role=alert), not polite — the Cinder #800 gap', async () => {
+  test('a warning-variant fault renders polite (role=status), not assertive', async () => {
     const { render } = await import('@testing-library/svelte');
     const { findByText } = render(ToastHost);
 
     showFault({ kind: 'not-found', message: 'workflow wf-1 not found' });
 
     const toastText = await findByText('Not found: workflow wf-1 not found');
-    expect(toastText.closest('[role="alert"]')).not.toBeNull();
-    expect(toastText.closest('[role="status"]')).toBeNull();
+    expect(toastText.closest('[role="status"]')).not.toBeNull();
+    expect(toastText.closest('[role="alert"]')).toBeNull();
   });
 });

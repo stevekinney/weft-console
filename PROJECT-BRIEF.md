@@ -17,7 +17,7 @@ engine. Read this file completely before touching code. Then read:
 - **Own your paths only.** Your task prompt names the directories you own. Never edit files outside
   them (shared files listed in your prompt are the only exception). Other agents work in parallel.
 - **Do not run `git` at all.** The orchestrator commits at phase boundaries.
-- **Cinder-first.** Every UI need uses `@lostgradient/cinder` (v0.16.1) when a component exists.
+- **Cinder-first.** Every UI need uses `@lostgradient/cinder` (v0.17.0) when a component exists.
   Ground truth for props/API: `/Users/stevekinney/Developer/cinder/packages/components/src/components/<kebab-name>/`
   (read the `.svelte` file's `$props()` interface, plus `README.md`/schema in the same dir).
   Import styles per component: base `@lostgradient/cinder/styles` is already wired in the entry CSS;
@@ -35,7 +35,7 @@ engine. Read this file completely before touching code. Then read:
   code, treat `as` casts as suspect.
 - **Transport is `HttpClient`** from `@lostgradient/weft/client` via the app context (`src/lib/client.ts`).
   Ergonomic methods first, `client.operations['weft.<name>'](input)` for the rest. Never `fetch()` the
-  API directly. API surface: plan Appendix A. Weft source ground truth (v0.11.0):
+  API directly. API surface: plan Appendix A. Weft source ground truth (v0.15.0):
   `/Users/stevekinney/Developer/weft/src/` (read-only reference — e.g. `src/client/`, `src/server/routes/`).
 - **TanStack Query** (`@tanstack/svelte-query`) owns server state; URL owns filter/pagination/tab
   state; runes own ephemeral UI state.

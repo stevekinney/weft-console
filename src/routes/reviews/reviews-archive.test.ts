@@ -7,6 +7,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { CompletedReviewEntry, ReviewListEntry } from '@lostgradient/weft';
+import { HttpClientError } from '@lostgradient/weft/client';
 
 import type { CreateQueryResult } from '@tanstack/svelte-query';
 
@@ -15,6 +16,9 @@ import ReviewsArchive from './reviews-archive.svelte';
 interface FakeQueryState<T> {
   data?: T;
   isPending: boolean;
+  isError?: boolean;
+  error?: unknown;
+  refetch?: () => void;
 }
 
 function fakeQuery(state: FakeQueryState<ReviewListEntry[]>): CreateQueryResult<ReviewListEntry[]> {
@@ -48,6 +52,30 @@ describe('ReviewsArchive', () => {
     });
 
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+  });
+
+  test('shows a fault banner instead of a false empty state when the query errors', async () => {
+    const { render } = await import('@testing-library/svelte');
+    let refetched = false;
+    const { getByText, queryByText, getByRole } = render(ReviewsArchive, {
+      props: {
+        completedQuery: fakeQuery({
+          isPending: false,
+          isError: true,
+          error: new HttpClientError(401, 'authentication required'),
+          refetch: () => {
+            refetched = true;
+          },
+        }),
+      },
+    });
+
+    expect(getByText('Not authorized')).not.toBeNull();
+    expect(queryByText('No decisions yet')).toBeNull();
+    await import('@testing-library/svelte').then(({ fireEvent }) =>
+      fireEvent.click(getByRole('button', { name: 'Retry' })),
+    );
+    expect(refetched).toBe(true);
   });
 
   test('shows an empty state with no completed reviews', async () => {

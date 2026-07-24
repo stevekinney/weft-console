@@ -77,11 +77,81 @@ describe('ScheduleDetail', () => {
 
       const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('No active or queued runs.')).not.toBeNull());
-      expect(getByText(/No fires observed yet this session\./)).not.toBeNull();
+      await waitFor(() => expect(getByText("No runs yet — this schedule hasn't fired.")).not.toBeNull());
     } finally {
       await server.stop();
     }
   });
+
+  test('queued runs (weft 0.13+ ScheduleQueuedRun[]) render as links with a queued-at timestamp', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const server = await startLiveSourceTestServer();
+    // `long-sleeper` parks on a 24h `ctx.sleep()`, so its run stays "running"
+    // for the lifetime of this test — the first occurrence occupies
+    // `currentWorkflowId` and every occurrence after it queues behind it
+    // under `overlapPolicy: 'queue'` rather than completing and freeing the
+    // slot. `every: '50ms'` (far below the engine's 1s scheduler poll
+    // interval) guarantees a tick is always due at each poll without
+    // relying on a fixed wall-clock sleep before the assertion below —
+    // `waitFor` polls the rendered DOM until a queued run actually appears.
+    await server.engine.schedule({
+      workflow: 'long-sleeper',
+      id: 'queue-probe',
+      every: '50ms',
+      input: { label: 'queue-probe-run' },
+      overlapPolicy: 'queue',
+    });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
+
+    try {
+      const { getByText } = render(ScheduleDetailHarness, {
+        props: { client, id: 'queue-probe' },
+      });
+
+      // Unique to a queued-run row (`schedule-detail.svelte`'s `{#each
+      // schedule.queuedRuns as queued}` branch) — the current-run row (if
+      // any) never renders "queued …" text, so this can only pass once a
+      // real `ScheduleQueuedRun` entry has round-tripped through the API.
+      const waitFor = await waitForCondition();
+      const queuedAtText = await waitFor(() => getByText(/^queued /), { timeout: 5000 });
+      expect(queuedAtText).not.toBeNull();
+      const queuedLink = queuedAtText.closest('li')?.querySelector('a');
+      expect(queuedLink?.getAttribute('href')).toMatch(/^\/workflows\//);
+    } finally {
+      await server.stop();
+    }
+  }, 10000);
+
+  test('recent runs (weft.workflows.list scheduleId filter, weft 0.13+) shows persisted history, not just live fires', async () => {
+    const { render } = await import('@testing-library/svelte');
+    const server = await startLiveSourceTestServer();
+    // `inventory-sync-sweep` completes near-instantly (one activity call),
+    // so within a couple of the engine's 1s scheduler polls it has both
+    // fired and completed — real, persisted history reachable via
+    // `fetchScheduleRunHistory`'s `scheduleId` filter, independent of
+    // whether this page ever observes the live `schedule:fired` event.
+    await server.engine.schedule({
+      workflow: 'inventory-sync-sweep',
+      id: 'history-probe',
+      every: '50ms',
+      input: { warehouseId: 'wh-main' },
+    });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
+
+    try {
+      const { getByText } = render(ScheduleDetailHarness, {
+        props: { client, id: 'history-probe' },
+      });
+
+      const waitFor = await waitForCondition();
+      const completedBadge = await waitFor(() => getByText('Completed'), { timeout: 5000 });
+      expect(completedBadge).not.toBeNull();
+      const runLink = completedBadge.closest('li')?.querySelector('a');
+      expect(runLink?.getAttribute('href')).toMatch(/^\/workflows\//);
+    } finally {
+      await server.stop();
+    }
+  }, 10000);
 
   test('a paused schedule shows "Not scheduled" instead of a next-fires list', async () => {
     const { render } = await import('@testing-library/svelte');

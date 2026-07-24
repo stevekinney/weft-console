@@ -2,9 +2,22 @@
   /**
    * Schedule detail (Track B, plan §9.3; design `Weft Console.dc.html`
    * "Schedule detail"): spec + next-5-fires preview, overlap policy with
-   * consequence text, current/queued runs, recent runs (live, session-scoped
-   * — see `live-fired-runs.svelte.ts`'s module doc for why), live update on
-   * `schedule:fired` via the shared `FleetEventSource`.
+   * consequence text, current/queued runs, recent runs, live update on
+   * `schedule:fired`/`schedule:missed-fire` via the shared
+   * `FleetEventSource`.
+   *
+   * **"Recent runs" is real, persisted history, not a live-only
+   * accumulator.** Earlier revisions of this page could only show fires
+   * observed live since the page loaded — weft had no queryable link from a
+   * schedule back to the workflow runs it launched (filed as
+   * https://github.com/stevekinney/weft/issues/735). Weft 0.13
+   * (https://github.com/stevekinney/weft/pull/759) added a `scheduleId`
+   * filter to `weft.workflows.list`, so `fetchScheduleRunHistory`
+   * (`schedule-queries.ts`) now queries the real history directly. The fleet
+   * subscription below still matters for LIVE freshness — refetching the
+   * moment a `schedule:fired`/`schedule:missed-fire` event arrives rather
+   * than waiting on the query's own staleness — but is no longer the only
+   * source of this data.
    */
   import Badge from '@lostgradient/cinder/badge';
   import Button from '@lostgradient/cinder/button';
@@ -28,16 +41,18 @@
   import { formatRelativeTime, truncateId } from '../../lib/format/index.ts';
   import { router } from '../../lib/router.svelte.ts';
   import { getPrincipalStore, scopeGate } from '../../lib/scopes.svelte.ts';
+  import { workflowStatusPresentation } from '../workflows/detail/workflow-status.ts';
   import { cadenceToScheduleValue, describeCadence } from './cadence.ts';
   import FaultBanner from './fault-banner.svelte';
-  import { ScheduleFiredRunTracker } from './live-fired-runs.svelte.ts';
   import { overlapConsequence, overlapLabel } from './overlap-policy.ts';
   import {
     cancelSchedule,
     fetchScheduleDetail,
+    fetchScheduleRunHistory,
     pauseSchedule,
     resumeSchedule,
     scheduleDetailQueryKey,
+    scheduleRunHistoryQueryKey,
   } from './schedule-queries.ts';
   import { scheduleStatusDescriptor } from './schedule-status.ts';
 
@@ -59,24 +74,34 @@
     })),
   );
 
+  const historyQuery = createQuery(
+    toStore(() => ({
+      queryKey: scheduleRunHistoryQueryKey(id),
+      queryFn: () => fetchScheduleRunHistory(client, id),
+    })),
+  );
+
   function invalidateDetail(): void {
     void queryClient.invalidateQueries({ queryKey: scheduleDetailQueryKey(id) });
+    void queryClient.invalidateQueries({ queryKey: scheduleRunHistoryQueryKey(id) });
   }
 
-  // A plain `$effect` (not `$derived`) owns the tracker's lifecycle
+  function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  // A plain `$effect` (not `$derived`) owns the subscription lifecycle
   // deliberately: `$effect`'s cleanup runs BEFORE the next run whenever `id`
   // changes, so the previous schedule's live subscription is always
   // disposed before a new one opens — `$derived` has no equivalent
   // teardown-before-recompute hook, which would leak a subscription per
   // navigation between two schedule detail pages.
-  let firedRuns = $state<ScheduleFiredRunTracker>();
-
   $effect(() => {
-    const tracker = new ScheduleFiredRunTracker(fleetSource, id, {
-      onRelevantEvent: invalidateDetail,
+    return fleetSource.subscribe((frame) => {
+      if (frame.kind !== 'schedule:fired' && frame.kind !== 'schedule:missed-fire') return;
+      if (!isRecord(frame.payload) || frame.payload['scheduleId'] !== id) return;
+      invalidateDetail();
     });
-    firedRuns = tracker;
-    return () => tracker.dispose();
   });
 
   const writeGate = $derived(scopeGate(principal, ['schedules:write']));
@@ -239,44 +264,50 @@
               <Badge variant="success">running</Badge>
             </a>
           {/if}
-          {#if schedule.queuedRuns > 0}
-            <p class="weft-schedule-detail__queued">
-              {schedule.queuedRuns} run{schedule.queuedRuns === 1 ? '' : 's'} queued — individual queued
-              run ids aren't exposed by the API yet.
-            </p>
+          {#if schedule.queuedRuns.length > 0}
+            <ul class="weft-schedule-detail__runs-list weft-schedule-detail__queued">
+              {#each schedule.queuedRuns as queued (queued.workflowId)}
+                <li>
+                  <a
+                    class="weft-schedule-detail__mono"
+                    href={router.href(`/workflows/${queued.workflowId}`)}
+                  >
+                    {truncateId(queued.workflowId)}
+                  </a>
+                  <span class="weft-schedule-detail__muted"
+                    >queued {formatRelativeTime(queued.queuedAt)}</span
+                  >
+                </li>
+              {/each}
+            </ul>
           {/if}
-          {#if schedule.currentWorkflowId === undefined && schedule.queuedRuns === 0}
+          {#if schedule.currentWorkflowId === undefined && schedule.queuedRuns.length === 0}
             <p class="weft-schedule-detail__muted">No active or queued runs.</p>
           {/if}
         </Card>
       </div>
     </div>
 
-    <Card>
-      {#snippet header()}
-        <span class="weft-schedule-detail__panel-header">
-          <span>Recent runs</span>
-          <span class="weft-schedule-detail__session-note"
-            >Observed this session, since page load</span
-          >
-        </span>
-      {/snippet}
-      {#if (firedRuns?.runs.length ?? 0) === 0}
-        <p class="weft-schedule-detail__muted">
-          No fires observed yet this session. Weft does not currently expose historical schedule-run
-          linkage — this list fills in live as the schedule fires.
-        </p>
+    <Card title="Recent runs">
+      {#if $historyQuery.isPending}
+        <Skeleton height="80px" />
+      {:else if $historyQuery.isError}
+        <FaultBanner
+          treatment={faultTreatment($historyQuery.error)}
+          onRetry={() => void $historyQuery.refetch()}
+        />
+      {:else if $historyQuery.data.items.length === 0}
+        <p class="weft-schedule-detail__muted">No runs yet — this schedule hasn't fired.</p>
       {:else}
         <ul class="weft-schedule-detail__runs-list">
-          {#each firedRuns?.runs ?? [] as run (run.workflowId)}
+          {#each $historyQuery.data.items as run (run.id)}
+            {@const status = workflowStatusPresentation(run.status)}
             <li>
-              <a
-                class="weft-schedule-detail__mono"
-                href={router.href(`/workflows/${run.workflowId}`)}
-              >
-                {truncateId(run.workflowId)}
+              <a class="weft-schedule-detail__mono" href={router.href(`/workflows/${run.id}`)}>
+                {truncateId(run.id)}
               </a>
-              <span class="weft-schedule-detail__muted">{formatRelativeTime(run.firedAt)}</span>
+              <Badge variant={status.variant}>{status.label}</Badge>
+              <span class="weft-schedule-detail__muted">{formatRelativeTime(run.createdAt)}</span>
             </li>
           {/each}
         </ul>
@@ -424,19 +455,6 @@
     font-size: var(--cinder-text-sm);
   }
 
-  .weft-schedule-detail__panel-header {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .weft-schedule-detail__session-note {
-    font-size: var(--cinder-text-2xs);
-    font-weight: 400;
-    color: var(--cinder-text-disabled);
-  }
-
   .weft-schedule-detail__runs-list {
     display: flex;
     flex-direction: column;
@@ -449,7 +467,10 @@
   .weft-schedule-detail__runs-list li {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 10px;
+  }
+
+  .weft-schedule-detail__runs-list li .weft-schedule-detail__muted {
+    margin-left: auto;
   }
 </style>

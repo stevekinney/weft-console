@@ -9,15 +9,15 @@
    * ## Live connect/disconnect (plan §9.4 T5.1)
    *
    * `EmptyState`+`Lock` gates the whole surface on `system:read`; an opt-in
-   * "Live" toggle (default OFF per plan §5 UI treatment) opens its OWN
-   * scoped `FleetEventSource`, filtered to `worker:connected`/
-   * `worker:disconnected`, invalidating the three queries on either —
-   * mirroring the Reviews track's identical pattern and its identical
-   * reason (`reviews-inbox.svelte`'s doc comment): the shell's shared fleet
-   * connection is not exposed via Svelte context today (a Foundation-layer
-   * gap outside every track's owned paths — `src/app/shell/route-outlet.svelte`
-   * renders route components with no props, and nothing in `src/app/**`
-   * puts it in context either). The always-on 30s poll
+   * "Live" toggle (default OFF per plan §5 UI treatment) subscribes to the
+   * shell's ONE shared `FleetEventSource` (`getFleetEventSource()`,
+   * `src/app/engine-status.svelte.ts`), filtering client-side to
+   * `worker:connected`/`worker:disconnected` and invalidating the three
+   * queries on either. The toggle only gates this subscription — it never
+   * constructs or closes a connection of its own — mirroring
+   * `schedule-detail.svelte`'s and the Workflows list track's identical
+   * pattern (`workflow-list-live.svelte.ts`), per plan §5's "one fleet SSE
+   * … never per-row/per-surface connections" budget. The always-on 30s poll
    * (`workers-data.ts`'s `REFETCH_INTERVAL_MS`) is the "polling fallback"
    * half of the requirement and runs regardless of the Live toggle.
    *
@@ -43,9 +43,9 @@
 
   import { useQueryClient } from '@tanstack/svelte-query';
 
+  import { getFleetEventSource } from '../../app/engine-status.svelte.ts';
   import { getClient } from '../../lib/client.ts';
   import { FAULT_TREATMENT_TITLE, faultTreatment } from '../../lib/faults.ts';
-  import { FleetEventSource } from '../../lib/live-source/index.ts';
   import { queryKeys } from '../../lib/query.ts';
   import { router } from '../../lib/router.svelte.ts';
   import {
@@ -121,10 +121,11 @@
   }
 
   // ---------------------------------------------------------------------
-  // Live toggle — own-scoped FleetEventSource (module doc above).
+  // Live toggle — subscribes to the shell's shared FleetEventSource
+  // (module doc above); never constructs or closes a connection of its own.
   // ---------------------------------------------------------------------
+  const fleetSource = getFleetEventSource();
   let live = $state(false);
-  let fleetSource = $state<FleetEventSource | null>(null);
   const liveToggleGate = $derived(scopeGate(principalStore, ['events:read']));
 
   const WORKER_LIVENESS_KINDS = new Set(['worker:connected', 'worker:disconnected']);
@@ -132,20 +133,12 @@
   $effect(() => {
     if (!live || liveToggleGate.disabled) return;
 
-    const source = new FleetEventSource({ baseUrl: client.baseUrl, headers: client.headers });
-    fleetSource = source;
-    const unsubscribe = source.subscribe((frame) => {
+    return fleetSource.subscribe((frame) => {
       if (!WORKER_LIVENESS_KINDS.has(frame.kind)) return;
       void queryClient.invalidateQueries({ queryKey: queryKeys.workers.list() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.queues.list() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.diagnostics() });
     });
-
-    return () => {
-      unsubscribe();
-      source.close();
-      fleetSource = null;
-    };
   });
 
   // ---------------------------------------------------------------------
@@ -256,7 +249,7 @@
     {#if !locked}
       <div class="weft-workers-route__live">
         {#if live}
-          <ConnectionIndicator status={fleetSource?.status ?? 'connecting'} />
+          <ConnectionIndicator status={fleetSource.status} />
         {:else}
           <ConnectionIndicator status="polling" label="Updated every 30s" />
         {/if}

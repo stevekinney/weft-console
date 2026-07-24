@@ -18,6 +18,7 @@
   import type { CreateQueryResult } from '@tanstack/svelte-query';
 
   import { formatRelativeTime, truncateId } from '../../lib/format/index.ts';
+  import QueryFaultBanner from './query-fault-banner.svelte';
   import { completedEntriesOnly } from './review-domain.ts';
 
   interface ReviewsArchiveProps {
@@ -42,6 +43,8 @@
     <Skeleton height="2.5rem" />
     <Skeleton height="2.5rem" />
   </div>
+{:else if $completedQuery.isError}
+  <QueryFaultBanner error={$completedQuery.error} onRetry={() => void $completedQuery.refetch()} />
 {:else if entries.length === 0}
   <EmptyState
     title="No decisions yet"

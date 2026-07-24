@@ -21,6 +21,7 @@ import type {
   ScheduleOverlapPolicy,
   ScheduleSpec,
   ScheduleSummary,
+  WorkflowSummary,
 } from '@lostgradient/weft';
 import type { HttpClient } from '@lostgradient/weft/client';
 
@@ -28,6 +29,29 @@ import type { QueryKey } from '@tanstack/svelte-query';
 
 export function scheduleDetailQueryKey(id: string): QueryKey {
   return ['schedules', 'detail', id] as const;
+}
+
+export function scheduleRunHistoryQueryKey(id: string): QueryKey {
+  return ['schedules', 'run-history', id] as const;
+}
+
+const SCHEDULE_RUN_HISTORY_LIMIT = 10;
+
+/**
+ * `GET /api/v1/workflows?scheduleId=…` (`weft.workflows.list`'s `scheduleId`
+ * filter) — the schedule's most recently launched runs, newest first (the
+ * operation's documented "engine default ordering" is `createdAt`
+ * descending; verified against `weft/src/core/engine/listing.ts`). Added by
+ * weft#759 ("Expose schedule run history", weft 0.13+) closing weft#735,
+ * which this console filed after finding no way to query which workflow
+ * runs a schedule had launched — see `schedule-detail.svelte`'s "Recent
+ * runs" panel, the sole consumer.
+ */
+export function fetchScheduleRunHistory(
+  client: Pick<HttpClient, 'list'>,
+  scheduleId: string,
+): Promise<PaginatedResult<WorkflowSummary>> {
+  return client.list({ scheduleId, limit: SCHEDULE_RUN_HISTORY_LIMIT });
 }
 
 /** `GET /api/v1/schedules` — page of schedule summaries. */

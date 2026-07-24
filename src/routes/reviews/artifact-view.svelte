@@ -4,7 +4,7 @@
    * Dispatch lives in `./review-domain.ts`'s pure `classifyArtifactValue()`;
    * this component only owns the presentation per kind:
    *   - `text`   → a plain paragraph.
-   *   - `markdown` → `@lostgradient/cinder/markdown/rendering`'s
+   *   - `markdown` → `@lostgradient/markdown/rendering`'s
    *     `renderMarkdown()`, which sanitizes before returning HTML — safe to
    *     `{@html}`.
    *   - `image`  → a plain `<img>`. `imageUrl` is asserted by an artifact
@@ -22,7 +22,7 @@
    *     (arrays/primitives have no keys to humanize).
    */
   import PayloadInspector from '@lostgradient/cinder/payload-inspector';
-  import { renderMarkdown } from '@lostgradient/cinder/markdown/rendering';
+  import { renderMarkdown } from '@lostgradient/markdown/rendering';
 
   import { classifyArtifactValue, humanizeKeys } from './review-domain.ts';
 

@@ -125,6 +125,54 @@
   padding: 24px;
 }
 
+/* Query fault banner (shared by the inbox list pane and the archive table —
+ * `query-fault-banner.svelte`). Mirrors the Workflows track's
+ * `.weft-query-fault` rules (`src/styles/workflows.css`) so every
+ * `createQuery` error renders the same six-treatment banner instead of a
+ * misleading "no data" empty state. */
+.weft-query-fault {
+  display: flex;
+  align-items: center;
+  gap: var(--cinder-space-2-5, 10px);
+  margin: 16px;
+  padding: 11px 14px;
+  border: 1px solid var(--cinder-border);
+  border-radius: var(--cinder-radius-md);
+  background: var(--cinder-surface-raised);
+  flex-wrap: wrap;
+}
+
+.weft-query-fault[data-tone='warning'] {
+  border-color: var(--cinder-color-warning-border);
+  background: var(--cinder-color-warning-bg);
+}
+
+.weft-query-fault[data-tone='danger'] {
+  border-color: var(--cinder-color-danger-border);
+  background: var(--cinder-color-danger-bg);
+}
+
+.weft-query-fault__icon {
+  flex: none;
+  color: var(--cinder-text-subtle);
+}
+
+.weft-query-fault[data-tone='warning'] .weft-query-fault__icon {
+  color: var(--cinder-color-warning-fg);
+}
+
+.weft-query-fault[data-tone='danger'] .weft-query-fault__icon {
+  color: var(--cinder-color-danger-fg);
+}
+
+.weft-query-fault__message {
+  flex: 1 1 auto;
+  min-width: 160px;
+  margin: 0;
+  font-size: var(--cinder-text-sm);
+  color: var(--cinder-text);
+}
+
 /* Two-panel layouts stack vertically below 900px (PROJECT-BRIEF binding
  * responsive rule). `ResizablePanels`'s own `orientation` prop is bound to
  * a `MediaQuery` at the same breakpoint in the component, so this media
