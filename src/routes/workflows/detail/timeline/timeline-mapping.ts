@@ -25,28 +25,29 @@
  *   immediately after `"reserveHotel"`). This module reads that
  *   deterministic, engine-established naming convention to set `compensates`
  *   — it is not inferring anything from business data.
- * - **Coordination groups (`ctx.race`/`ctx.all`/`ctx.speculate`) genuinely
- *   degrade to one opaque step.** Verified live: a `checkout-coordination`
- *   run's `race`/`parallel` (the operation type for `ctx.all`)/`speculate`
- *   operations each produce exactly ONE timeline entry with
- *   `inputSummary: '{"operationCount":2}'` and a single `outputSummary` for
- *   the whole group — no per-branch id, label, duration, or winner/loser
- *   outcome is recorded anywhere the client can read. Cinder's
- *   `RunStepBranchGroup` (lanes with individual steps and outcomes) cannot
- *   be honestly populated from this data, so this module never emits one —
- *   it renders a single step labeled with the operation kind and (when the
- *   input summary carries it) the branch count, and says so in a detail
- *   panel. Filed upstream (weft) for per-branch timeline detail; see this
- *   track's final report.
+ * - **Coordination groups (`ctx.race`/`ctx.all`/`ctx.speculate`) carry bounded
+ *   branch detail in the current wire format.** `branches` contains the
+ *   operation id, key, label, and outcome for `race`/`all`; `children` and
+ *   `speculationOutcome` do the same for `speculate`. This module maps those
+ *   fields to Cinder's native branch groups and keeps an opaque step only for
+ *   older or incomplete timeline entries.
  * - **No timeline entry exists for finalizer execution at all** — durable
  *   finalizers run on the engine host outside the normal workflow generator
  *   (this repo's CLAUDE.md), so `destroySandbox`-style teardown never
  *   appears in `getTimeline()`. See `workflow-live-observations.svelte.ts`
  *   for the (live-event-only) finalizer strip this track builds instead.
  */
-import type { WorkflowTimelineEntry } from '@lostgradient/weft';
+import type { WorkflowTimelineEntry, WorkflowTimelineOperationDetail } from '@lostgradient/weft';
 
-import type { RunStep, RunStepDetail } from '@lostgradient/cinder/run-step-timeline';
+import type {
+  RunStep,
+  RunStepBranchGroup,
+  RunStepBranchLane,
+  RunStepBranchLaneOutcome,
+  RunStepDetail,
+  RunStepStatus,
+  RunStepTimelineEntry,
+} from '@lostgradient/cinder/run-step-timeline';
 
 import { formatDuration } from '../../../../lib/format/index.ts';
 import { timelineStepStatus } from './timeline-step-state.ts';
@@ -112,13 +113,29 @@ export function timelineEntryLabel(entry: WorkflowTimelineEntry): string {
     : `${structuralLabel} · ${operationCount} branches`;
 }
 
-/** True for the structural coordination operation types that degrade to one opaque step (see module doc). */
-export function isDegradedCoordinationEntry(entry: WorkflowTimelineEntry): boolean {
+function isCoordinationEntry(entry: WorkflowTimelineEntry): boolean {
   return (
     entry.operationType === 'race' ||
     entry.operationType === 'parallel' ||
     entry.operationType === 'speculate'
   );
+}
+
+function coordinatorDetails(
+  entry: WorkflowTimelineEntry,
+): readonly WorkflowTimelineOperationDetail[] | undefined {
+  return entry.operationType === 'speculate' ? entry.children : entry.branches;
+}
+
+function coordinatorOmittedCount(entry: WorkflowTimelineEntry): number {
+  return entry.operationType === 'speculate'
+    ? (entry.childrenOmitted ?? 0)
+    : (entry.branchesOmitted ?? 0);
+}
+
+/** True when a coordination entry has no branch detail to render. */
+export function isDegradedCoordinationEntry(entry: WorkflowTimelineEntry): boolean {
+  return isCoordinationEntry(entry) && coordinatorDetails(entry) === undefined;
 }
 
 /** `compensate:<name>` → the forward step's real name, or `null` when this entry isn't a saga compensation. */
@@ -184,27 +201,92 @@ function buildDetails(entry: WorkflowTimelineEntry): RunStepDetail[] {
     details.push({
       id: `${timelineStepId(entry.step)}-coordination-note`,
       label: 'About this step',
-      content:
-        'The timeline API records one entry for the whole coordinated operation — ' +
-        'per-branch labels, durations, and winner/loser outcomes are not available. ' +
-        'Filed upstream; see the workflow detail track report.',
+      content: 'The timeline API did not include per-branch detail for this coordinated operation.',
     });
   }
 
   return details;
 }
 
+function branchStepStatus(detail: WorkflowTimelineOperationDetail): RunStepStatus {
+  if (detail.outcome === 'rejected' || detail.errorSummary !== undefined) return 'failed';
+  return 'succeeded';
+}
+
+function branchLaneOutcome(detail: WorkflowTimelineOperationDetail): RunStepBranchLaneOutcome {
+  if (detail.outcome === 'won') return 'won';
+  if (detail.outcome === 'lost') return 'lost';
+  return 'settled';
+}
+
+function branchStepDetails(
+  entry: WorkflowTimelineEntry,
+  detail: WorkflowTimelineOperationDetail,
+): RunStepDetail[] {
+  const id = `${timelineStepId(entry.step)}-branch-${String(detail.index)}`;
+  const details: RunStepDetail[] = [
+    { id: `${id}-operation-id`, label: 'Operation ID', content: detail.operationId },
+    { id: `${id}-operation-type`, label: 'Operation type', content: detail.operationType },
+  ];
+  if (detail.errorSummary !== undefined) {
+    details.push({ id: `${id}-error`, label: 'Error', content: detail.errorSummary });
+  }
+  return details;
+}
+
+function branchGroupLabel(entry: WorkflowTimelineEntry): string {
+  const omitted = coordinatorOmittedCount(entry);
+  const omissionLabel = omitted > 0 ? ` · ${omitted} more omitted` : '';
+  const speculationLabel =
+    entry.speculationOutcome === undefined ? '' : ` · ${entry.speculationOutcome}`;
+  return `${timelineEntryLabel(entry)}${speculationLabel}${omissionLabel}`;
+}
+
+function mapCoordinatorEntry(
+  entry: WorkflowTimelineEntry,
+  details: readonly WorkflowTimelineOperationDetail[],
+): RunStepBranchGroup {
+  const lanes: RunStepBranchLane[] = details.map((detail) => {
+    const stepId = `${timelineStepId(entry.step)}-branch-${String(detail.index)}`;
+    const step: RunStep = {
+      id: stepId,
+      label: detail.operationLabel,
+      status: branchStepStatus(detail),
+      details: branchStepDetails(entry, detail),
+      ...(entry.speculationOutcome === 'rolled-back' ? { rewound: true } : {}),
+    };
+    return {
+      id: `${stepId}-lane`,
+      ...(detail.key === undefined ? {} : { label: detail.key }),
+      outcome: branchLaneOutcome(detail),
+      steps: [step],
+    };
+  });
+
+  return {
+    kind: 'branch',
+    id: timelineStepId(entry.step),
+    label: branchGroupLabel(entry),
+    lanes,
+  };
+}
+
 /**
- * Maps the full timeline to Cinder `RunStep[]` in step order. Always a flat
- * array — `WorkflowTimelineEntry` has no parent/child structure, so this
- * module never nests via `RunStep.children` (nesting is reserved for the
- * genuinely-recoverable case Cinder documents; Weft's child-workflow entries
- * don't qualify — see `workflow-timeline-data.ts`).
+ * Maps the full timeline to Cinder's timeline-entry union in step order.
+ * Coordinator metadata becomes native branch groups; ordinary entries remain
+ * top-level steps.
  */
-export function mapTimelineToSteps(entries: readonly WorkflowTimelineEntry[]): RunStep[] {
+export function mapTimelineToSteps(
+  entries: readonly WorkflowTimelineEntry[],
+): RunStepTimelineEntry[] {
   const compensatesStep = resolveCompensationTargets(entries);
 
   return entries.map((entry) => {
+    const details = coordinatorDetails(entry);
+    if (isCoordinationEntry(entry) && details !== undefined) {
+      return mapCoordinatorEntry(entry, details);
+    }
+
     const compensatesTargetStep = compensatesStep.get(entry.step);
     const step: RunStep = {
       id: timelineStepId(entry.step),

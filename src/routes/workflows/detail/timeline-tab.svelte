@@ -32,7 +32,9 @@
   import Button from '@lostgradient/cinder/button';
   import EmptyState from '@lostgradient/cinder/empty-state';
   import Input from '@lostgradient/cinder/input';
-  import RunStepTimeline, { type RunStep } from '@lostgradient/cinder/run-step-timeline';
+  import RunStepTimeline, {
+    type RunStepTimelineEntry,
+  } from '@lostgradient/cinder/run-step-timeline';
   import SegmentedControl, { Segment } from '@lostgradient/cinder/segmented-control';
   import Skeleton from '@lostgradient/cinder/skeleton';
   import { createQuery, useQueryClient } from '@tanstack/svelte-query';
@@ -117,7 +119,7 @@
     paginated ? timelineEntriesForPage(filteredEntries, pageIndex) : filteredEntries,
   );
 
-  const steps: RunStep[] = $derived(mapTimelineToSteps(pageEntries));
+  const steps: RunStepTimelineEntry[] = $derived(mapTimelineToSteps(pageEntries));
 
   // Called once at component init, not reactively: `timelineSelectionFor`
   // both reads AND (conditionally) mutates the shared module-level store,
