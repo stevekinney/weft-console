@@ -28,6 +28,18 @@ export type CoverageBaseline = {
    * serially because Bun's default-parallel coverage workers can collide on
    * the integration servers' ephemeral ports; the exact command is recorded
    * in package.json's `test:coverage` script.
+   *
+   * 2026-07-24 SIGTRAP investigation (isolated worktree): the earlier
+   * full-parallel SIGTRAP (exit 133; crash report
+   * ~/Library/Logs/DiagnosticReports/bun-2026-07-24-121054.ips) did NOT
+   * reproduce in 3/3 loaded runs on Bun 1.3.13 — artificial load produced
+   * EADDRINUSE noise instead, consistent with the port-collision rationale
+   * above — and the full suite ran clean on Bun 1.3.14. Not escalated to
+   * oven-sh/bun without a reproduction. Also verified: `--path-ignore-patterns`
+   * takes real GLOBS matched against the path (`'*storage-client*'` excludes;
+   * a bare substring like `'storage-client'` matches nothing — Jest-style
+   * regex-substring expectations do not transfer), and explicitly named file
+   * arguments override ignore patterns.
    */
   overall: AreaCoverage;
   areas: Record<string, AreaCoverage>;
