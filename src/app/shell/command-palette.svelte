@@ -140,7 +140,7 @@
             <CommandItem
               value={`workflow-${workflow.id}`}
               description={workflow.type}
-              onselect={() => goTo(`/workflows/${workflow.id}`)}
+              onSelect={() => goTo(`/workflows/${workflow.id}`)}
             >
               {workflow.id}
             </CommandItem>
@@ -156,7 +156,7 @@
             <CommandItem
               value={`schedule-${schedule.id}`}
               description={schedule.workflowType}
-              onselect={() => goTo('/schedules')}
+              onSelect={() => goTo('/schedules')}
             >
               {schedule.id}
             </CommandItem>
@@ -172,7 +172,7 @@
             <CommandItem
               value={`worker-${worker.id}`}
               description={worker.queue}
-              onselect={() => goTo('/workers')}
+              onSelect={() => goTo('/workers')}
             >
               {worker.id}
             </CommandItem>
@@ -188,7 +188,7 @@
             <CommandItem
               value={`review-${review.reviewId}`}
               description={review.reviewType}
-              onselect={() => goTo('/reviews')}
+              onSelect={() => goTo('/reviews')}
             >
               {review.reviewId}
             </CommandItem>

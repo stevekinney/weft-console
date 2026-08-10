@@ -59,9 +59,9 @@
     <SegmentedControl
       id="discovery-view"
       label="Discovery document"
-      hideLabel
+      labelVisible={false}
       value={view}
-      onchange={(next) => (view = next)}
+      onValueChange={(next) => (view = next)}
     >
       <Segment value="openapi">OpenAPI</Segment>
       <Segment value="openrpc">OpenRPC</Segment>

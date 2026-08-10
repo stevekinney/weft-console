@@ -193,11 +193,11 @@
   title="Recover all workflows?"
   description="This resumes every workflow this engine believes should be running. Safe to run repeatedly, but may generate a burst of activity if many workflows were stalled."
   confirmLabel="Recover all"
-  onconfirm={() => {
+  onConfirm={() => {
     confirmOpen = false;
     $recoverAll.mutate();
   }}
-  oncancel={() => (confirmOpen = false)}
+  onCancel={() => (confirmOpen = false)}
 />
 
 <style>

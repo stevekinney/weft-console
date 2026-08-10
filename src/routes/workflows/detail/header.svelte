@@ -161,7 +161,7 @@
     <div class="weft-workflow-detail__identity">
       <div class="weft-workflow-detail__badges">
         <h1 class="weft-workflow-detail__title">{workflow.type}</h1>
-        <Badge variant="accent" mono>v{workflow.versionTuple.workflowVersion}</Badge>
+        <Badge variant="accent" monochrome>v{workflow.versionTuple.workflowVersion}</Badge>
         {#if presentation.tooltip}
           <Tooltip text={presentation.tooltip}>
             <Badge variant={presentation.variant}>
@@ -299,7 +299,7 @@
     description={CONFIRM_COPY[confirmingAction]}
     confirmLabel={actionLabel(confirmingAction)}
     destructive
-    onconfirm={confirmAndClose}
-    oncancel={() => (confirmingAction = null)}
+    onConfirm={confirmAndClose}
+    onCancel={() => (confirmingAction = null)}
   />
 {/if}

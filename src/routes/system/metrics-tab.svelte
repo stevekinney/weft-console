@@ -25,8 +25,8 @@
   import ConnectionIndicator from '@lostgradient/cinder/connection-indicator';
   import { LineChart } from '@lostgradient/cinder/line-chart';
   import { Segment, SegmentedControl } from '@lostgradient/cinder/segmented-control';
-  import { Stat } from '@lostgradient/cinder/stat';
-  import { StatGroup } from '@lostgradient/cinder/stat-group';
+  import Statistic from '@lostgradient/cinder/statistic';
+  import StatisticGroup from '@lostgradient/cinder/statistic-group';
   import { Download } from 'lucide-svelte';
   import { createQuery } from '@tanstack/svelte-query';
   import { onDestroy } from 'svelte';
@@ -116,9 +116,9 @@
     <SegmentedControl
       id="metrics-view"
       label="Metrics view"
-      hideLabel
+      labelVisible={false}
       value={view}
-      onchange={onViewChange}
+      onValueChange={onViewChange}
     >
       <Segment value="dashboard">Dashboard</Segment>
       <Segment value="raw">Raw</Segment>
@@ -135,11 +135,11 @@
   </div>
 
   {#if view === 'dashboard'}
-    <StatGroup columns="auto" variant="cards">
+    <StatisticGroup columns="auto" variant="cards">
       {#each TRACKED_METRICS as metric (metric.name)}
-        <Stat label={metric.label} value={metricPointValue(latest?.[metric.name])} />
+        <Statistic label={metric.label} value={metricPointValue(latest?.[metric.name])} />
       {/each}
-    </StatGroup>
+    </StatisticGroup>
 
     <div class="weft-metrics-tab__charts">
       {#each TRACKED_METRICS as metric (metric.name)}

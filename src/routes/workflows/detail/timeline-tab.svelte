@@ -231,10 +231,10 @@
       <SegmentedControl
         id={`timeline-quick-filter-${workflow.id}`}
         label="Quick filter"
-        hideLabel
+        labelVisible={false}
         density="toolbar"
         value={quickFilter}
-        onchange={(next) => (quickFilter = next)}
+        onValueChange={(next) => (quickFilter = next)}
       >
         {#each TIMELINE_QUICK_FILTERS as filter (filter)}
           <Segment value={filter}>{timelineQuickFilterLabel(filter)}</Segment>
@@ -261,7 +261,7 @@
           <Input
             id={`timeline-jump-to-step-${workflow.id}`}
             label="Jump to step"
-            hideLabel
+            labelVisible={false}
             placeholder="Jump to step"
             inputmode="numeric"
             bind:value={jumpToStepText}

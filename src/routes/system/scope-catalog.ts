@@ -96,16 +96,6 @@ const SCOPE_DESCRIPTIONS: Readonly<Record<AuthorizationScope, ScopeCatalogEntry>
     description: 'Subscribe to the per-workflow and fleet-wide live event feeds.',
     unlocks: 'Live tails, the fleet activity feed, and notifications',
   },
-  'budget:read': {
-    scope: 'budget:read',
-    description: 'View budget usage. Declared in the scope vocabulary; no operation uses it yet.',
-    unlocks: 'Nothing today — no budget operations exist',
-  },
-  'budget:write': {
-    scope: 'budget:write',
-    description: 'Modify budgets. Declared in the scope vocabulary; no operation uses it yet.',
-    unlocks: 'Nothing today — no budget operations exist',
-  },
   'storage:read': {
     scope: 'storage:read',
     description: 'Get and scan keys in the durable storage browser.',

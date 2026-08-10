@@ -1,28 +1,28 @@
 <script lang="ts">
   /**
    * Workflow list filter bar (plan §9.2 T2.1, design `Weft Console.dc.html`
-   * "Workflow list" filter row). `FacetedFilterBar` (Cinder) is the shell;
+   * "Workflow list" filter row). `FilterBar` (Cinder) is the shell;
    * status is a multi-select toggle row above it (a `select` facet only
    * carries one value, but `ListFilter.status` accepts several — plan
    * §10.3-adjacent, matches the design's row of independently pressable
    * status pills) and "Search attributes" is a disclosure toggle for
    * `query-builder.svelte` below it (plan §10.3).
    *
-   * `FacetedFilterBar`'s `custom` facet snippet gets no wrapping label from
-   * the bar itself (verified against `faceted-filter-bar.svelte`: the
+   * `FilterBar`'s `custom` facet snippet gets no wrapping label from
+   * the bar itself (verified against `filter-bar.svelte`: the
    * `custom` branch renders the snippet in a bare `<div>`, no `aria-label`)
    * — every custom control below supplies its own accessible name.
    *
-   * Tags and status are NOT modeled as `FacetedFilterBar` "applied filter"
+   * Tags and status are NOT modeled as `FilterBar` "applied filter"
    * chips: `AppliedFilter` is one value per facet key, but both are
    * multi-valued and already self-represent their active state (`TagInput`
    * renders its own removable chips; the status row's pressed `Chip`s ARE
    * the active-state display) — routing them through the bar's single-chip
-   * model would just duplicate that. `onclearall` resets everything this
+   * model would just duplicate that. `onClearAll` resets everything this
    * component owns, tags/status included, so "Clear all" still works.
    */
-  import FacetedFilterBar from '@lostgradient/cinder/faceted-filter-bar';
-  import type { AppliedFilter } from '@lostgradient/cinder/faceted-filter-bar';
+  import FilterBar from '@lostgradient/cinder/filter-bar';
+  import type { AppliedFilter } from '@lostgradient/cinder/filter-bar';
   import Chip from '@lostgradient/cinder/chip';
   import Input from '@lostgradient/cinder/input';
   import Select from '@lostgradient/cinder/select';
@@ -152,21 +152,21 @@
         variant={pressed ? badge.tone : 'neutral'}
         density="toolbar"
         {pressed}
-        onpressedchange={() => toggleStatus(status)}
+        onPressedChange={() => toggleStatus(status)}
       />
     {/each}
   </div>
 
-  <FacetedFilterBar
+  <FilterBar
     aria-label="Workflow filters"
     searchQuery={filter.idPrefix ?? ''}
     searchPlaceholder="wf_… id prefix"
     searchAriaLabel="Filter by workflow id prefix"
-    onsearchchange={onSearchChange}
+    {onSearchChange}
     {appliedFilters}
-    onfacetchange={onFacetChange}
-    onfilterremove={onFilterRemove}
-    onclearall={onClearAll}
+    {onFacetChange}
+    {onFilterRemove}
+    {onClearAll}
     facets={[
       { type: 'custom', key: 'type', label: 'Type', control: typeControl },
       { type: 'custom', key: 'tags', label: 'Tags', control: tagsControl },
@@ -188,14 +188,14 @@
   </button>
 </div>
 
-{#snippet typeControl({ onchange }: { value: string; onchange: (value: string) => void })}
+{#snippet typeControl({ onValueChange }: { value: string; onValueChange: (value: string) => void })}
   <Input
     id="weft-workflow-filter-type"
     label="Workflow type"
-    hideLabel
+    labelVisible={false}
     placeholder="Workflow type…"
     value={filter.type ?? ''}
-    oninput={(event) => onchange((event.currentTarget as HTMLInputElement).value)}
+    oninput={(event) => onValueChange((event.currentTarget as HTMLInputElement).value)}
   />
 {/snippet}
 
@@ -205,16 +205,21 @@
     aria-label="Filter by tags (matches all)"
     placeholder="add tag…"
     value={filter.tags ?? []}
-    onchange={onTagsChange}
+    onValueChange={onTagsChange}
   />
 {/snippet}
 
-{#snippet createdControl({ onchange }: { value: string; onchange: (value: string) => void })}
+{#snippet createdControl({
+  onValueChange,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+})}
   <Select
     id="weft-workflow-filter-created"
     aria-label="Filter by created date"
     options={createdOptions}
     value={createdPreset}
-    onchange={(event) => onchange((event.currentTarget as HTMLSelectElement).value)}
+    onchange={(event) => onValueChange((event.currentTarget as HTMLSelectElement).value)}
   />
 {/snippet}

@@ -12,8 +12,8 @@
 @import '@lostgradient/cinder/connection-indicator/styles';
 @import '@lostgradient/cinder/line-chart/styles';
 @import '@lostgradient/cinder/segmented-control/styles';
-@import '@lostgradient/cinder/stat/styles';
-@import '@lostgradient/cinder/stat-group/styles';
+@import '@lostgradient/cinder/statistic/styles';
+@import '@lostgradient/cinder/statistic-group/styles';
 @import '@lostgradient/cinder/permission-matrix/styles';
 @import '@lostgradient/cinder/search-field/styles';
 @import '@lostgradient/cinder/alert-dialog/styles';

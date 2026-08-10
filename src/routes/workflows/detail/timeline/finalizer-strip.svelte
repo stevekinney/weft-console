@@ -65,13 +65,13 @@
       </div>
       <div class="weft-finalizer-strip__row">
         {#if inFlight}
-          <StatusDot status="pending" label="Finalizer pending" showLabel={false} />
+          <StatusDot status="pending" label="Finalizer pending" labelVisible={false} />
           <span class="weft-finalizer-strip__row-name">Awaiting completion…</span>
         {:else if status}
           <StatusDot
             status={succeeded ? 'success' : 'danger'}
             label={succeeded ? 'Finalizer completed' : 'Finalizer failed'}
-            showLabel={false}
+            labelVisible={false}
           />
           <span class="weft-finalizer-strip__row-name">
             Teardown {succeeded ? 'completed' : 'failed'}

@@ -65,9 +65,9 @@
     <SegmentedControl
       id="weft-start-configure-mode"
       label="Payload mode"
-      hideLabel
+      labelVisible={false}
       value={mode}
-      onchange={(next) => onModeChange(next)}
+      onValueChange={(next) => onModeChange(next)}
     >
       <Segment value="form">Form</Segment>
       <Segment value="json">JSON</Segment>
@@ -83,7 +83,7 @@
       {schema}
       name="start-input"
       submitLabel="Continue to review"
-      onsubmit={onContinue}
+      onSubmit={onContinue}
     />
   {:else}
     <JsonEditor
@@ -93,7 +93,7 @@
       value={rawText}
       onValueChange={onRawTextChange}
       highlight
-      showValidFeedback={false}
+      validFeedbackVisible={false}
     />
   {/if}
 

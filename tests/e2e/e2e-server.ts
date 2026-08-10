@@ -63,8 +63,6 @@ const ALL_SCOPES = [
   'tags:write',
   'streams:read',
   'events:read',
-  'budget:read',
-  'budget:write',
   'storage:read',
   'storage:write',
   'storage:admin',

@@ -119,7 +119,7 @@
       value={payloadText}
       onValueChange={(next) => (payloadText = next)}
       highlight
-      showValidFeedback={false}
+      validFeedbackVisible={false}
     />
     {#if payloadError}
       <p class="weft-send-tab__error">{payloadError}</p>

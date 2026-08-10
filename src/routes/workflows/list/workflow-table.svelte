@@ -104,7 +104,7 @@
     <col style="width: 92px" />
     <col style="width: 92px" />
   </colgroup>
-  <Table.Header {allSelected} {someSelected} onselectall={toggleAll}>
+  <Table.Header {allSelected} {someSelected} onSelectAll={toggleAll}>
     <Table.Row>
       <Table.HeaderCell>Status</Table.HeaderCell>
       <Table.HeaderCell>Workflow ID</Table.HeaderCell>
@@ -124,7 +124,7 @@
           ? {
               selected,
               selectionLabel: `Select workflow ${truncateId(row.id)}`,
-              onselectedchange: (next: boolean) => toggleRow(row.id, next),
+              onSelectedChange: (next: boolean) => toggleRow(row.id, next),
             }
           : {}}
       >

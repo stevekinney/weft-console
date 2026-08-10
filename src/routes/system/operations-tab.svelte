@@ -63,14 +63,14 @@
         id="operation-search"
         placeholder="Search operations…"
         value={searchQuery}
-        oninput={(next) => (searchQuery = next)}
+        onValueChange={(next) => (searchQuery = next)}
       />
       <SegmentedControl
         id="operations-view"
         label="Catalog view"
-        hideLabel
+        labelVisible={false}
         value={view}
-        onchange={(next) => (view = next)}
+        onValueChange={(next) => (view = next)}
       >
         <Segment value="table">Table</Segment>
         <Segment value="matrix">Scope matrix</Segment>

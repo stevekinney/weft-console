@@ -120,7 +120,7 @@
         >
       </span>
       <div class="weft-async-activity-drawer__token">
-        <CodeBlock code={activity.token} highlight={false} showLanguageLabel={false} />
+        <CodeBlock code={activity.token} highlight={false} languageLabelVisible={false} />
         <CopyButton value={activity.token} iconOnly label="Copy completion token" />
       </div>
     </div>
@@ -131,10 +131,10 @@
       <SegmentedControl
         id="weft-async-activity-mode"
         label="Completion mode"
-        hideLabel
+        labelVisible={false}
         density="toolbar"
         value={mode}
-        onchange={(next) => (mode = next)}
+        onValueChange={(next) => (mode = next)}
       >
         <Segment value="complete">Complete</Segment>
         <Segment value="fail">Fail</Segment>

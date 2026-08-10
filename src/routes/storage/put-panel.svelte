@@ -48,7 +48,7 @@
     onValueChange={(next) => (value = next)}
     rows={5}
     highlight
-    showValidFeedback={false}
+    validFeedbackVisible={false}
     class="weft-storage-monospace-input"
   />
   <Button
@@ -76,7 +76,7 @@
   title={`Write to "${key}"?`}
   description="This overwrites any existing value at this key. This cannot be undone."
   confirmLabel="Write"
-  onconfirm={() => {
+  onConfirm={() => {
     $putMutation.mutate(
       { key, value },
       { onSuccess: () => showToast(`Wrote "${key}"`, { variant: 'success' }) },

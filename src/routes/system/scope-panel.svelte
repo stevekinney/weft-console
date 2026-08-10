@@ -24,7 +24,7 @@
   <ul class="weft-scope-panel__list">
     {#each granted as entry (entry.scope)}
       <li>
-        <Badge variant="success" mono>{entry.scope}</Badge>
+        <Badge variant="success" monochrome>{entry.scope}</Badge>
         <div class="weft-scope-panel__copy">
           <span>{entry.description}</span>
           <span class="weft-scope-panel__unlocks">Unlocks: {entry.unlocks}</span>
@@ -40,7 +40,7 @@
   <ul class="weft-scope-panel__list weft-scope-panel__list--denied">
     {#each denied as entry (entry.scope)}
       <li>
-        <Badge variant="neutral" mono>{entry.scope}</Badge>
+        <Badge variant="neutral" monochrome>{entry.scope}</Badge>
         <div class="weft-scope-panel__copy">
           <span>{entry.description}</span>
           <span class="weft-scope-panel__unlocks">Unlocks: {entry.unlocks}</span>

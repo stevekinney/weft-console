@@ -22,7 +22,7 @@ import {
 } from './scopes.svelte.ts';
 
 describe('AUTHORIZATION_SCOPES', () => {
-  test('is the flat 23-scope vocabulary, verbatim, in order', () => {
+  test('is the flat 21-scope vocabulary, verbatim, in order', () => {
     // Mirrors weft's internal AUTHORIZATION_SCOPES (`weft/src/server/authorization-scope.ts`,
     // not currently a public export) — this pins the console's copy against drift.
     expect(AUTHORIZATION_SCOPES).toEqual([
@@ -41,8 +41,6 @@ describe('AUTHORIZATION_SCOPES', () => {
       'tags:write',
       'streams:read',
       'events:read',
-      'budget:read',
-      'budget:write',
       'storage:read',
       'storage:write',
       'storage:admin',

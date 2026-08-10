@@ -191,8 +191,8 @@
   {title}
   dismissOnBackdropClick={phase !== 'committing'}
   dismissOnEscape={phase !== 'committing'}
-  showCloseButton={phase !== 'committing'}
-  ondismiss={handleDismiss}
+  closeButtonVisible={phase !== 'committing'}
+  onDismiss={handleDismiss}
 >
   {#snippet children()}
     {#if phase === 'params'}

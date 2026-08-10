@@ -91,10 +91,10 @@
     <SegmentedControl
       id="weft-query-builder-mode"
       label="View"
-      hideLabel
+      labelVisible={false}
       density="toolbar"
       value={mode}
-      onchange={(value) => (mode = value)}
+      onValueChange={(value) => (mode = value)}
     >
       <Segment value="visual">Visual</Segment>
       <Segment value="raw">Raw</Segment>
@@ -107,7 +107,7 @@
       {conditions}
       {fieldOptions}
       label="Workflow filters"
-      onchange={handleConditionsChange}
+      onValueChange={handleConditionsChange}
     />
   {:else}
     <JsonViewer value={rawPreview} initialDepth={6} />

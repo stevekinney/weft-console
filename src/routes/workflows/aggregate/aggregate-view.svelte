@@ -141,10 +141,10 @@
       <SegmentedControl
         id="weft-aggregate-group-by"
         label="Group by"
-        hideLabel
+        labelVisible={false}
         density="toolbar"
         value={segmentedValue}
-        onchange={onFixedDimensionChange}
+        onValueChange={onFixedDimensionChange}
       >
         <Segment value="status">Status</Segment>
         <Segment value="type">Type</Segment>
@@ -160,7 +160,7 @@
         <Input
           id="weft-aggregate-attribute-name"
           label="Attribute name"
-          hideLabel
+          labelVisible={false}
           placeholder="or group by attribute…"
           value={attributeName}
           oninput={(event) => (attributeName = (event.currentTarget as HTMLInputElement).value)}

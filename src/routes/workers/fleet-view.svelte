@@ -86,7 +86,7 @@
         <li class="weft-deployment-row">
           <StatusDot
             status={presentationStatusDotStatus(presentation.variant)}
-            showLabel={false}
+            labelVisible={false}
             label={presentation.label}
           />
           <div class="weft-deployment-row__identity">

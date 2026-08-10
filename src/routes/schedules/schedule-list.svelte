@@ -250,7 +250,7 @@
     <Input
       id="weft-schedule-id-filter"
       label="ID prefix"
-      hideLabel
+      labelVisible={false}
       placeholder="ID prefix…"
       bind:value={idPrefix}
       leading={searchIcon}
@@ -338,7 +338,7 @@
             </Table.Cell>
             <Table.Cell align="right">
               <Dropdown id={`weft-schedule-actions-${schedule.id}`} placement="bottom-end">
-                <Dropdown.Trigger showCaret={false} onclick={(event) => event.stopPropagation()}>
+                <Dropdown.Trigger caretVisible={false} onclick={(event) => event.stopPropagation()}>
                   <Ellipsis aria-hidden="true" size={16} />
                   <span class="weft-sr-only">Actions for {schedule.id}</span>
                 </Dropdown.Trigger>
@@ -388,7 +388,7 @@
     : ''}
   confirmLabel="Cancel schedule"
   destructive
-  onconfirm={confirmCancel}
+  onConfirm={confirmCancel}
 />
 
 <style>

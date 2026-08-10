@@ -52,7 +52,7 @@
       placeholder="Search or type a workflow type…"
       {options}
       {value}
-      bind:inputValue={() => value, (next) => onValueChange(next)}
+      bind:textInputValue={() => value, (next) => onValueChange(next)}
     />
   {:else}
     <Input

@@ -37,6 +37,6 @@
   confirmLabel={submitting ? 'Clearing…' : 'Clear dead letter'}
   destructive
   typeToConfirm={operationId}
-  onconfirm={onConfirm}
-  oncancel={onCancel}
+  {onConfirm}
+  {onCancel}
 />

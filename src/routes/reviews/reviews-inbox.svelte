@@ -150,7 +150,7 @@
       selectionMode="single"
       label="Review state"
       value={inboxState}
-      onchange={(value) => (inboxState = value as ReviewInboxState)}
+      onValueChange={(value) => (inboxState = value as ReviewInboxState)}
     >
       {#each INBOX_STATES as state (state)}
         <Segment value={state}>{STATE_LABELS[state]}</Segment>

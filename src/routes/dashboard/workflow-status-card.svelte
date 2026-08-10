@@ -66,7 +66,7 @@
           }}
         >
           <span class="weft-status-card__cell-label">
-            <StatusDot status={info.tone} showLabel={false} aria-hidden="true" />
+            <StatusDot status={info.tone} labelVisible={false} aria-hidden="true" />
             {info.label}
           </span>
           <span class="weft-status-card__cell-count" data-tone={info.tone}>{count}</span>

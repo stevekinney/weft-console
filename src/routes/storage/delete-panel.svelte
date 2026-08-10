@@ -69,7 +69,7 @@
   description="This permanently removes the key from storage. This cannot be undone."
   destructive
   confirmLabel="Delete"
-  onconfirm={() => {
+  onConfirm={() => {
     const deletedKey = key;
     $deleteMutation.mutate(deletedKey, {
       onSuccess: () => showToast(`Deleted "${deletedKey}"`, { variant: 'success' }),

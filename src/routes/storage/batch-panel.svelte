@@ -173,7 +173,7 @@
         <Input
           id={`batch-key-${row.id}`}
           label="Key"
-          hideLabel
+          labelVisible={false}
           bind:value={row.key}
           placeholder="Key"
           class="weft-storage-monospace-input"
@@ -182,7 +182,7 @@
           <Input
             id={`batch-value-${row.id}`}
             label="Value"
-            hideLabel
+            labelVisible={false}
             bind:value={row.value}
             placeholder="Value"
             class="weft-storage-monospace-input"
@@ -219,7 +219,7 @@
           <Input
             id={`condition-key-${row.id}`}
             label="Key"
-            hideLabel
+            labelVisible={false}
             bind:value={row.key}
             placeholder="Key"
             class="weft-storage-monospace-input"
@@ -233,7 +233,7 @@
             <Input
               id={`condition-value-${row.id}`}
               label="Expected value"
-              hideLabel
+              labelVisible={false}
               bind:value={row.expectedValue}
               placeholder="Expected value"
               class="weft-storage-monospace-input"
@@ -280,5 +280,5 @@
     ? 'Writes apply only if every condition currently matches. This cannot be undone.'
     : 'This applies every listed operation atomically. This cannot be undone.'}
   confirmLabel="Apply"
-  onconfirm={runBatch}
+  onConfirm={runBatch}
 />

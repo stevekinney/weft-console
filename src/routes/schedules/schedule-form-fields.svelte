@@ -112,7 +112,7 @@
         value={form.inputText}
         onValueChange={(next) => (form.inputText = next)}
         highlight
-        showValidFeedback={false}
+        validFeedbackVisible={false}
         error={form.errors.input ?? ''}
       />
     {/if}
@@ -122,7 +122,7 @@
     <h3 class="weft-schedule-form__section-title">Cadence</h3>
     <ScheduleBuilder
       value={form.cadence}
-      onchange={onCadenceChange}
+      onValueChange={onCadenceChange}
       {computeNextFires}
       timezoneLabel="UTC"
       label="Cadence"

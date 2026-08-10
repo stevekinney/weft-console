@@ -19,7 +19,7 @@
 @import '@lostgradient/cinder/avatar/styles';
 @import '@lostgradient/cinder/alert/styles';
 @import '@lostgradient/cinder/toggle/styles';
-@import '@lostgradient/cinder/stat/styles';
+@import '@lostgradient/cinder/statistic/styles';
 
 /* ---------------------------------------------------------------------- */
 /* Route shell (index.svelte)                                             */

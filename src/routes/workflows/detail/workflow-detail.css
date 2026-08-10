@@ -13,7 +13,7 @@
 @import '@lostgradient/cinder/tabs/styles';
 @import '@lostgradient/cinder/description-list/styles';
 @import '@lostgradient/cinder/payload-inspector/styles';
-@import '@lostgradient/cinder/event-stream-viewer/styles';
+@import '@lostgradient/cinder/feed/styles';
 @import '@lostgradient/cinder/confirm-dialog/styles';
 @import '@lostgradient/cinder/copy-button/styles';
 @import '@lostgradient/cinder/tooltip/styles';

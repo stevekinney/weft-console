@@ -31,7 +31,7 @@
 @import '@lostgradient/cinder/copy-button/styles';
 @import '@lostgradient/cinder/description-list/styles';
 @import '@lostgradient/cinder/empty-state/styles';
-@import '@lostgradient/cinder/faceted-filter-bar/styles';
+@import '@lostgradient/cinder/filter-bar/styles';
 @import '@lostgradient/cinder/input/styles';
 @import '@lostgradient/cinder/json-viewer/styles';
 @import '@lostgradient/cinder/pagination/styles';
@@ -40,8 +40,8 @@
 @import '@lostgradient/cinder/segmented-control/styles';
 @import '@lostgradient/cinder/select/styles';
 @import '@lostgradient/cinder/skeleton/styles';
-@import '@lostgradient/cinder/stat/styles';
-@import '@lostgradient/cinder/stat-group/styles';
+@import '@lostgradient/cinder/statistic/styles';
+@import '@lostgradient/cinder/statistic-group/styles';
 @import '@lostgradient/cinder/steps/styles';
 @import '@lostgradient/cinder/table/styles';
 @import '@lostgradient/cinder/table-body/styles';

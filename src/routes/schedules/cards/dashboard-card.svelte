@@ -93,7 +93,7 @@
         onclick={() => openList('active')}
       >
         <span class="weft-schedules-dashboard-card__segment-label">
-          <StatusDot status="success" showLabel={false} />
+          <StatusDot status="success" labelVisible={false} />
           Active
         </span>
         <span class="weft-schedules-dashboard-card__segment-count">{summary.active}</span>
@@ -104,7 +104,7 @@
         onclick={() => openList('paused')}
       >
         <span class="weft-schedules-dashboard-card__segment-label">
-          <StatusDot status="neutral" showLabel={false} />
+          <StatusDot status="neutral" labelVisible={false} />
           Paused
         </span>
         <span class="weft-schedules-dashboard-card__segment-count">{summary.paused}</span>
@@ -117,7 +117,7 @@
         <span class="weft-schedules-dashboard-card__segment-label">
           <StatusDot
             status={summary.missedWithin24h > 0 ? 'warning' : 'neutral'}
-            showLabel={false}
+            labelVisible={false}
           />
           Missed 24h
         </span>

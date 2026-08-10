@@ -66,9 +66,9 @@
         id="reviews-view"
         selectionMode="single"
         label="View"
-        hideLabel
+        labelVisible={false}
         value={view}
-        onchange={(value) => (view = value as 'inbox' | 'archive')}
+        onValueChange={(value) => (view = value as 'inbox' | 'archive')}
       >
         <Segment value="inbox">Inbox</Segment>
         <Segment value="archive">Archive</Segment>

@@ -143,11 +143,11 @@
             id={controlId}
             selectionMode="single"
             label={`${humanizeKey(key)} decision`}
-            hideLabel
+            labelVisible={false}
             size="sm"
             value={current ?? ''}
-            disallowEmptySelection={false}
-            onchange={(value) =>
+            selectionRequired={false}
+            onValueChange={(value) =>
               setSectionDecision(key, (value || undefined) as SectionDecision | undefined)}
           >
             <Segment value="approved">Approve</Segment>
@@ -167,7 +167,7 @@
       label="Overall decision"
       fullWidth
       value={overallDecision ?? ''}
-      onchange={(value) => setOverallDecision(value)}
+      onValueChange={(value) => setOverallDecision(value)}
       class="weft-review-decision-segments"
     >
       <Segment value="approved">Approve</Segment>

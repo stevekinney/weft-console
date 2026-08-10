@@ -257,7 +257,7 @@
               class="weft-schedule-detail__current-run"
               href={router.href(`/workflows/${schedule.currentWorkflowId}`)}
             >
-              <StatusDot status="online" showLabel={false} />
+              <StatusDot status="online" labelVisible={false} />
               <span class="weft-schedule-detail__mono"
                 >{truncateId(schedule.currentWorkflowId)}</span
               >
@@ -320,7 +320,7 @@
       description={`"${schedule.id}" will stop firing. This can't be undone — create a new schedule to resume this cadence.`}
       confirmLabel="Cancel schedule"
       destructive
-      onconfirm={() => $cancelMutation.mutate()}
+      onConfirm={() => $cancelMutation.mutate()}
     />
   {/if}
 </div>

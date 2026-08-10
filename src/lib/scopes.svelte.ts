@@ -2,7 +2,7 @@
  * Principal + scope gating (plan §6, T1.2). Frozen after the Phase 1
  * Foundation gate — see PROJECT-BRIEF "Shared contracts".
  *
- * The 23 scopes below are flat (`workflows:admin` does NOT imply
+ * The 21 scopes below are flat (`workflows:admin` does NOT imply
  * `workflows:read`) and mirror weft's internal `AUTHORIZATION_SCOPES`
  * (`weft/src/server/authorization-scope.ts`), which is not currently a
  * public export of `@lostgradient/weft/server` — this literal union is the
@@ -31,7 +31,7 @@
  * supplied), not any operation's own scope check — `list` is public-access
  * precisely so it never produces a 403 on its own.
  *
- * Once the probe resolves, this module optimistically grants all 23 scopes
+ * Once the probe resolves, this module optimistically grants all 21 scopes
  * and *degrades* specific ones as the app observes real `403 Forbidden`
  * responses from scope-gated operations it actually calls (`denyScope()` /
  * `isForbidden()`). This is a reasonably safe default for most single-item
@@ -85,8 +85,6 @@ export const AUTHORIZATION_SCOPES = [
   'tags:write',
   'streams:read',
   'events:read',
-  'budget:read',
-  'budget:write',
   'storage:read',
   'storage:write',
   'storage:admin',
@@ -102,7 +100,7 @@ export type UnauthenticatedAccessPolicy = 'warn' | 'allow' | 'reject';
 
 export interface Principal {
   /**
-   * Scopes currently believed granted. Starts as all 23 (optimistic — see
+   * Scopes currently believed granted. Starts as all 21 (optimistic — see
    * module doc) and only ever shrinks, via `denyScope()`, as real `403`s
    * are observed.
    */

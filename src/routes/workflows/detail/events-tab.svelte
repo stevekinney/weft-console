@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * Events tab (plan T2.5, §9.2): `EventStreamViewer` + live tail via
+   * Events tab (plan T2.5, §9.2): `Feed` (`kind="log"`) + live tail via
    * `WorkflowTailSource`, cursor resume (owned by `WorkflowTailSource`
    * itself), and the Download menu (§G: "Event history · JSON" / "Events +
    * timeline · JSON", pure client-side over `GET …/events`).
@@ -15,7 +15,13 @@
    * `EVENTS_READ_EVENT_TYPES` enum documents. This tab renders exactly what
    * the API returns, honestly labeled ("Checkpoint · step N") rather than
    * implying a richer stream than exists. The rich per-operation view lives
-   * on the Timeline tab (T3.1, `getTimeline()`).
+   * on the Timeline tab (T3.1, `getTimeline()`). As of Cinder 0.22 the
+   * stream renders through `Feed`'s `kind="log"` arm (`EventStreamViewer`
+   * was folded into it upstream): entries are authored `Feed.Event`
+   * children, detail payloads are a `Collapsible` + `JsonViewer`
+   * composition (the built-in detail panels are gone), and the empty state
+   * is consumer-owned (`role="status"`) because with authored children the
+   * component cannot know the stream is empty.
    *
    * ## Live tail in the dev harness
    *
@@ -34,10 +40,9 @@
    * Selecting a Timeline step filters this tab to the matching checkpoint
    * row(s) — see `./timeline/timeline-selection-store.svelte.ts`'s module
    * doc for why the store lives in that track's files and is just imported
-   * here. `EventStreamViewer` has no per-row highlight/dim prop (verified:
-   * `event-stream-viewer.types.ts` — `events` is the only content input),
-   * so "filters" here narrows the array passed in rather than the design
-   * mock's literal indigo-edge/dim treatment; the Timeline track's report
+   * here. `Feed.Event` has no per-row highlight/dim prop, so "filters"
+   * here narrows the rendered entries rather than the design mock's
+   * literal indigo-edge/dim treatment; the Timeline track's report
    * covers the upstream Cinder gap. The mock's exact copy also names
    * "Events and Logs" — this tab only ever says "Events": Logs is a
    * permanent empty state (see `logs-tab.svelte`), so there is nothing
@@ -47,10 +52,9 @@
   import Button from '@lostgradient/cinder/button';
   import ConnectionIndicator from '@lostgradient/cinder/connection-indicator';
   import Dropdown from '@lostgradient/cinder/dropdown';
-  import EventStreamViewer, {
-    type EventStreamEntry,
-    type EventStreamState,
-  } from '@lostgradient/cinder/event-stream-viewer';
+  import Collapsible from '@lostgradient/cinder/collapsible';
+  import Feed, { type FeedConnectionState } from '@lostgradient/cinder/feed';
+  import JsonViewer from '@lostgradient/cinder/json-viewer';
   import { createQuery, useQueryClient } from '@tanstack/svelte-query';
   import type { HttpClient } from '@lostgradient/weft/client';
   import type { WorkflowEvent, WorkflowState } from '@lostgradient/weft';
@@ -148,12 +152,19 @@
     return typeof value === 'object' && value !== null;
   }
 
-  function toStreamEntry(event: WorkflowEvent, index: number): EventStreamEntry {
+  /** Local render model — replaces the deleted upstream `EventStreamEntry`. */
+  interface StreamEntry {
+    readonly id: string;
+    readonly datetime: string;
+    readonly summary: string;
+    readonly details: unknown;
+  }
+
+  function toStreamEntry(event: WorkflowEvent, index: number): StreamEntry {
     const step = isRecordWithStep(event.data) ? event.data['step'] : undefined;
     return {
       id: `${event.timestamp}-${index}`,
       datetime: new Date(event.timestamp).toISOString(),
-      severity: 'info',
       summary:
         event.type === 'workflow:checkpoint' && typeof step === 'number'
           ? `Checkpoint · step ${step}`
@@ -162,7 +173,7 @@
     };
   }
 
-  const allStreamEvents = $derived<EventStreamEntry[]>(
+  const allStreamEvents = $derived<StreamEntry[]>(
     ($eventsQuery.data ?? []).map((event, index) => toStreamEntry(event, index)),
   );
 
@@ -171,7 +182,7 @@
   );
 
   // Filters (narrows) rather than tints/dims — see module doc for why.
-  const streamEvents = $derived<EventStreamEntry[]>(
+  const streamEvents = $derived<StreamEntry[]>(
     selectedStep === null
       ? allStreamEvents
       : ($eventsQuery.data ?? [])
@@ -182,7 +193,7 @@
           .map(({ entry }) => entry),
   );
 
-  function tailToStreamState(status: LiveSourceStatus): EventStreamState {
+  function tailToStreamState(status: LiveSourceStatus): FeedConnectionState {
     switch (status) {
       case 'live':
         return 'connected';
@@ -199,7 +210,7 @@
     }
   }
 
-  const connectionState = $derived<EventStreamState | undefined>(
+  const connectionState = $derived<FeedConnectionState | undefined>(
     tail === null ? undefined : tailToStreamState(tail.status),
   );
 
@@ -259,20 +270,31 @@
   </div>
 
   {#if connectionState === undefined}
-    <EventStreamViewer
-      events={streamEvents}
-      loading={$eventsQuery.isPending}
-      label="Workflow events"
-    />
+    <Feed kind="log" loading={$eventsQuery.isPending} label="Workflow events">
+      {@render streamEntries()}
+    </Feed>
   {:else}
-    <EventStreamViewer
-      events={streamEvents}
-      {connectionState}
-      loading={$eventsQuery.isPending}
-      label="Workflow events"
-    />
+    <Feed kind="log" {connectionState} loading={$eventsQuery.isPending} label="Workflow events">
+      {@render streamEntries()}
+    </Feed>
   {/if}
 </div>
+
+{#snippet streamEntries()}
+  {#each streamEvents as entry (entry.id)}
+    <Feed.Event variant="minimal" datetime={entry.datetime} tone="info">
+      {entry.summary}
+      {#if entry.details !== undefined && entry.details !== null}
+        <Collapsible trigger="Details" class="weft-events-tab__details">
+          <JsonViewer value={entry.details} />
+        </Collapsible>
+      {/if}
+    </Feed.Event>
+  {/each}
+  {#if !$eventsQuery.isPending && streamEvents.length === 0}
+    <p role="status" class="weft-events-tab__empty">No events to display.</p>
+  {/if}
+{/snippet}
 
 <style>
   /* Track A3 addition (linked selection, design §E) — scoped locally rather
@@ -286,5 +308,18 @@
     padding: 0;
     margin-left: 2px;
     cursor: pointer;
+  }
+
+  /* Cinder 0.22: Feed's log arm has consumer-owned empty/detail treatments
+     (EventStreamViewer's built-ins are gone) — keep them compact and muted. */
+  .weft-events-tab :global(.weft-events-tab__details) {
+    margin-top: var(--cinder-space-1);
+  }
+
+  .weft-events-tab__empty {
+    color: var(--cinder-text-muted);
+    font-size: var(--cinder-font-size-sm);
+    padding: var(--cinder-space-4);
+    margin: 0;
   }
 </style>

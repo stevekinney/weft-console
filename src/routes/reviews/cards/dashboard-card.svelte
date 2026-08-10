@@ -11,7 +11,7 @@
   import Card from '@lostgradient/cinder/card';
   import EmptyState from '@lostgradient/cinder/empty-state';
   import Skeleton from '@lostgradient/cinder/skeleton';
-  import Stat from '@lostgradient/cinder/stat';
+  import Statistic from '@lostgradient/cinder/statistic';
 
   import { getClient } from '../../../lib/client.ts';
   import { faultTreatment } from '../../../lib/faults.ts';
@@ -74,8 +74,8 @@
       <p class="weft-reviews-card__error">{faultTreatment($query.error).message}</p>
     {:else}
       <div class="weft-reviews-card__stats">
-        <Stat label="Pending" value={pending.length} />
-        <Stat
+        <Statistic label="Pending" value={pending.length} />
+        <Statistic
           label="Nearest deadline"
           value={nearestDeadline === null
             ? '—'

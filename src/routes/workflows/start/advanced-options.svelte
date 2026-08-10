@@ -78,7 +78,7 @@
       aria-label="Tags"
       placeholder="add tag…"
       value={[...value.tags]}
-      onchange={(tags) => patch({ tags })}
+      onValueChange={(tags: string[]) => patch({ tags })}
     />
   </div>
 
@@ -89,7 +89,7 @@
         <Input
           id={`weft-start-attribute-key-${index}`}
           label={`Attribute ${index + 1} key`}
-          hideLabel
+          labelVisible={false}
           placeholder="key"
           value={row.key}
           oninput={(event) =>
@@ -98,7 +98,7 @@
         <Input
           id={`weft-start-attribute-value-${index}`}
           label={`Attribute ${index + 1} value`}
-          hideLabel
+          labelVisible={false}
           placeholder="value"
           value={row.value}
           oninput={(event) =>

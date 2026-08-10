@@ -13,7 +13,7 @@
   import Card from '@lostgradient/cinder/card';
   import EmptyState from '@lostgradient/cinder/empty-state';
   import Skeleton from '@lostgradient/cinder/skeleton';
-  import Stat from '@lostgradient/cinder/stat';
+  import Statistic from '@lostgradient/cinder/statistic';
 
   import { getClient } from '../../../lib/client.ts';
   import { faultTreatment } from '../../../lib/faults.ts';
@@ -80,8 +80,8 @@
       <p class="weft-workers-card__error">{faultTreatment(firstError).message}</p>
     {:else}
       <div class="weft-workers-card__stats">
-        <Stat label="Capacity" value={`${totals.inFlight} / ${totals.capacity}`} />
-        <Stat label="Unhealthy" value={unhealthyCount} />
+        <Statistic label="Capacity" value={`${totals.inFlight} / ${totals.capacity}`} />
+        <Statistic label="Unhealthy" value={unhealthyCount} />
       </div>
       {#if activeDiagnosticKinds.length > 0}
         <div class="weft-workers-card__diagnostics">

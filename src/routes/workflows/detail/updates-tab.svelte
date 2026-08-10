@@ -192,7 +192,7 @@
       value={payloadText}
       onValueChange={(next) => (payloadText = next)}
       highlight
-      showValidFeedback={false}
+      validFeedbackVisible={false}
     />
     <div class="weft-send-tab__row">
       <Input

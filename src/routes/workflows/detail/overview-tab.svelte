@@ -108,7 +108,7 @@
         <Input
           id={`workflow-detail-new-tag-${workflow.id}`}
           label="Add tag"
-          hideLabel
+          labelVisible={false}
           placeholder="Add tag"
           bind:value={newTag}
           onkeydown={(event) => {

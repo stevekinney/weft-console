@@ -49,7 +49,7 @@
   }
 </script>
 
-<Modal bind:open {title} ondismiss={handleDismiss}>
+<Modal bind:open {title} onDismiss={handleDismiss}>
   {#snippet children()}
     <p class="weft-drain-dialog__description">
       Draining <strong class="weft-drain-dialog__target">{targetLabel}</strong> stops new task assignment
