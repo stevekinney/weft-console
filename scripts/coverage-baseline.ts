@@ -136,13 +136,76 @@ const DARWIN_BASELINE: CoverageBaseline = {
 };
 
 /**
+ * Recorded from CI run 31438752308's bootstrap-mode output (ubuntu runner,
+ * Bun 1.3.x, 2026-08-10) — the gate's own paste-ready block. Linux
+ * attribution differs from darwin's in both directions (see the
+ * platform-divergence note on {@link CoverageMeasurementPlatform}), so these
+ * numbers are NOT comparable to `DARWIN_BASELINE`'s — each ratchets only
+ * against its own platform's measurements.
+ */
+const LINUX_BASELINE: CoverageBaseline = {
+  measuredAt: '2026-08-10T22:36:23.413Z',
+  overall: { linesFound: 36914, linesHit: 19401, functionsFound: 3937, functionsHit: 3235 },
+  areas: {
+    fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
+    scripts: { linesFound: 329, linesHit: 258, functionsFound: 24, functionsHit: 23 },
+    src: { linesFound: 12, linesHit: 12, functionsFound: 2, functionsHit: 2 },
+    'src/app': { linesFound: 1350, linesHit: 1136, functionsFound: 264, functionsHit: 150 },
+    'src/lib': { linesFound: 1312, linesHit: 896, functionsFound: 178, functionsHit: 113 },
+    'src/routes/dashboard': {
+      linesFound: 1468,
+      linesHit: 1172,
+      functionsFound: 243,
+      functionsHit: 209,
+    },
+    'src/routes/reviews': {
+      linesFound: 2712,
+      linesHit: 936,
+      functionsFound: 183,
+      functionsHit: 149,
+    },
+    'src/routes/schedules': {
+      linesFound: 3748,
+      linesHit: 2313,
+      functionsFound: 487,
+      functionsHit: 409,
+    },
+    'src/routes/storage': {
+      linesFound: 3089,
+      linesHit: 992,
+      functionsFound: 171,
+      functionsHit: 138,
+    },
+    'src/routes/system': {
+      linesFound: 5777,
+      linesHit: 1520,
+      functionsFound: 274,
+      functionsHit: 219,
+    },
+    'src/routes/workers': {
+      linesFound: 3866,
+      linesHit: 1359,
+      functionsFound: 264,
+      functionsHit: 216,
+    },
+    'src/routes/workflows': {
+      linesFound: 12408,
+      linesHit: 8374,
+      functionsFound: 1762,
+      functionsHit: 1580,
+    },
+    tests: { linesFound: 145, linesHit: 114, functionsFound: 16, functionsHit: 15 },
+  },
+};
+
+/**
  * Per-platform baselines. A `null` entry means that platform has never had
  * a baseline recorded: `check-coverage.ts` then runs in bootstrap mode —
  * it measures, prints a paste-ready baseline object, and passes — so the
- * first run on a new platform (e.g. the first CI run after this split)
- * supplies the numbers a follow-up commit records here.
+ * first run on a new platform supplies the numbers a follow-up commit
+ * records here.
  */
 export const COVERAGE_BASELINES: Record<CoverageMeasurementPlatform, CoverageBaseline | null> = {
   darwin: DARWIN_BASELINE,
-  linux: null,
+  linux: LINUX_BASELINE,
 };
