@@ -62,7 +62,25 @@ export type CoverageBaseline = {
   areas: Record<string, AreaCoverage>;
 };
 
-export const COVERAGE_BASELINE: CoverageBaseline = {
+/**
+ * Platforms the coverage gate records separate baselines for.
+ *
+ * Bun's LCOV attribution is DETERMINISTIC per platform but materially
+ * different between macOS and Linux: the same commit, same suite, and same
+ * 1213-test pass produced e.g. `src/routes/system` 89.26% lines on darwin
+ * vs 26.31% on linux (CI run 31435362335, byte-identical across a rerun —
+ * some areas measure higher on linux, some lower, so neither is a subset
+ * of the other). One shared floor therefore cannot gate both environments;
+ * each platform ratchets against numbers measured on that platform.
+ */
+export type CoverageMeasurementPlatform = 'darwin' | 'linux';
+
+/** The current process's baseline platform, or `null` when unrecognized. */
+export function coverageMeasurementPlatform(): CoverageMeasurementPlatform | null {
+  return process.platform === 'darwin' || process.platform === 'linux' ? process.platform : null;
+}
+
+const DARWIN_BASELINE: CoverageBaseline = {
   measuredAt: '2026-08-10T21:20:00.000Z',
   overall: { linesFound: 35851, linesHit: 23180, functionsFound: 4745, functionsHit: 4088 },
   areas: {
@@ -115,4 +133,16 @@ export const COVERAGE_BASELINE: CoverageBaseline = {
     },
     tests: { linesFound: 145, linesHit: 110, functionsFound: 15, functionsHit: 13 },
   },
+};
+
+/**
+ * Per-platform baselines. A `null` entry means that platform has never had
+ * a baseline recorded: `check-coverage.ts` then runs in bootstrap mode —
+ * it measures, prints a paste-ready baseline object, and passes — so the
+ * first run on a new platform (e.g. the first CI run after this split)
+ * supplies the numbers a follow-up commit records here.
+ */
+export const COVERAGE_BASELINES: Record<CoverageMeasurementPlatform, CoverageBaseline | null> = {
+  darwin: DARWIN_BASELINE,
+  linux: null,
 };

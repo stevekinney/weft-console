@@ -8,9 +8,14 @@ import {
   parseLcov,
   percentage,
   renderAreaTable,
+  resolveBaselineForPlatform,
   type FileCoverage,
 } from './check-coverage.ts';
-import type { AreaCoverage } from './coverage-baseline.ts';
+import {
+  coverageMeasurementPlatform,
+  type AreaCoverage,
+  type CoverageBaseline,
+} from './coverage-baseline.ts';
 
 describe('parseLcov', () => {
   it('parses a single record', () => {
@@ -296,5 +301,56 @@ describe('renderAreaTable', () => {
     ]);
     const lines = renderAreaTable(new Map(), baseline);
     expect(lines[1]).toBe('src/routes/removed | (missing) | (missing) | 100.00% | 100.00%');
+  });
+});
+
+describe('resolveBaselineForPlatform', () => {
+  const areas = new Map<string, AreaCoverage>([
+    ['OVERALL', { linesFound: 10, linesHit: 8, functionsFound: 2, functionsHit: 2 }],
+    ['src/lib', { linesFound: 10, linesHit: 8, functionsFound: 2, functionsHit: 2 }],
+  ]);
+  const recorded: CoverageBaseline = {
+    measuredAt: '2026-08-10T00:00:00.000Z',
+    overall: { linesFound: 10, linesHit: 8, functionsFound: 2, functionsHit: 2 },
+    areas: { 'src/lib': { linesFound: 10, linesHit: 8, functionsFound: 2, functionsHit: 2 } },
+  };
+
+  it('returns the recorded baseline for a platform that has one', () => {
+    const result = resolveBaselineForPlatform(areas, 'darwin', { darwin: recorded, linux: null });
+    expect(result.platform).toBe('darwin');
+    expect(result.baseline).toBe(recorded);
+  });
+
+  it('returns a null baseline (bootstrap mode) for a platform with none recorded', () => {
+    const result = resolveBaselineForPlatform(areas, 'linux', { darwin: recorded, linux: null });
+    expect(result.platform).toBe('linux');
+    expect(result.baseline).toBeNull();
+  });
+
+  it('returns a null baseline for an unrecognized platform', () => {
+    const result = resolveBaselineForPlatform(areas, null, { darwin: recorded, linux: recorded });
+    expect(result.baseline).toBeNull();
+    expect(result.platform).toBe(process.platform);
+  });
+});
+
+describe('coverageMeasurementPlatform', () => {
+  it('recognizes the current platform (this suite only runs on darwin or linux)', () => {
+    expect(coverageMeasurementPlatform()).toBe(process.platform as 'darwin' | 'linux');
+  });
+});
+
+describe('resolveBaselineForPlatform — default arguments', () => {
+  it('resolves the real recorded baseline for the running platform (or bootstrap-null)', () => {
+    const areas = new Map<string, AreaCoverage>([
+      ['OVERALL', { linesFound: 1, linesHit: 1, functionsFound: 1, functionsHit: 1 }],
+    ]);
+    const result = resolveBaselineForPlatform(areas);
+    // darwin has a recorded baseline; linux is in bootstrap until its first
+    // CI measurement is pasted in — both are valid resolutions here.
+    expect(result.platform).toBe(process.platform);
+    if (result.baseline !== null) {
+      expect(result.baseline.overall.linesFound).toBeGreaterThan(0);
+    }
   });
 });

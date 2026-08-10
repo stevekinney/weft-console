@@ -24,7 +24,12 @@ import { $ } from 'bun';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { COVERAGE_BASELINE, type AreaCoverage } from './coverage-baseline.ts';
+import {
+  COVERAGE_BASELINES,
+  coverageMeasurementPlatform,
+  type AreaCoverage,
+  type CoverageBaseline,
+} from './coverage-baseline.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..');
 const COVERAGE_DIRECTORY = join(REPO_ROOT, 'coverage');
@@ -259,6 +264,51 @@ export function renderAreaTable(
   return lines;
 }
 
+/**
+ * Resolve the baseline the current platform gates against. Returns a `null`
+ * baseline (after printing why) for the two ungated cases: an unrecognized
+ * platform, and a recognized platform with no recorded baseline yet — the
+ * latter prints a paste-ready bootstrap object so the first measurement on
+ * a new platform (e.g. the first CI run after the darwin/linux split)
+ * supplies the numbers a follow-up commit records.
+ */
+export function resolveBaselineForPlatform(
+  currentAreas: ReadonlyMap<string, AreaCoverage>,
+  platform: ReturnType<typeof coverageMeasurementPlatform> = coverageMeasurementPlatform(),
+  baselines: typeof COVERAGE_BASELINES = COVERAGE_BASELINES,
+): {
+  baseline: CoverageBaseline | null;
+  platform: string;
+} {
+  if (platform === null) {
+    console.log(
+      `\nNo coverage baseline vocabulary for platform "${process.platform}" — measurement ran clean but is not gated here. Record a baseline in scripts/coverage-baseline.ts to gate this platform.`,
+    );
+    return { baseline: null, platform: process.platform };
+  }
+
+  const baseline = baselines[platform];
+  if (baseline === null) {
+    const bootstrap: CoverageBaseline = {
+      measuredAt: new Date().toISOString(),
+      overall: currentAreas.get('OVERALL') ?? emptyTotals(),
+      areas: Object.fromEntries(
+        [...currentAreas.entries()].filter(([area]) => area !== 'OVERALL').toSorted(),
+      ),
+    };
+    console.log(
+      `\nNo ${platform} baseline recorded yet — bootstrap mode: measurement ran clean and is NOT gated this run.`,
+    );
+    console.log(
+      `Record it by pasting this into scripts/coverage-baseline.ts as the ${platform} entry:\n`,
+    );
+    console.log(JSON.stringify(bootstrap, null, 2));
+    return { baseline: null, platform };
+  }
+
+  return { baseline, platform };
+}
+
 async function main(): Promise<boolean> {
   await rm(COVERAGE_DIRECTORY, { recursive: true, force: true });
 
@@ -286,11 +336,15 @@ async function main(): Promise<boolean> {
   const currentAreas = aggregateByArea(records);
   currentAreas.set('OVERALL', overallTotals(records));
 
-  const baselineAreas = new Map<string, AreaCoverage>(Object.entries(COVERAGE_BASELINE.areas));
-  baselineAreas.set('OVERALL', COVERAGE_BASELINE.overall);
+  const gate = resolveBaselineForPlatform(currentAreas);
+  if (gate.baseline === null) return true;
+  const { baseline, platform } = gate;
+
+  const baselineAreas = new Map<string, AreaCoverage>(Object.entries(baseline.areas));
+  baselineAreas.set('OVERALL', baseline.overall);
 
   console.log(
-    `\nCoverage by area, current vs. the baseline recorded ${COVERAGE_BASELINE.measuredAt}:`,
+    `\nCoverage by area (${platform}), current vs. the baseline recorded ${baseline.measuredAt}:`,
   );
   for (const line of renderAreaTable(currentAreas, baselineAreas)) {
     console.log(`  ${line}`);

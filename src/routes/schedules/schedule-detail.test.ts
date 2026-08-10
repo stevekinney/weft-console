@@ -10,6 +10,26 @@ import { HttpClient } from '@lostgradient/weft/client';
 import { startLiveSourceTestServer } from '../../lib/live-source/live-source-test-server.test-support.ts';
 import ScheduleDetailHarness from './schedule-detail-test-harness.test-harness.svelte';
 
+/**
+ * Polls a server-side condition until it holds, BEFORE the page under test
+ * mounts, so the page's own initial fetch already contains the data the
+ * assertion needs. Without this, the queued-runs/history tests race the
+ * engine's real scheduler (fire → run → persist) against the DOM `waitFor`
+ * window — a race the un-instrumented suite wins easily but the ~7×-slower
+ * `--coverage` run can lose (observed: the queued-runs assertion timing
+ * out at 5s only under coverage instrumentation). Waiting on the SERVER
+ * state rather than bumping the DOM timeout keeps the assertion about
+ * rendering, not about scheduler latency.
+ */
+async function waitForServerState(check: () => Promise<boolean>, label: string): Promise<void> {
+  const deadline = Date.now() + 8_000;
+  while (Date.now() < deadline) {
+    if (await check()) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`server never reached state: ${label}`);
+}
+
 describe('ScheduleDetail', () => {
   test('renders the not-found state for an unknown id', async () => {
     const server = await startLiveSourceTestServer();
@@ -74,26 +94,6 @@ describe('ScheduleDetail', () => {
       await server.stop();
     }
   });
-
-  /**
-   * Polls a server-side condition until it holds, BEFORE the page under test
-   * mounts, so the page's own initial fetch already contains the data the
-   * assertion needs. Without this, the tests below race the engine's real
-   * scheduler (fire → run → persist) against the DOM `waitFor` window — a
-   * race the un-instrumented suite wins easily but the ~7×-slower
-   * `--coverage` run can lose (observed: the queued-runs assertion timing
-   * out at 5s only under coverage instrumentation). Waiting on the SERVER
-   * state rather than bumping the DOM timeout keeps the assertion about
-   * rendering, not about scheduler latency.
-   */
-  async function waitForServerState(check: () => Promise<boolean>, label: string): Promise<void> {
-    const deadline = Date.now() + 8_000;
-    while (Date.now() < deadline) {
-      if (await check()) return;
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-    throw new Error(`server never reached state: ${label}`);
-  }
 
   test('queued runs (weft 0.13+ ScheduleQueuedRun[]) render as links with a queued-at timestamp', async () => {
     const server = await startLiveSourceTestServer();
