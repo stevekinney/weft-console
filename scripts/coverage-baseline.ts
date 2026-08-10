@@ -24,10 +24,27 @@ export type AreaCoverage = {
 export type CoverageBaseline = {
   measuredAt: string;
   /**
-   * Re-measured 2026-07-24 after the Cinder 0.19.0 migration. Coverage runs
-   * serially because Bun's default-parallel coverage workers can collide on
-   * the integration servers' ephemeral ports; the exact command is recorded
-   * in package.json's `test:coverage` script.
+   * Re-measured 2026-08-10 after the cinder 0.22.0 / weft 0.16.0 dependency
+   * wave. Absolute covered lines ROSE (23,003 → 23,180) but a few area
+   * percentages dipped fractionally, for structural reasons reviewed in that
+   * change: `src/lib` lost exactly the two covered lines of the removed
+   * `budget:*` scopes (weft#844); `src/routes/system` grew with the new
+   * authoritative Active-alerts section (weft#843) whose compiled template
+   * branches are partially covered; `tests` (= `tests/setup.ts` + the smoke
+   * harnesses — test FILES are not instrumented) shifted because every test
+   * file now imports `@testing-library/svelte` statically, so setup.ts's
+   * dynamic-import fallback paths no longer execute. That static-import
+   * conversion is itself the fix for `bun test --parallel=1` hard-failing
+   * whenever the library's module-scope `beforeEach()` registration first
+   * evaluated INSIDE a running test — the root cause of the coverage suite's
+   * 378-failure crashes (and the likely identity of the previously
+   * intermittent full-suite failure).
+   *
+   * Earlier note (2026-07-24), kept for context: re-measured after the
+   * Cinder 0.19.0 migration. Coverage runs serially because Bun's
+   * default-parallel coverage workers can collide on the integration
+   * servers' ephemeral ports; the exact command is recorded in
+   * package.json's `test:coverage` script.
    *
    * 2026-07-24 SIGTRAP investigation (isolated worktree): the earlier
    * full-parallel SIGTRAP (exit 133; crash report
@@ -46,13 +63,14 @@ export type CoverageBaseline = {
 };
 
 export const COVERAGE_BASELINE: CoverageBaseline = {
-  measuredAt: '2026-07-24T20:44:04.000Z',
-  overall: { linesFound: 35492, linesHit: 23003, functionsFound: 4712, functionsHit: 4064 },
+  measuredAt: '2026-08-10T21:20:00.000Z',
+  overall: { linesFound: 35851, linesHit: 23180, functionsFound: 4745, functionsHit: 4088 },
   areas: {
     fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
     scripts: { linesFound: 288, linesHit: 221, functionsFound: 22, functionsHit: 21 },
+    src: { linesFound: 12, linesHit: 12, functionsFound: 2, functionsHit: 2 },
     'src/app': { linesFound: 1350, linesHit: 1136, functionsFound: 264, functionsHit: 150 },
-    'src/lib': { linesFound: 1353, linesHit: 825, functionsFound: 174, functionsHit: 103 },
+    'src/lib': { linesFound: 1351, linesHit: 823, functionsFound: 174, functionsHit: 103 },
     'src/routes/dashboard': {
       linesFound: 1454,
       linesHit: 1202,
@@ -78,10 +96,10 @@ export const COVERAGE_BASELINE: CoverageBaseline = {
       functionsHit: 195,
     },
     'src/routes/system': {
-      linesFound: 4728,
-      linesHit: 4350,
-      functionsFound: 871,
-      functionsHit: 807,
+      linesFound: 4925,
+      linesHit: 4396,
+      functionsFound: 883,
+      functionsHit: 811,
     },
     'src/routes/workers': {
       linesFound: 3784,
@@ -90,11 +108,11 @@ export const COVERAGE_BASELINE: CoverageBaseline = {
       functionsHit: 248,
     },
     'src/routes/workflows': {
-      linesFound: 12862,
-      linesHit: 6814,
-      functionsFound: 1429,
-      functionsHit: 1263,
+      linesFound: 13014,
+      linesHit: 6939,
+      functionsFound: 1449,
+      functionsHit: 1283,
     },
-    tests: { linesFound: 145, linesHit: 114, functionsFound: 16, functionsHit: 15 },
+    tests: { linesFound: 145, linesHit: 110, functionsFound: 15, functionsHit: 13 },
   },
 };

@@ -6,15 +6,11 @@
  * module's doc for why `client.operations[...]` (JSON-RPC) needs this
  * instead.
  */
+import { render, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import DashboardIndexHarness from './dashboard-index-test-harness.test-harness.svelte';
 import { realClient, ScriptedFetch } from './dashboard-test-support.test-support.ts';
-
-async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
-  const { waitFor } = await import('@testing-library/svelte');
-  return waitFor;
-}
 
 let scripted: ScriptedFetch | undefined;
 
@@ -25,20 +21,17 @@ afterEach(() => {
 
 describe('Dashboard', () => {
   test('shows the unreachable state when the health probe fails', async () => {
-    const { render } = await import('@testing-library/svelte');
     scripted = new ScriptedFetch();
     scripted.routeUrlStatus('/v1/health', 503);
     const client = realClient();
 
     const { getByText } = render(DashboardIndexHarness, { props: { client } });
 
-    const waitFor = await waitForCondition();
     await waitFor(() => expect(getByText('Server unreachable')).not.toBeNull());
     expect(getByText('The health probe failed to respond.')).not.toBeNull();
   });
 
   test('shows the onboarding empty state when the workflow status aggregate totals zero', async () => {
-    const { render } = await import('@testing-library/svelte');
     scripted = new ScriptedFetch();
     scripted.routeUrl('/v1/health', { status: 'ok' });
     scripted.routeJsonRpcMethod('weft.workflows.aggregate', {
@@ -50,7 +43,6 @@ describe('Dashboard', () => {
 
     const { getByText } = render(DashboardIndexHarness, { props: { client } });
 
-    const waitFor = await waitForCondition();
     await waitFor(() => expect(getByText('No workflow activity yet')).not.toBeNull());
     expect(
       getByText(
@@ -61,7 +53,6 @@ describe('Dashboard', () => {
   });
 
   test('renders the three bands with real counts once health and aggregate data resolve', async () => {
-    const { render } = await import('@testing-library/svelte');
     scripted = new ScriptedFetch();
     scripted.routeUrl('/v1/health', { status: 'ok' });
     scripted.routeJsonRpcMethod('weft.workflows.aggregate', {
@@ -88,7 +79,6 @@ describe('Dashboard', () => {
 
     const { getByText, getAllByText } = render(DashboardIndexHarness, { props: { client } });
 
-    const waitFor = await waitForCondition();
     await waitFor(() => expect(getByText('Workflows by status')).not.toBeNull());
     expect(getAllByText('9').length).toBeGreaterThan(0);
     expect(getByText('Failures by category')).not.toBeNull();

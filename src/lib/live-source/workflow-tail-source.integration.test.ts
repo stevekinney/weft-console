@@ -29,6 +29,7 @@
  */
 import type { WorkflowEvent } from '@lostgradient/weft';
 import { HttpClient } from '@lostgradient/weft/client';
+import { waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import {
@@ -36,11 +37,6 @@ import {
   type LiveSourceTestServer,
 } from './live-source-test-server.test-support.ts';
 import { WorkflowTailSource } from './workflow-tail-source.svelte.ts';
-
-async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
-  const { waitFor } = await import('@testing-library/svelte');
-  return waitFor;
-}
 
 /**
  * `client.tail()` defaults to `eventTransport: 'auto'` (WebSocket first, real
@@ -67,7 +63,6 @@ describe('WorkflowTailSource (integration, real server)', () => {
       const workflowId = 'wts-integration-catchup-live';
       await startSignalStepped(server, workflowId, 2);
 
-      const waitFor = await waitForCondition();
       // Give the first step's checkpoints a moment to land BEFORE
       // subscribing, so this genuinely exercises catch-up.
       await new Promise((resolve) => setTimeout(resolve, 30));
@@ -104,8 +99,6 @@ describe('WorkflowTailSource (integration, real server)', () => {
       await startSignalStepped(server, workflowId, 3);
       await server.engine.signal(workflowId, 'advance');
       await server.engine.signal(workflowId, 'advance');
-
-      const waitFor = await waitForCondition();
 
       const firstClient = sseClient(server);
       const firstSource = new WorkflowTailSource(firstClient, workflowId);
@@ -159,7 +152,6 @@ describe('WorkflowTailSource (integration, real server)', () => {
       // before taking the "at close" baseline, or this test would be
       // asserting on an inherent delivery race rather than close()'s
       // actual behavior.
-      const waitFor = await waitForCondition();
       await waitFor(() => {
         expect(received.length).toBeGreaterThan(0);
       });

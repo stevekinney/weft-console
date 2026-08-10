@@ -63,55 +63,56 @@ sends) is wired up, which is a deliberate follow-up, not done here.
 
 The same built bundle (`dist/`) boots in three modes — distinguished only by how the shell is
 served and which realtime transport is viable, never by rebuilding — via one runtime
-configuration layer (plan §3). `tests/deployment/` integration-tests the Service Worker and
-cross-origin modes against real weft code (`setupServiceWorker`/`handleRequest`, a real
-`serve({ cors })`). Bun-mount's five-route contract is verified against a real
-`serve({ dashboard: weftConsole() })` instance built from the packed npm tarball (Phase 10
-release-readiness gate, 2026-07-24): all five `DASHBOARD_PAGE_ROUTES` return the shell at `200`
-and `/api`/root-stable routes are untouched, confirming the page-route/API split works exactly as
-documented. That check also surfaced a real limitation — see the callout below.
+configuration layer (plan §3). `tests/deployment/` integration-tests all three modes against
+real weft code: the Bun mount (`tests/deployment/bun-mount.test.ts`, a real
+`serve({ dashboard, dashboardAssets })` — all eight `DASHBOARD_PAGE_ROUTES` return the shell at
+`200`, `/assets/*` serves the built chunks, and `/api`/root-stable routes are untouched), the
+Service Worker mode (`setupServiceWorker`/`handleRequest`), and cross-origin (a real
+`serve({ cors })`).
 
 ### 1. Bun server mount (primary)
 
 ```ts
 import { Engine } from '@lostgradient/weft';
 import { serve } from '@lostgradient/weft/server';
-import { weftConsole } from '@lostgradient/weft-console';
+import { weftConsole, weftConsoleAssets } from '@lostgradient/weft-console';
 import { workflows } from './workflows';
 
 const engine = await Engine.create({ workflows });
-await serve({ engine, dashboard: weftConsole() });
+await serve({ engine, dashboard: weftConsole(), dashboardAssets: weftConsoleAssets() });
 ```
 
 `weftConsole({ distDir? })` (`src/mount.ts`) returns a static `Response` streaming the built
-`index.html` — `serve()` registers it at exactly the five `DASHBOARD_PAGE_ROUTES`
-(`/`, `/workflows`, `/workflows/*`, `/reviews`, `/workers`) and, by construction of Bun's static
-route table, it can never shadow `/api/*` or the root-stable discovery routes (`/v1/health`,
-`/openapi.json`, …). The injected config block defaults to `{ baseUrl: '' }` (same origin — the
-console and API share a port under this mode). Pass `distDir` only if you build once and copy
-`dist/` to a different location than this package's own `dist/` (e.g. a CDN origin bucket) before
-serving it from there.
+`index.html` — `serve()` registers it at exactly the eight `DASHBOARD_PAGE_ROUTES`
+(`/`, `/workflows`, `/workflows/*`, `/reviews`, `/workers`, `/schedules`, `/storage`, `/system`
+as of `@lostgradient/weft@0.16.0`, which made the console's leaf routes real deep-linkable page
+routes) and, by construction of Bun's static route table, it can never shadow `/api/*` or the
+root-stable discovery routes (`/v1/health`, `/openapi.json`, …). The injected config block
+defaults to `{ baseUrl: '' }` (same origin — the console and API share a port under this mode).
 
-**This call alone does not serve the shell's assets.** `ServeOptions.dashboard` only mounts a
-single `Response` at the five page-route keys above — it has no mechanism to also serve the
-content-hashed JS/CSS chunks the shell's `index.html` references under `/assets/*`. Verified
-directly: a `serve({ dashboard: weftConsole() })` instance built from a packed tarball returns the
-shell HTML at `200` on all five routes, but every `/assets/*.js`/`.css` request it makes 404s
-through weft's own API 404 handler (unmatched paths fall through to `fetch`, same as any other
-unknown API path). This is a gap in weft's mount contract, not something this package can work
-around — `ServeOptions` has no hook to register additional static routes alongside `dashboard`,
-and inlining every route's JS/CSS into a single self-contained response (making `/assets/*`
-unnecessary) would defeat the per-route code-splitting this bundle's `check:bundle` budgets are
-built around, so this package doesn't do that either. Filed upstream
-(`stevekinney/weft`, see the issue tracker — search "dashboard assets").
+`weftConsoleAssets({ distDir? })` returns the `ServeOptions.dashboardAssets` descriptor
+(`{ prefix: '/assets', directory: <distDir>/assets }`) for the shell's content-hashed JS/CSS
+chunks — weft 0.16.0's `dashboardAssets` option serves them as verified static file routes, so
+the two options together are a complete deployment: no reverse proxy or separate static file
+server is required. (Before weft 0.16.0, `dashboard` alone mounted only the page routes and
+every `/assets/*` request 404'd; that gap is fixed upstream and
+`tests/deployment/bun-mount.test.ts` guards the full contract against a real `serve()`
+instance.)
 
-**Until that lands, serve `dist/assets/*` yourself** — put a static file server or reverse proxy
-in front that serves `/assets/*` directly from this package's `dist/assets` (`node_modules/@lostgradient/weft-console/dist/assets/` once installed, or wherever you copied `dist/` via
-`distDir`) and proxies everything else to the `serve()` process. This is also weft's own
-recommended production topology for external dashboards (see the security note below), so a
-correctly deployed console already has this reverse proxy in place; a bare `serve({ dashboard })`
-call with nothing in front of it is a local/dev convenience, not a complete production
-deployment.
+Pass `distDir` (to both functions) only if you build once and copy `dist/` to a different
+location than this package's own `dist/` (e.g. a CDN origin bucket) before serving it from
+there. The assets directory must exist before `serve()` is called — weft validates it at boot.
+
+**Zero-code CLI mount (weft 0.16.0, weft#842).** `weft serve --console` mounts this package
+without writing any server code: the CLI resolves `@lostgradient/weft-console` from the project
+it runs in, calls the exported `weftConsole()`, and serves the package's built `dist/assets`
+as the asset routes — the CLI equivalent of the `serve({ dashboard, dashboardAssets })` call
+above. Install the console next to weft and start the server:
+
+```sh
+bun add @lostgradient/weft-console
+bunx weft serve --console --workflows ./workflows.ts
+```
 
 **Security note.** The shell HTML is served from Bun's static `routes` table, which is matched
 _before_ weft's `fetch`/auth handler runs — so `serve({ auth })` protects the API, never the
@@ -189,39 +190,36 @@ block round-trips through `readRuntimeConfig()`/`createClient()` into a correctl
 /weft/v1/workflows/:id`) resolves end to end through the real `setupServiceWorker()` fetch
 listener against `IndexedDBStorage`.
 
-**Known gap — SSE does not work through `setupServiceWorker()` today.** `handleRequest` itself
-streams SSE incrementally rather than buffering (proven directly in
-`tests/deployment/service-worker.test.ts`: a live-appended fleet event arrives over an
-already-open `Response` body without the underlying subscription ever completing). But
-`setupServiceWorker()`'s own fetch listener calls `handleRequest(request, engine)` with no
-`HandlerOptions` at all — no `authContext`, no `fleetEventFeed`, no `workflowEventFeed` — so
-every request through the real Service Worker entry point is unconditionally anonymous, and any
-`scoped`/`authenticated` operation 401s before reaching a feed that was never wired up in the
-first place (also proven in that test file). This is a gap in weft's public `service-worker`
-API — confirmed from source, not a console defect and not a buffering problem — surfaced by this
-track's testing rather than a previously-filed issue; it needs its own upstream tracking, and this
-repository does not patch it locally. Until it's addressed, a host that needs SW-mode SSE has to
-hand-roll the fetch listener instead of using
-`setupServiceWorker()`'s convenience wrapper for that one concern:
+**Authenticated SSE through `setupServiceWorker()` (weft 0.16.0, weft#845).**
+`setupServiceWorker({ handlerOptions })` accepts the `ServiceWorkerHandlerOptions` subset of
+`HandlerOptions` (`authContext`, `workflowEventFeed`, `fleetEventFeed`,
+`acquireWorkflowStreamConnection`), so a host that wants live feeds or a non-anonymous principal
+wires them straight into the convenience wrapper — no hand-rolled fetch listener required:
 
 ```ts
-import { buildDelegatedRequest, normalizePathPrefix } from '@lostgradient/weft/service-worker';
-import { createFleetEventFeed, handleRequest } from '@lostgradient/weft/server/handler';
+import { createFleetEventFeed } from '@lostgradient/weft/server/handler';
 
-const pathPrefix = normalizePathPrefix('/weft/');
-const fleetEventFeed = createFleetEventFeed(engine.storage);
+const storage = /* the same storage instance the engine uses */;
 
-self.addEventListener('fetch', (event) => {
-  const delegated = buildDelegatedRequest(event, pathPrefix);
-  if (delegated === null) return;
-  event.respondWith(
-    handleRequest(delegated, engine, {
-      fleetEventFeed,
-      // authContext: … — still required for any `scoped`/`authenticated` route.
-    }),
-  );
+await setupServiceWorker({
+  storage,
+  handlerOptions: {
+    fleetEventFeed: createFleetEventFeed(storage),
+    // authContext: … — required for any `scoped`/`authenticated` route
+    // (fleet SSE declares `events:read`).
+  },
+  register: (engine) => {
+    /* … */
+  },
 });
 ```
+
+Omitting `handlerOptions` keeps the pre-0.16 default: every request through the Service Worker
+entry point resolves to a zero-scope anonymous principal, so `public` REST reads work but any
+`scoped`/`authenticated` operation 401s. Both sides — the anonymous default and an
+authenticated, genuinely incremental fleet SSE stream (a live-appended event arriving over an
+already-open `Response` body) — are proven through the real `setupServiceWorker()` fetch
+listener in `tests/deployment/service-worker.test.ts`.
 
 ### Runtime configuration contract
 

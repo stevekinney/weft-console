@@ -3,19 +3,18 @@
  * happy-dom + `@testing-library/svelte` (plan §11.2) — run via
  * `bun run test`, never bare `bun test` (README "Toolchain decisions").
  */
+import { render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import ArtifactView from './artifact-view.svelte';
 
 describe('ArtifactView', () => {
   test('renders a bare string as plain text', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(ArtifactView, { props: { value: 'Please approve this.' } });
     expect(getByText('Please approve this.').tagName).toBe('P');
   });
 
   test('renders a markdown key as sanitized HTML', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { container } = render(ArtifactView, {
       props: { value: { markdown: '# Heading\n\nSome **bold** text.' } },
     });
@@ -24,7 +23,6 @@ describe('ArtifactView', () => {
   });
 
   test('sanitizes a script tag out of markdown content', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { container } = render(ArtifactView, {
       props: { value: { markdown: 'Hello <script>window.__pwned = true</script>' } },
     });
@@ -32,7 +30,6 @@ describe('ArtifactView', () => {
   });
 
   test('renders an imageUrl key as an image', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByAltText } = render(ArtifactView, {
       props: { value: { imageUrl: 'https://example.com/chart.png' } },
     });
@@ -41,7 +38,6 @@ describe('ArtifactView', () => {
   });
 
   test('renders an htmlContent key as a sandboxed iframe', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { container } = render(ArtifactView, {
       props: { value: { htmlContent: '<p>Rich content</p>' } },
     });
@@ -52,7 +48,6 @@ describe('ArtifactView', () => {
   });
 
   test('falls back to PayloadInspector with humanized keys for a plain object', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText, queryByText } = render(ArtifactView, {
       props: { value: { annualValue: 248_000, term: '24 months' }, label: 'Contract terms' },
     });
@@ -61,7 +56,6 @@ describe('ArtifactView', () => {
   });
 
   test('falls back to PayloadInspector for an array value', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(ArtifactView, {
       props: { value: [1, 2, 3], label: 'List artifact' },
     });

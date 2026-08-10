@@ -1,3 +1,4 @@
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { AttributeFilter } from '../../../lib/attribute-filters.ts';
@@ -5,7 +6,6 @@ import QueryBuilder from './query-builder.svelte';
 
 describe('QueryBuilder', () => {
   test('renders one row per seeded attribute filter, plus operator/value text', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByDisplayValue } = render(QueryBuilder, {
       props: {
         attributes: [{ key: 'customerTier', value: 'gold' }] satisfies AttributeFilter[],
@@ -19,7 +19,6 @@ describe('QueryBuilder', () => {
   });
 
   test('renders one blank row when there are no seeded attributes', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByLabelText } = render(QueryBuilder, {
       props: { attributes: [], onAttributesChange: () => {}, knownAttributeKeys: [] },
     });
@@ -28,7 +27,6 @@ describe('QueryBuilder', () => {
   });
 
   test('typing a value calls onAttributesChange with the updated filter', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let latest: AttributeFilter[] | undefined;
     const { getByLabelText } = render(QueryBuilder, {
       props: {
@@ -47,7 +45,6 @@ describe('QueryBuilder', () => {
   });
 
   test('Cinder commits an arbitrary field key through its free-text combobox', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let latest: AttributeFilter[] | undefined;
     const { getByLabelText } = render(QueryBuilder, {
       props: {
@@ -67,7 +64,6 @@ describe('QueryBuilder', () => {
   });
 
   test('Cinder renders a numeric value control for an observed numeric attribute', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByLabelText } = render(QueryBuilder, {
       props: {
         attributes: [{ key: 'retryCount', value: 3 }] satisfies AttributeFilter[],
@@ -80,7 +76,6 @@ describe('QueryBuilder', () => {
   });
 
   test('"Add condition" appends a blank row', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getByRole, getByLabelText } = render(QueryBuilder, {
       props: { attributes: [], onAttributesChange: () => {}, knownAttributeKeys: [] },
     });
@@ -92,7 +87,6 @@ describe('QueryBuilder', () => {
   });
 
   test('removing the only row leaves one blank row rather than zero', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let latest: AttributeFilter[] | undefined;
     const { getByRole, getByLabelText } = render(QueryBuilder, {
       props: {
@@ -111,7 +105,6 @@ describe('QueryBuilder', () => {
   });
 
   test('switching to Raw mode shows the JSON preview', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getByRole, getByText } = render(QueryBuilder, {
       props: {
         attributes: [{ key: 'customerTier', value: 'gold' }] satisfies AttributeFilter[],

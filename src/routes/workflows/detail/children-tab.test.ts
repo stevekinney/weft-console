@@ -1,3 +1,4 @@
+import { render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { PaginatedResult, WorkflowState, WorkflowSummary } from '@lostgradient/weft';
@@ -35,7 +36,6 @@ function page(items: WorkflowSummary[], total = items.length): PaginatedResult<W
 
 describe('ChildrenTab', () => {
   test('shows the empty state when list({ parentWorkflowId }) returns no children', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const client = { list: async () => page([]) };
 
     const { getByText } = render(ChildrenTabHarness, {
@@ -48,7 +48,6 @@ describe('ChildrenTab', () => {
   });
 
   test('renders real child ids as clickable rows, including a detached (non-awaited) child', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const client = {
       list: async (filter?: { parentWorkflowId?: string }) => {
         expect(filter?.parentWorkflowId).toBe('wf_1');
@@ -73,7 +72,6 @@ describe('ChildrenTab', () => {
   });
 
   test('shows a "+N more" note when the parent has more children than the page limit', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const client = {
       list: async () => page([summary({ id: 'wf_child_1' })], 3),
     };

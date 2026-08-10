@@ -13,41 +13,28 @@
  * preload), matching what `setupServiceWorker()` itself defaults to in a
  * browser/Service Worker scope (plan §3.3).
  *
- * **A confirmed gap, not a buffering problem.** Plan §3.3 says "verify [SSE]
- * in an integration test in Phase 9 and file a weft issue if `handleRequest`
- * buffers instead of streams." `handleRequest` does NOT buffer — the second
- * `describe` block below proves genuine incremental delivery. The real gap is
- * upstream of that: `SetupServiceWorkerOptions` / `ServiceWorkerOptions` have
- * no way to pass `HandlerOptions` (`fleetEventFeed`, `workflowEventFeed`,
- * `authContext`) through to `handleRequest`, and `setupServiceWorker`'s own
- * fetch listener calls `handleRequest(delegatedRequest, engine)` with no
- * options at all (`src/service-worker/setup.ts`'s `buildFetchListener`). Two
- * consequences, both exercised below:
- *   1. Every request through the real SW entry point is always anonymous —
- *      there is no way to authenticate it — so any `scoped`/`authenticated`
- *      operation (fleet SSE's `events:read` included) 401s unconditionally.
- *   2. Even with a principal, fleet SSE would still fail: nothing ever
- *      constructs and passes a `fleetEventFeed`, so the operation throws
- *      `UnsupportedTransport` before `createFleetEventFeed`'s streaming
- *      behavior is ever reached through this entry point.
- * This is a newly-surfaced gap in weft's public `service-worker` API (not the
- * same thing as the separately-tracked server auth-posture gap — that one is
- * about operations not checking a principal's scopes; this one is about the
- * SW entry point never producing a non-anonymous principal, or a fleet feed,
- * at all), and not something this track patches locally — weft's
- * `service-worker` module is ground-truth, read-only; it needs its own
- * upstream issue. The README documents the workaround in the meantime: a
- * host that needs SW-mode SSE hand-rolls a `fetch` listener with
- * `buildDelegatedRequest` + explicit `HandlerOptions`, bypassing the
- * `setupServiceWorker` convenience wrapper for that one concern.
+ * **The weft#845 adoption (0.16.0).** Earlier revisions of this file
+ * documented a confirmed gap: `SetupServiceWorkerOptions` had no way to pass
+ * `HandlerOptions` (`fleetEventFeed`, `workflowEventFeed`, `authContext`)
+ * through to `handleRequest`, so every request through the real SW entry
+ * point was unconditionally anonymous and fleet SSE threw
+ * `UnsupportedTransport` before streaming was ever reached. Weft 0.16.0
+ * closes it: `setupServiceWorker({ handlerOptions })` accepts the
+ * `ServiceWorkerHandlerOptions` subset (`authContext`, `workflowEventFeed`,
+ * `fleetEventFeed`, `acquireWorkflowStreamConnection`). The suite below
+ * proves both sides through the REAL `setupServiceWorker` fetch listener:
+ *   1. Omitting `handlerOptions` keeps the old default — anonymous
+ *      principal, so a `scoped` operation (fleet SSE, `events:read`) 401s.
+ *   2. Passing `handlerOptions: { authContext, fleetEventFeed }` makes the
+ *      same fleet SSE request stream — genuinely incrementally (a
+ *      live-appended event arrives over the open Response body without the
+ *      stream ending), which also re-proves the plan §3.3 "handleRequest
+ *      does not buffer" verification through the public SW entry point
+ *      rather than a direct `handleRequest` call.
  */
-import { Engine, workflow } from '@lostgradient/weft';
+import { workflow } from '@lostgradient/weft';
 import { principalFromApiKey } from '@lostgradient/weft/mcp';
-import {
-  createFleetEventFeed,
-  handleRequest,
-  type FleetEventFeed,
-} from '@lostgradient/weft/server/handler';
+import { createFleetEventFeed, type FleetEventFeed } from '@lostgradient/weft/server/handler';
 import { setupServiceWorker, type MinimalFetchEvent } from '@lostgradient/weft/service-worker';
 import { IndexedDBStorage } from '@lostgradient/weft/storage/indexeddb';
 import { describe, expect, it } from 'bun:test';
@@ -177,7 +164,7 @@ describe('Service Worker mode — REST via a real setupServiceWorker() fetch lis
     }
   });
 
-  it('cannot reach a scoped operation (fleet SSE) — the fetch listener never authenticates a principal', async () => {
+  it('stays anonymous without handlerOptions — a scoped operation (fleet SSE) 401s', async () => {
     const { scope, dispatchFetch } = createFakeServiceWorkerScope();
     const { storage, cleanup } = createIndexedDbStorage();
 
@@ -193,10 +180,10 @@ describe('Service Worker mode — REST via a real setupServiceWorker() fetch lis
 
         // `weft.events.sse` declares `access: { kind: 'scoped', scopes: {
         // anyOf: ['events:read'] } }` (`src/server/operations/fleet-events-sse.ts`).
-        // `buildFetchListener` calls `handleRequest(delegatedRequest, engine)`
-        // with no `HandlerOptions`, so `authContextToPrincipal(undefined)`
-        // always resolves to `anonymousPrincipal()` — this 401s before the
-        // pipeline ever reaches the (also-missing) `fleetEventFeed` check.
+        // With no `handlerOptions`, `buildFetchListener` still delegates
+        // with no `authContext`, so `authContextToPrincipal(undefined)`
+        // resolves to `anonymousPrincipal()` — the pre-0.16 default is
+        // unchanged for callers that omit the option.
         expect(response.status).toBe(401);
       });
     } finally {
@@ -212,28 +199,35 @@ function operatorPrincipalAuthContext() {
   };
 }
 
-describe('Service Worker mode — fleet SSE streams incrementally through handleRequest (not buffered)', () => {
-  it('delivers a live-appended fleet event over the open Response body without waiting for the stream to end', async () => {
+describe('Service Worker mode — authenticated fleet SSE via handlerOptions (weft#845, 0.16.0)', () => {
+  it('streams a live-appended fleet event incrementally through the real setupServiceWorker fetch listener', async () => {
+    const { scope, dispatchFetch } = createFakeServiceWorkerScope();
     const { storage, cleanup } = createIndexedDbStorage();
-    const engine = new Engine({ storage });
-    const fleetEventFeed: FleetEventFeed = createFleetEventFeed(engine.storage);
+    const fleetEventFeed: FleetEventFeed = createFleetEventFeed(storage);
     const abortController = new AbortController();
 
     try {
-      const request = new Request('https://sw-host.example/v1/events/sse', {
-        headers: { Accept: 'text/event-stream' },
-        signal: abortController.signal,
-      });
+      const response = await withFakeSelf(scope, async () => {
+        await setupServiceWorker({
+          storage,
+          handlerOptions: {
+            authContext: operatorPrincipalAuthContext(),
+            fleetEventFeed,
+          },
+        });
 
-      // The fleet feed's `subscribe()` never completes on its own for a live
-      // stream with no persisted backlog (only `close()`/abort ends it) — if
-      // `handleRequest` buffered the whole SSE body before returning a
-      // `Response`, this `await` could never resolve. It resolving at all,
-      // well inside the test's timeout, is itself part of the streaming
-      // proof; the incremental reads below are the rest of it.
-      const response = await handleRequest(request, engine, {
-        authContext: operatorPrincipalAuthContext(),
-        fleetEventFeed,
+        // The fleet feed's `subscribe()` never completes on its own for a
+        // live stream with no persisted backlog (only `close()`/abort ends
+        // it) — if the SW path buffered the whole SSE body before
+        // responding, this `await` could never resolve. It resolving at
+        // all, well inside the test's timeout, is itself part of the
+        // streaming proof; the incremental reads below are the rest of it.
+        return dispatchFetch(
+          new Request('https://sw-host.example/weft/v1/events/sse', {
+            headers: { Accept: 'text/event-stream' },
+            signal: abortController.signal,
+          }),
+        );
       });
       expect(response.status).toBe(200);
       expect(response.headers.get('content-type')).toContain('text/event-stream');

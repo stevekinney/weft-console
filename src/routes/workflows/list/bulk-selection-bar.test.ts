@@ -1,3 +1,4 @@
+import { fireEvent, render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { WorkflowListQuery } from '../../../lib/filters.ts';
@@ -23,7 +24,6 @@ function baseProps(overrides: Partial<Record<string, unknown>> = {}) {
 
 describe('BulkSelectionBar', () => {
   test('renders nothing when nothing is selected', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { container } = render(BulkSelectionBar, {
       props: baseProps({ selectedCount: 0 }),
     });
@@ -32,7 +32,6 @@ describe('BulkSelectionBar', () => {
   });
 
   test('shows the selection count and the select-all-matching banner', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText, getByRole } = render(BulkSelectionBar, { props: baseProps() });
 
     expect(getByText('3 selected')).not.toBeNull();
@@ -40,7 +39,6 @@ describe('BulkSelectionBar', () => {
   });
 
   test('Deselect calls onDeselect', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let deselected = false;
     const { getByRole } = render(BulkSelectionBar, {
       props: baseProps({
@@ -55,7 +53,6 @@ describe('BulkSelectionBar', () => {
   });
 
   test('missing workflows:admin disables every action with the scope reason', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getAllByRole } = render(BulkSelectionBar, {
       props: baseProps({ adminGate: DENIED }),
     });
@@ -70,7 +67,6 @@ describe('BulkSelectionBar', () => {
   });
 
   test('scope granted but "select all matching" unchecked still disables every action', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getAllByRole } = render(BulkSelectionBar, { props: baseProps() });
 
     const cancelButton = getAllByRole('button').find(
@@ -80,7 +76,6 @@ describe('BulkSelectionBar', () => {
   });
 
   test('an unscoped filter disables every action even after selecting all matching', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getByRole, getAllByRole } = render(BulkSelectionBar, {
       props: baseProps({ filter: {} as WorkflowListQuery }),
     });
@@ -94,7 +89,6 @@ describe('BulkSelectionBar', () => {
   });
 
   test('granted scope + select-all-matching + a scoped filter enables the actions', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getByRole, getAllByRole } = render(BulkSelectionBar, { props: baseProps() });
 
     await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
@@ -125,7 +119,6 @@ describe('BulkSelectionBar', () => {
       confirmationTokenVersion: 1,
     });
 
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const { getByRole, getAllByRole, getByText } = render(BulkSelectionBar, {
       props: baseProps({ client: realClient() }),
     });
@@ -143,7 +136,6 @@ describe('BulkSelectionBar', () => {
   });
 
   test('clicking Purge (once enabled) opens the purge dialog using the already-known total, no dry run', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const { getByRole, getAllByRole, getByText } = render(BulkSelectionBar, {
       props: baseProps(),
     });
@@ -169,7 +161,6 @@ describe('BulkSelectionBar', () => {
     const fetch = new ScriptedFetch();
     fetch.routeJsonRpcMethod('weft.workflows.purge', { deleted: 47 });
 
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     let completed = 0;
     const { getByRole, getAllByRole, getByText, getByLabelText } = render(BulkSelectionBar, {
       props: baseProps({

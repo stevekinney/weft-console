@@ -1,3 +1,4 @@
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import CompletedReviewRow from './completed-review-row.svelte';
@@ -22,7 +23,6 @@ function entry(decision: 'approved' | 'rejected' | 'needs-changes') {
 
 describe('CompletedReviewRow', () => {
   test('renders an approved decision', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(CompletedReviewRow, {
       props: { entry: entry('approved'), selected: false, now: NOW, onSelect: () => {} },
     });
@@ -32,7 +32,6 @@ describe('CompletedReviewRow', () => {
   });
 
   test('renders a rejected decision', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(CompletedReviewRow, {
       props: { entry: entry('rejected'), selected: false, now: NOW, onSelect: () => {} },
     });
@@ -41,7 +40,6 @@ describe('CompletedReviewRow', () => {
   });
 
   test('renders a needs-changes decision', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(CompletedReviewRow, {
       props: { entry: entry('needs-changes'), selected: false, now: NOW, onSelect: () => {} },
     });
@@ -50,7 +48,6 @@ describe('CompletedReviewRow', () => {
   });
 
   test('calls onSelect with the reviewId when clicked', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const selected: string[] = [];
     const { getByRole } = render(CompletedReviewRow, {
       props: {

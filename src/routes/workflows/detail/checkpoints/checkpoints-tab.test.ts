@@ -1,3 +1,4 @@
+import { fireEvent, render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { CheckpointSummary, WorkflowReplay } from '@lostgradient/weft';
@@ -40,8 +41,6 @@ function baseClient(
 
 describe('CheckpointsTab', () => {
   test('renders the checkpoint list', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
-
     const { getByText } = render(CheckpointsTabHarness, {
       props: {
         client: baseClient(),
@@ -58,8 +57,6 @@ describe('CheckpointsTab', () => {
   });
 
   test('shows an empty state when no checkpoints are retained', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
-
     const { getByText } = render(CheckpointsTabHarness, {
       props: {
         client: baseClient([]),
@@ -75,8 +72,6 @@ describe('CheckpointsTab', () => {
   });
 
   test('selecting a checkpoint shows the Replay panel by default, and Fork after clicking the Fork tab', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
-
     const { getByText, getByRole } = render(CheckpointsTabHarness, {
       props: {
         client: baseClient(),
@@ -101,8 +96,6 @@ describe('CheckpointsTab', () => {
   });
 
   test('forking a checkpoint shows the success link and reveals the divergence view', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
-
     const { getByText, getByRole } = render(CheckpointsTabHarness, {
       props: {
         client: baseClient(),
@@ -127,7 +120,6 @@ describe('CheckpointsTab', () => {
   });
 
   test('a query fault (e.g. a 404 from the checkpoints operation) shows the real fault treatment, not a fabricated "no checkpoints" empty state', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const client = baseClient();
     const failingClient = {
       ...client,
@@ -155,8 +147,6 @@ describe('CheckpointsTab', () => {
   });
 
   test('a principal missing workflows:read sees the disabled replay gate, not a fabricated view', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
-
     const { getByText } = render(CheckpointsTabHarness, {
       props: {
         client: baseClient(),

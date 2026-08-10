@@ -3,6 +3,7 @@
  * Covers URL-owned tab state: default tab, switching tabs updates `?tab=`,
  * and a deep link into a non-default tab renders that tab on load.
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { DetachedWindowAPI } from 'happy-dom';
 
@@ -53,7 +54,6 @@ async function renderSystemRoute() {
   // own doc: "stays open … never closes on its own").
   scripted.routeSseStream('/v1/events/sse', []);
 
-  const { render } = await import('@testing-library/svelte');
   return render(SystemRouteTestHarness, {
     props: { client: realClient(), queryClient: createQueryClient(), component: SystemRoute },
   });
@@ -68,7 +68,6 @@ describe('System route', () => {
 
   test('clicking a tab updates the URL and renders that tab', async () => {
     const { findByRole } = await renderSystemRoute();
-    const { fireEvent } = await import('@testing-library/svelte');
 
     await fireEvent.click(await findByRole('tab', { name: 'Scopes' }));
 

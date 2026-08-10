@@ -1,10 +1,10 @@
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import ClearDeadLetterDialog from './clear-dead-letter-dialog.svelte';
 
 describe('ClearDeadLetterDialog', () => {
   test('the confirm button is disabled until the operationId is typed exactly', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getByRole, getByLabelText } = render(ClearDeadLetterDialog, {
       props: {
         open: true,
@@ -25,7 +25,6 @@ describe('ClearDeadLetterDialog', () => {
   });
 
   test('confirming calls onConfirm once the value matches', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let confirmed = 0;
     const { getByRole, getByLabelText } = render(ClearDeadLetterDialog, {
       props: {
@@ -46,7 +45,6 @@ describe('ClearDeadLetterDialog', () => {
   });
 
   test('cancelling calls onCancel', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let cancelled = 0;
     const { getByRole } = render(ClearDeadLetterDialog, {
       props: {

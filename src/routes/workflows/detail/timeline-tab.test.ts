@@ -1,3 +1,4 @@
+import { fireEvent, render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { WorkflowState, WorkflowTimelineEntry } from '@lostgradient/weft';
@@ -77,7 +78,6 @@ function baseClient(
 
 describe('TimelineTab', () => {
   test('shows an empty state with no timeline entries', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const liveObservations = new WorkflowLiveObservations(
       new InertFleet(),
       inertQueryClient(),
@@ -97,7 +97,6 @@ describe('TimelineTab', () => {
   });
 
   test('renders steps in order with their labels', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const liveObservations = new WorkflowLiveObservations(
       new InertFleet(),
       inertQueryClient(),
@@ -124,7 +123,6 @@ describe('TimelineTab', () => {
   });
 
   test('clicking a step selects it and shows the linked-selection chip, Clear removes it', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const liveObservations = new WorkflowLiveObservations(
       new InertFleet(),
       inertQueryClient(),
@@ -165,7 +163,6 @@ describe('TimelineTab', () => {
    * immediately-deselect and `aria-pressed` would never flip.
    */
   test('the step-selection button toggles aria-pressed and the linked-selection chip on a single click (no double-toggle from the row delegate)', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const liveObservations = new WorkflowLiveObservations(
       new InertFleet(),
       inertQueryClient(),
@@ -208,7 +205,6 @@ describe('TimelineTab', () => {
   });
 
   test('the Failed quick filter narrows the rendered steps', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const liveObservations = new WorkflowLiveObservations(
       new InertFleet(),
       inertQueryClient(),
@@ -238,7 +234,6 @@ describe('TimelineTab', () => {
   });
 
   test('shows the Finalizing badge when the durable finalizer field reports still-in-flight (weft#732 item 4)', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const fleet = new InertFleet();
     const liveObservations = new WorkflowLiveObservations(fleet, inertQueryClient(), 'wf-1');
 
@@ -255,7 +250,6 @@ describe('TimelineTab', () => {
   });
 
   test('an unambiguous pending async activity badges the matching step', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const fleet = new InertFleet();
     const liveObservations = new WorkflowLiveObservations(fleet, inertQueryClient(), 'wf-1');
     const entries = [
@@ -292,7 +286,6 @@ describe('TimelineTab', () => {
   });
 
   test('an ambiguous (unattached) pending async activity shows in the standalone list instead of on a step', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const fleet = new InertFleet();
     const liveObservations = new WorkflowLiveObservations(fleet, inertQueryClient(), 'wf-1');
     // No matching timeline entry at all — the observation stays unattached.

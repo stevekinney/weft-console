@@ -1,3 +1,4 @@
+import { fireEvent, render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { BulkOperationDryRunResult } from '@lostgradient/weft';
@@ -29,7 +30,6 @@ function preview(overrides: Partial<BulkOperationDryRunResult> = {}): BulkOperat
 
 describe('BulkActionDialog — dry-run preview', () => {
   test('shows the matched count and filter chip from the dry run, not a client estimate', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const { getByText } = render(BulkActionDialog, {
       props: {
         title: 'Bulk cancel',
@@ -48,7 +48,6 @@ describe('BulkActionDialog — dry-run preview', () => {
   });
 
   test('0 matched disables the confirm affordance and offers no type-to-confirm field', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const { getByText, queryByLabelText, queryByRole } = render(BulkActionDialog, {
       props: {
         title: 'Bulk cancel',
@@ -67,7 +66,6 @@ describe('BulkActionDialog — dry-run preview', () => {
   });
 
   test('a failed dry run shows the fault treatment', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const { getByText } = render(BulkActionDialog, {
       props: {
         title: 'Bulk cancel',
@@ -92,7 +90,6 @@ describe('BulkActionDialog — dry-run preview', () => {
     // via manual dev-harness verification: clicking "Retry" after a failed
     // initial preview silently did nothing. See `faultOrigin` in the
     // component.
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     let dryRunCalls = 0;
     let commitCalls = 0;
 
@@ -134,7 +131,6 @@ describe('BulkActionDialog — dry-run preview', () => {
 
 describe('BulkActionDialog — type-to-confirm', () => {
   test('the confirm button stays disabled until the exact phrase is typed', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const { getByRole, getByLabelText } = render(BulkActionDialog, {
       props: {
         title: 'Bulk cancel',
@@ -161,7 +157,6 @@ describe('BulkActionDialog — type-to-confirm', () => {
   });
 
   test('confirming calls runCommit with the dry run token and matched count, then shows the result', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const received: { call: { token: string; matched: number } | null } = { call: null };
 
     const { getByRole, getByLabelText, getByText } = render(BulkActionDialog, {
@@ -194,7 +189,6 @@ describe('BulkActionDialog — type-to-confirm', () => {
 
 describe('BulkActionDialog — commit fault treatment', () => {
   test('a stale confirmation token (InvalidParams) offers "Refresh preview", not a generic retry', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     let dryRunCalls = 0;
 
     const { getByRole, getByLabelText, getByText } = render(BulkActionDialog, {
@@ -240,7 +234,6 @@ describe('BulkActionDialog — commit fault treatment', () => {
   });
 
   test('a transient commit fault (not InvalidParams) offers a same-token Retry', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     let commitCalls = 0;
 
     const { getByRole, getByLabelText, getByText } = render(BulkActionDialog, {
@@ -282,7 +275,6 @@ describe('BulkActionDialog — commit fault treatment', () => {
 
 describe('BulkActionDialog — non-dismissible while committing', () => {
   test('onClose is not called while the commit is in flight', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     let closed = false;
     const pendingCommit: { resolve: (() => void) | null } = { resolve: null };
 
@@ -324,7 +316,6 @@ describe('BulkActionDialog — non-dismissible while committing', () => {
 
 describe('BulkActionDialog — onSuccess vs onClose', () => {
   test('onSuccess fires exactly once, right when the commit succeeds — not on a plain dismiss', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     let successCount = 0;
     let closeCount = 0;
 
@@ -365,7 +356,6 @@ describe('BulkActionDialog — onSuccess vs onClose', () => {
   });
 
   test('a dismissed dialog (never committed) never fires onSuccess', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     let successCount = 0;
     let closeCount = 0;
 

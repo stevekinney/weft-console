@@ -4,6 +4,7 @@ import {
   type WorkflowEvent,
 } from '@lostgradient/weft';
 import type { WorkflowEventTail } from '@lostgradient/weft/client';
+import { waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import { isTerminalWorkflowEventType } from './workflow-lifecycle-events.ts';
@@ -91,11 +92,6 @@ function event(type: string, data: Record<string, unknown> = {}): WorkflowEvent 
   return { type, timestamp: Date.now(), data };
 }
 
-async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
-  const { waitFor } = await import('@testing-library/svelte');
-  return waitFor;
-}
-
 /** Yields past pending microtasks/promise resolutions — for asserting a fake tail's internal `for await` had a chance to resume after `push()`, when there's no other observable condition to poll. */
 function settle(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
@@ -126,7 +122,6 @@ describe('WorkflowTailSource', () => {
   });
 
   test('delivers frames pushed after subscribe, in order', async () => {
-    const waitFor = await waitForCondition();
     const opener = new ScriptedTailOpener();
     const tail = new FakeWorkflowEventTail();
     opener.enqueue(() => tail);
@@ -169,7 +164,6 @@ describe('WorkflowTailSource', () => {
   });
 
   test('drops the oldest buffered frame and reports "stale" once the pre-attach buffer overflows', async () => {
-    const waitFor = await waitForCondition();
     const opener = new ScriptedTailOpener();
     const tail = new FakeWorkflowEventTail();
     opener.enqueue(() => tail);
@@ -206,7 +200,6 @@ describe('WorkflowTailSource', () => {
   });
 
   test('reconnects after a drop with positional dedup — the subscriber sees each frame exactly once', async () => {
-    const waitFor = await waitForCondition();
     const opener = new ScriptedTailOpener();
     const firstTail = new FakeWorkflowEventTail();
     opener.enqueue(() => firstTail);
@@ -243,7 +236,6 @@ describe('WorkflowTailSource', () => {
   });
 
   test('settles to closed (does not reconnect) once a terminal workflow event is observed', async () => {
-    const waitFor = await waitForCondition();
     const opener = new ScriptedTailOpener();
     const tail = new FakeWorkflowEventTail();
     opener.enqueue(() => tail);
@@ -269,7 +261,6 @@ describe('WorkflowTailSource', () => {
   });
 
   test('status is "reconnecting" during the backoff window after a drop', async () => {
-    const waitFor = await waitForCondition();
     const opener = new ScriptedTailOpener();
     const firstTail = new FakeWorkflowEventTail();
     opener.enqueue(() => firstTail);
@@ -301,7 +292,6 @@ describe('WorkflowTailSource', () => {
   });
 
   test('opener throwing synchronously schedules a reconnect instead of crashing', async () => {
-    const waitFor = await waitForCondition();
     const opener: WorkflowEventTailOpener = {
       tail(id: string): WorkflowEventTail {
         void id;

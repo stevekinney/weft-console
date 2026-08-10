@@ -4,6 +4,7 @@
  * Appendix B ("Review inbox + decision (partial sections) / completed /
  * timeout-expired / archive").
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import ReviewDetailPanel from './review-detail-panel.svelte';
@@ -61,7 +62,6 @@ const completed = {
 
 describe('ReviewDetailPanel', () => {
   test('renders sections with a decision form for a pending sectioned review', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText, getByRole, container } = render(ReviewDetailPanel, {
       props: { entry: pendingSectioned, now: NOW, submitting: false, onSubmit: () => {} },
     });
@@ -77,7 +77,6 @@ describe('ReviewDetailPanel', () => {
   });
 
   test('withholds the decision form and shows the timeout banner once the deadline elapses', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText, queryByRole } = render(ReviewDetailPanel, {
       props: { entry: pendingTimedOut, now: NOW, submitting: false, onSubmit: () => {} },
     });
@@ -87,7 +86,6 @@ describe('ReviewDetailPanel', () => {
   });
 
   test('renders an unsectioned artifact as a single block with a decision form', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText, getByRole } = render(ReviewDetailPanel, {
       props: { entry: pendingUnsectioned, now: NOW, submitting: false, onSubmit: () => {} },
     });
@@ -97,7 +95,6 @@ describe('ReviewDetailPanel', () => {
   });
 
   test('renders a read-only recorded decision for a completed review, with no form', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText, queryByRole } = render(ReviewDetailPanel, {
       props: { entry: completed, now: NOW, submitting: false, onSubmit: () => {} },
     });
@@ -110,7 +107,6 @@ describe('ReviewDetailPanel', () => {
   });
 
   test('calls onSubmit with the reviewId and the decision-form submission', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const submissions: unknown[] = [];
     const { getByRole, getByLabelText } = render(ReviewDetailPanel, {
       props: {

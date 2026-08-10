@@ -5,6 +5,7 @@
  * active view, so every test routes all three (a minimal stub for the ones
  * it isn't asserting on).
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { createQueryClient } from '../../lib/query.ts';
@@ -26,7 +27,6 @@ function routeBaselineDocuments(fetch: ScriptedFetch): void {
 }
 
 async function renderDiscoveryTab() {
-  const { render } = await import('@testing-library/svelte');
   return render(SystemRouteTestHarness, {
     props: { client: realClient(), queryClient: createQueryClient(), component: DiscoveryTab },
   });
@@ -55,7 +55,6 @@ describe('DiscoveryTab', () => {
     scripted.routeUrl('/openapi.json', { openapi: '3.1.0', paths: {} });
 
     const { findByLabelText, findByText } = await renderDiscoveryTab();
-    const { fireEvent } = await import('@testing-library/svelte');
 
     await fireEvent.click(await findByLabelText('Raw JSON'));
 
@@ -84,7 +83,6 @@ describe('DiscoveryTab', () => {
     });
 
     const { findByRole, findByText } = await renderDiscoveryTab();
-    const { fireEvent } = await import('@testing-library/svelte');
 
     await fireEvent.click(await findByRole('radio', { name: 'OpenRPC' }));
 
@@ -100,7 +98,6 @@ describe('DiscoveryTab', () => {
     });
 
     const { findByRole, findByText } = await renderDiscoveryTab();
-    const { fireEvent } = await import('@testing-library/svelte');
 
     await fireEvent.click(await findByRole('radio', { name: 'AsyncAPI' }));
 

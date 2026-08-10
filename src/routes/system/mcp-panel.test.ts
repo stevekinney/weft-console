@@ -3,6 +3,7 @@
  * discovery document, the honest `publicOrigin`/`trustedHosts` 503 case, and
  * the interactive "Test MCP session" panel.
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { createQueryClient } from '../../lib/query.ts';
@@ -18,7 +19,6 @@ afterEach(() => {
 });
 
 async function renderMcpPanel() {
-  const { render } = await import('@testing-library/svelte');
   return render(SystemRouteTestHarness, {
     props: { client: realClient(), queryClient: createQueryClient(), component: McpPanel },
   });
@@ -69,7 +69,6 @@ describe('McpPanel', () => {
     );
 
     const { findByRole, findByText } = await renderMcpPanel();
-    const { fireEvent } = await import('@testing-library/svelte');
 
     await fireEvent.click(await findByRole('button', { name: 'Test' }));
 

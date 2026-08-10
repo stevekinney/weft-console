@@ -33,14 +33,17 @@ test('operator creates a cron schedule with backfill and lands on its detail', a
   await workflowTypeField.selectOption('order-processing');
 
   await drawer.getByRole('tab', { name: 'Cron' }).click();
-  // `exact: true` throughout: Playwright's default fuzzy name matching
-  // treats "Month" as a substring match of "Day of month" too, which
-  // otherwise makes that one locator resolve to both fields.
-  await drawer.getByRole('textbox', { name: 'Minute', exact: true }).fill('0');
-  await drawer.getByRole('textbox', { name: 'Hour', exact: true }).fill('3');
-  await drawer.getByRole('textbox', { name: 'Day of month', exact: true }).fill('*');
-  await drawer.getByRole('textbox', { name: 'Month', exact: true }).fill('*');
-  await drawer.getByRole('textbox', { name: 'Day of week', exact: true }).fill('*');
+  // Cinder 0.22 restructured ScheduleBuilder's cron tab: the five raw
+  // textboxes became per-field structured editors — a "<Field> pattern"
+  // Select plus numeric value inputs, with raw expressions demoted to a
+  // per-field "Advanced raw expression" disclosure. Author `0 3 * * *`
+  // through the structured UI: Minute and Hour get "Specific value"
+  // patterns; Day of month / Month / Day of week keep their seeded
+  // "Every value (*)" defaults, so they need no interaction at all.
+  await drawer.getByLabel('Minute pattern').selectOption('specific');
+  await drawer.getByRole('spinbutton', { name: 'Minute value', exact: true }).fill('0');
+  await drawer.getByLabel('Hour pattern').selectOption('specific');
+  await drawer.getByRole('spinbutton', { name: 'Hour value', exact: true }).fill('3');
 
   // `RadioGroup` renders a native `<fieldset>` (implicit `role="group"`,
   // legend as the accessible name) — distinct from `SegmentedControl`'s

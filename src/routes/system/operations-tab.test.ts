@@ -3,6 +3,7 @@
  * searchable catalog table, search filtering, and the scope-domain matrix
  * toggle.
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { createQueryClient } from '../../lib/query.ts';
@@ -37,7 +38,6 @@ function routeDocuments(fetch: ScriptedFetch): void {
 }
 
 async function renderOperationsTab() {
-  const { render } = await import('@testing-library/svelte');
   return render(SystemRouteTestHarness, {
     props: { client: realClient(), queryClient: createQueryClient(), component: OperationsTab },
   });
@@ -67,7 +67,6 @@ describe('OperationsTab', () => {
     scripted = new ScriptedFetch();
     routeDocuments(scripted);
     const { findByPlaceholderText, findByText, queryByText } = await renderOperationsTab();
-    const { fireEvent } = await import('@testing-library/svelte');
 
     const search = await findByPlaceholderText('Search operations…');
     await fireEvent.input(search, { target: { value: 'storage' } });
@@ -80,7 +79,6 @@ describe('OperationsTab', () => {
     scripted = new ScriptedFetch();
     routeDocuments(scripted);
     const { findByRole, findByText } = await renderOperationsTab();
-    const { fireEvent } = await import('@testing-library/svelte');
 
     await fireEvent.click(await findByRole('radio', { name: 'Scope matrix' }));
 

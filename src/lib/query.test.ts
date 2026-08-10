@@ -6,6 +6,7 @@
  * fixture drift" bias — it's the one piece of this module that only proves
  * anything when checked against Cinder's real toast DOM.
  */
+import { render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import { HttpClientError } from '@lostgradient/weft/client';
@@ -146,7 +147,6 @@ describe('createQueryClient — keepPreviousData on paginated/filtered lists onl
 
 describe('createQueryClient — mutation error reports a toast via the fault mapping', () => {
   test('a mutation failure shows a toast built from the classified treatment', async () => {
-    const { render } = await import('@testing-library/svelte');
     const toastHostModule = await import('../app/toast-host.svelte');
     const ToastHost = toastHostModule.default;
     const { findByText } = render(ToastHost);

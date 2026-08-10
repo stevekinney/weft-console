@@ -1,3 +1,4 @@
+import { render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import { HttpClientError } from '@lostgradient/weft/client';
@@ -15,7 +16,6 @@ const BASE_PROPS = {
 
 describe('ReviewStep', () => {
   test('shows the workflow type and Start button in the idle state', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText, getByRole } = render(ReviewStep, {
       props: { ...BASE_PROPS, submitState: { status: 'idle' } },
     });
@@ -25,7 +25,6 @@ describe('ReviewStep', () => {
   });
 
   test('disables the submit button while pending', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByRole } = render(ReviewStep, {
       props: { ...BASE_PROPS, submitState: { status: 'pending' } },
     });
@@ -34,7 +33,6 @@ describe('ReviewStep', () => {
   });
 
   test('shows a success result with a link to the new run and hides the form', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByRole, queryByRole } = render(ReviewStep, {
       props: {
         ...BASE_PROPS,
@@ -48,7 +46,6 @@ describe('ReviewStep', () => {
   });
 
   test('shows the spent-idempotency-key explanation for that conflict shape', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(ReviewStep, {
       props: {
         ...BASE_PROPS,
@@ -64,7 +61,6 @@ describe('ReviewStep', () => {
   });
 
   test('shows the generic fault banner for a non-idempotency error', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(ReviewStep, {
       props: {
         ...BASE_PROPS,

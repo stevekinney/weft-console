@@ -8,6 +8,7 @@
  * (`tests/setup.ts` extends `expect` at runtime only), so `toBeDisabled()`
  * doesn't typecheck here even though it works at runtime.
  */
+import { fireEvent, render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import ApiKeyEntry from './api-key-entry.svelte';
@@ -18,7 +19,6 @@ function submitButton(getByRole: (role: string, options: { name: string }) => HT
 
 describe('ApiKeyEntry', () => {
   test('renders the API key field and a disabled submit button with no input', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByLabelText, getByRole } = render(ApiKeyEntry, {
       props: { onSubmit: async () => {} },
     });
@@ -28,7 +28,6 @@ describe('ApiKeyEntry', () => {
   });
 
   test('submits the trimmed key and calls onSubmit', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const submitted: string[] = [];
     const { getByLabelText, getByRole } = render(ApiKeyEntry, {
       props: {
@@ -46,7 +45,6 @@ describe('ApiKeyEntry', () => {
   });
 
   test('does not submit a blank or whitespace-only key', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const submitted: string[] = [];
     const { getByLabelText, getByRole } = render(ApiKeyEntry, {
       props: {
@@ -65,7 +63,6 @@ describe('ApiKeyEntry', () => {
   });
 
   test('shows an inline error when onSubmit rejects, and re-enables the form', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const { getByLabelText, getByRole, getByText } = render(ApiKeyEntry, {
       props: {
         onSubmit: async () => {
@@ -85,7 +82,6 @@ describe('ApiKeyEntry', () => {
   });
 
   test('a non-Error rejection falls back to a generic message', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const { getByLabelText, getByRole, getByText } = render(ApiKeyEntry, {
       props: {
         onSubmit: async () => {

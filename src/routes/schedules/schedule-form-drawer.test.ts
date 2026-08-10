@@ -15,6 +15,7 @@
  * `schedule-form-fields.test.ts` instead. These tests still confirm the
  * free-text fallback works end-to-end, which is real coverage on its own.
  */
+import { fireEvent, render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import { HttpClient } from '@lostgradient/weft/client';
@@ -22,14 +23,8 @@ import { HttpClient } from '@lostgradient/weft/client';
 import { startLiveSourceTestServer } from '../../lib/live-source/live-source-test-server.test-support.ts';
 import ScheduleFormDrawerHarness from './schedule-form-drawer-test-harness.test-harness.svelte';
 
-async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
-  const { waitFor } = await import('@testing-library/svelte');
-  return waitFor;
-}
-
 describe('ScheduleFormDrawer — create', () => {
   test('creates a schedule with the selected workflow type and default cadence', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
@@ -39,7 +34,6 @@ describe('ScheduleFormDrawer — create', () => {
         props: { client, mode: 'create', onClose: () => (closed = true) },
       });
 
-      const waitFor = await waitForCondition();
       const workflowTypeInput = await waitFor(() =>
         getByRole('textbox', { name: 'Workflow type' }),
       );
@@ -59,7 +53,6 @@ describe('ScheduleFormDrawer — create', () => {
   });
 
   test('creating with "Start paused" checked leaves the schedule paused', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
@@ -69,7 +62,6 @@ describe('ScheduleFormDrawer — create', () => {
         props: { client, mode: 'create', onClose: () => (closed = true) },
       });
 
-      const waitFor = await waitForCondition();
       const workflowTypeInput = await waitFor(() =>
         getByRole('textbox', { name: 'Workflow type' }),
       );
@@ -90,7 +82,6 @@ describe('ScheduleFormDrawer — create', () => {
   });
 
   test('the submit button is disabled with a reason pill when schedules:write is missing', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
@@ -104,7 +95,6 @@ describe('ScheduleFormDrawer — create', () => {
         },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => {
         expect(
           (getByRole('button', { name: 'Create schedule' }) as HTMLButtonElement).disabled,
@@ -117,7 +107,6 @@ describe('ScheduleFormDrawer — create', () => {
   });
 
   test('the submit button stays disabled until the form is valid', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
@@ -126,7 +115,6 @@ describe('ScheduleFormDrawer — create', () => {
         props: { client, mode: 'create', onClose: () => {} },
       });
 
-      const waitFor = await waitForCondition();
       // No workflow type chosen yet — invalid.
       await waitFor(() => {
         expect(
@@ -141,7 +129,6 @@ describe('ScheduleFormDrawer — create', () => {
 
 describe('ScheduleFormDrawer — edit', () => {
   test('prefills the cadence from the existing schedule and updates it on save', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -162,7 +149,6 @@ describe('ScheduleFormDrawer — edit', () => {
         },
       });
 
-      const waitFor = await waitForCondition();
       const workflowTypeField = await waitFor(() =>
         getByRole('textbox', { name: 'Workflow type' }),
       );
@@ -182,7 +168,6 @@ describe('ScheduleFormDrawer — edit', () => {
   });
 
   test('renders the not-found fault when the schedule no longer exists', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
@@ -191,7 +176,6 @@ describe('ScheduleFormDrawer — edit', () => {
         props: { client, mode: 'edit', scheduleId: 'missing', onClose: () => {} },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('Not found')).not.toBeNull());
     } finally {
       await server.stop();

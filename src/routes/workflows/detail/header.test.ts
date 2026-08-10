@@ -1,3 +1,4 @@
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { WorkflowFinalizerStatus, WorkflowState } from '@lostgradient/weft';
@@ -23,7 +24,6 @@ const noopAsync = async () => undefined;
 
 describe('WorkflowDetailHeader', () => {
   test('renders the workflow type, version, and status badge', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(Header, {
       props: {
         workflow: workflow(),
@@ -43,7 +43,6 @@ describe('WorkflowDetailHeader', () => {
   });
 
   test('running workflows offer cancel, suspend, and force timeout', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByRole } = render(Header, {
       props: {
         workflow: workflow({ status: 'running' }),
@@ -63,7 +62,6 @@ describe('WorkflowDetailHeader', () => {
   });
 
   test('terminal workflows offer no contextual actions', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { queryByRole } = render(Header, {
       props: {
         workflow: workflow({ status: 'completed' }),
@@ -81,7 +79,6 @@ describe('WorkflowDetailHeader', () => {
   });
 
   test('cancel opens a confirm dialog rather than calling onAction directly', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let called = false;
     const { getByRole } = render(Header, {
       props: {
@@ -104,7 +101,6 @@ describe('WorkflowDetailHeader', () => {
   });
 
   test('suspend calls onAction directly with no confirm dialog', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const received: { action: string | null } = { action: null };
     const { getByRole, queryByRole } = render(Header, {
       props: {
@@ -127,7 +123,6 @@ describe('WorkflowDetailHeader', () => {
   });
 
   test('Send signal navigates to the signals tab', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const navigated: { tab: string | null } = { tab: null };
     const { getByRole } = render(Header, {
       props: {
@@ -149,7 +144,6 @@ describe('WorkflowDetailHeader', () => {
   });
 
   test('tags render as badges', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(Header, {
       props: {
         workflow: workflow({ tags: ['prod', 'tier-1'] }),
@@ -168,7 +162,6 @@ describe('WorkflowDetailHeader', () => {
   });
 
   test('a cancelled workflow with an in-flight finalizer renders "Finalizing" instead of "Cancelled" (weft#732 item 4)', async () => {
-    const { render } = await import('@testing-library/svelte');
     const finalizerStatus: WorkflowFinalizerStatus = {
       status: 'running',
       attempts: 1,
@@ -192,7 +185,6 @@ describe('WorkflowDetailHeader', () => {
   });
 
   test('a cancelled workflow with a failed finalizer renders "Cancelled — cleanup failed"', async () => {
-    const { render } = await import('@testing-library/svelte');
     const finalizerStatus: WorkflowFinalizerStatus = {
       status: 'failed',
       attempts: 3,
@@ -216,7 +208,6 @@ describe('WorkflowDetailHeader', () => {
   });
 
   test('a cancelled workflow with no finalizer work recorded renders the plain "Cancelled" badge', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(Header, {
       props: {
         workflow: workflow({ status: 'cancelled' }),
@@ -234,7 +225,6 @@ describe('WorkflowDetailHeader', () => {
   });
 
   test('deadline countdown renders for a running workflow with an execution deadline', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(Header, {
       props: {
         workflow: workflow({ status: 'running', executionDeadline: 62_000 }),

@@ -14,6 +14,7 @@
  * into `'connecting'`, or after `dispose()` (at which point reading
  * `status` is moot) — not exercised here; see the module's getter doc.
  */
+import { render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import { FleetEventSource } from '../lib/live-source/fleet-event-source.svelte.ts';
@@ -22,11 +23,6 @@ import { EngineStatusController } from './engine-status.svelte.ts';
 import GetFleetEventSourceHarness from './get-fleet-event-source-harness.test-harness.svelte';
 import { NotificationStore } from './notifications.svelte.ts';
 import ProvideFleetEventSourceHarness from './provide-fleet-event-source-harness.test-harness.svelte';
-
-async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
-  const { waitFor } = await import('@testing-library/svelte');
-  return waitFor;
-}
 
 /** A bare `Bun.serve()` that always fails `/v1/events/sse` (simulating an unreachable fleet feed) but keeps `/v1/health` reachable, so `EngineStatusController`'s health-poll fallback has somewhere to succeed. */
 function startUnreachableFleetServer(): { baseUrl: string; stop: () => void } {
@@ -56,7 +52,6 @@ describe('EngineStatusController (integration, real server)', () => {
     );
 
     try {
-      const waitFor = await waitForCondition();
       await waitFor(() => {
         expect(controller.status).toBe('live');
       });
@@ -94,7 +89,6 @@ describe('EngineStatusController (integration, real server)', () => {
     );
 
     try {
-      const waitFor = await waitForCondition();
       await waitFor(() => {
         expect(controller.fleetSource.caughtUp).toBe(true);
       });
@@ -114,7 +108,6 @@ describe('EngineStatusController (integration, real server)', () => {
     );
 
     try {
-      const waitFor = await waitForCondition();
       await waitFor(() => {
         expect(controller.status).toBe('live');
       });
@@ -137,7 +130,6 @@ describe('EngineStatusController (integration, real server)', () => {
     );
 
     try {
-      const waitFor = await waitForCondition();
       await waitFor(
         () => {
           expect(controller.fleetSource.reconnectAttempt).toBeGreaterThanOrEqual(5);
@@ -163,14 +155,12 @@ describe('EngineStatusController (integration, real server)', () => {
 
 describe('provideFleetEventSource() / getFleetEventSource() (Track B addition)', () => {
   test('getFleetEventSource() throws outside any provideFleetEventSource() ancestor', async () => {
-    const { render } = await import('@testing-library/svelte');
     expect(() => render(GetFleetEventSourceHarness)).toThrow(
       /getFleetEventSource\(\) called with no source in context/,
     );
   });
 
   test('a descendant reads back the exact instance a provideFleetEventSource() ancestor provided', async () => {
-    const { render } = await import('@testing-library/svelte');
     const source = new FleetEventSource({ baseUrl: 'https://weft.example.com' });
     let received: FleetEventSource | undefined;
 

@@ -5,6 +5,7 @@
  * Deliberately does not exercise the full inbox/archive data flow here —
  * `reviews.integration.test.ts` covers that against a real engine.
  */
+import { render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { HttpClient } from '@lostgradient/weft/client';
@@ -23,7 +24,6 @@ function pendingClient(): HttpClient {
 
 describe('Reviews route — scope gate', () => {
   test('shows a lock state naming the missing scope when reviews:read is not granted', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(ReviewsTestHarness, {
       props: { client: pendingClient(), scopes: [] },
     });
@@ -33,7 +33,6 @@ describe('Reviews route — scope gate', () => {
   });
 
   test('renders the Inbox/Archive switch (not the lock state) once reviews:read is granted', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByRole, queryByText } = render(ReviewsTestHarness, {
       props: { client: pendingClient(), scopes: ['reviews:read', 'events:read'] },
     });

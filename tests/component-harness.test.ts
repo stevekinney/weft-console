@@ -15,13 +15,13 @@
  * methods are bound directly to the container it just mounted, with no such
  * module-load-order hazard — prefer them over `screen` in this harness.
  */
+import { render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import { Button } from '@lostgradient/cinder';
 
 describe('component test harness', () => {
   test('mounts a Cinder Button and renders its label', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByRole } = render(Button, { props: { label: 'Click me' } });
 
     expect(getByRole('button', { name: 'Click me' })).not.toBeNull();

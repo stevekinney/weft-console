@@ -3,6 +3,7 @@
  * Dashboard/Raw toggle, stat rendering from a polled snapshot, and the raw
  * Prometheus text view including its fault path.
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { createQueryClient } from '../../lib/query.ts';
@@ -18,7 +19,6 @@ afterEach(() => {
 });
 
 async function renderMetricsTab() {
-  const { render } = await import('@testing-library/svelte');
   return render(SystemRouteTestHarness, {
     props: { client: realClient(), queryClient: createQueryClient(), component: MetricsTab },
   });
@@ -47,7 +47,6 @@ describe('MetricsTab', () => {
     scripted.routeUrlText('/v1/metrics', 'weft_workflow_active 7\n');
 
     const { findByRole, findByText } = await renderMetricsTab();
-    const { fireEvent } = await import('@testing-library/svelte');
 
     await fireEvent.click(await findByRole('radio', { name: 'Raw' }));
 
@@ -60,7 +59,6 @@ describe('MetricsTab', () => {
     scripted.routeUrlStatus('/v1/metrics', 500, 'Internal Server Error');
 
     const { findByRole, findByText } = await renderMetricsTab();
-    const { fireEvent } = await import('@testing-library/svelte');
 
     await fireEvent.click(await findByRole('radio', { name: 'Raw' }));
 

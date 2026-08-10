@@ -3,6 +3,7 @@
  * component (no client/query/principal context needed), so these render
  * standalone.
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import ScheduleFormFields from './schedule-form-fields.svelte';
@@ -10,7 +11,6 @@ import { ScheduleFormState } from './schedule-form-state.svelte.ts';
 
 describe('ScheduleFormFields — create mode', () => {
   test('renders a workflow-type Select when registry options are available', async () => {
-    const { render } = await import('@testing-library/svelte');
     const form = new ScheduleFormState();
 
     const { getByRole, queryByText } = render(ScheduleFormFields, {
@@ -22,7 +22,6 @@ describe('ScheduleFormFields — create mode', () => {
   });
 
   test('degrades to a free-text field when registry options are unavailable', async () => {
-    const { render } = await import('@testing-library/svelte');
     const form = new ScheduleFormState();
 
     const { getByText, queryByRole } = render(ScheduleFormFields, {
@@ -34,7 +33,6 @@ describe('ScheduleFormFields — create mode', () => {
   });
 
   test('shows the schedule id, input JSON, and cadence fields', async () => {
-    const { render } = await import('@testing-library/svelte');
     const form = new ScheduleFormState();
 
     const { getByRole } = render(ScheduleFormFields, {
@@ -46,7 +44,6 @@ describe('ScheduleFormFields — create mode', () => {
   });
 
   test('selecting an overlap policy updates the form and shows its consequence', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const form = new ScheduleFormState();
 
     const { getByRole, getByText } = render(ScheduleFormFields, {
@@ -65,7 +62,6 @@ describe('ScheduleFormFields — create mode', () => {
   });
 
   test('enabling backfill shows the catch-up-window warning', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const form = new ScheduleFormState();
 
     const { getByRole, queryByText, getByText } = render(ScheduleFormFields, {
@@ -80,7 +76,6 @@ describe('ScheduleFormFields — create mode', () => {
   });
 
   test('shows a field-level error message for invalid JSON input', async () => {
-    const { render } = await import('@testing-library/svelte');
     const form = new ScheduleFormState({ inputText: '{not json' });
 
     const { getByText } = render(ScheduleFormFields, {
@@ -93,7 +88,6 @@ describe('ScheduleFormFields — create mode', () => {
 
 describe('ScheduleFormFields — edit mode', () => {
   test('disables workflow type, input, overlap policy, jitter, and backfill; shows the edit-scope note', async () => {
-    const { render } = await import('@testing-library/svelte');
     const form = new ScheduleFormState({
       id: 'nightly-rollup',
       workflowType: 'report-gen',

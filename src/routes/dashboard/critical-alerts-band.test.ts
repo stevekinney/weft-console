@@ -5,15 +5,11 @@
  * scripted at the `fetch` layer — see `./dashboard-test-support.
  * test-support.ts`'s module doc for why.
  */
+import { render, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import CriticalAlertsBandHarness from './critical-alerts-band-test-harness.test-harness.svelte';
 import { realClient, ScriptedFetch } from './dashboard-test-support.test-support.ts';
-
-async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
-  const { waitFor } = await import('@testing-library/svelte');
-  return waitFor;
-}
 
 /**
  * This band drives two independent, real `HttpClient` round trips
@@ -43,7 +39,6 @@ afterEach(() => {
 
 describe('CriticalAlertsBand', () => {
   test('renders nothing when diagnostics are clean and no reviews are near timeout', async () => {
-    const { render } = await import('@testing-library/svelte');
     scripted = new ScriptedFetch();
     scripted.routeJsonRpcMethod('weft.tasks.diagnostics', {
       items: [],
@@ -62,7 +57,6 @@ describe('CriticalAlertsBand', () => {
       props: { client },
     });
 
-    const waitFor = await waitForCondition();
     await waitFor(
       () => expect(queryByLabelText('Loading alerts')).toBeNull(),
       WAIT_FOR_TWO_QUERIES,
@@ -71,7 +65,6 @@ describe('CriticalAlertsBand', () => {
   });
 
   test('renders a diagnostic chip that deep-links to the workers queue view', async () => {
-    const { render } = await import('@testing-library/svelte');
     scripted = new ScriptedFetch();
     scripted.routeJsonRpcMethod('weft.tasks.diagnostics', {
       items: [],
@@ -83,7 +76,6 @@ describe('CriticalAlertsBand', () => {
 
     const { getByText } = render(CriticalAlertsBandHarness, { props: { client } });
 
-    const waitFor = await waitForCondition();
     await waitFor(
       () => expect(getByText('3 dead-lettered tasks')).not.toBeNull(),
       WAIT_FOR_TWO_QUERIES,
@@ -93,7 +85,6 @@ describe('CriticalAlertsBand', () => {
   });
 
   test('renders a reviews-near-timeout chip that deep-links to /reviews', async () => {
-    const { render } = await import('@testing-library/svelte');
     scripted = new ScriptedFetch();
     scripted.routeJsonRpcMethod('weft.tasks.diagnostics', {
       items: [],
@@ -120,7 +111,6 @@ describe('CriticalAlertsBand', () => {
 
     const { getByText } = render(CriticalAlertsBandHarness, { props: { client } });
 
-    const waitFor = await waitForCondition();
     await waitFor(
       () => expect(getByText('1 review near timeout')).not.toBeNull(),
       WAIT_FOR_TWO_QUERIES,
@@ -130,7 +120,6 @@ describe('CriticalAlertsBand', () => {
   });
 
   test('shows a lock notice instead of chips when both scopes are denied', async () => {
-    const { render } = await import('@testing-library/svelte');
     scripted = new ScriptedFetch();
     const client = realClient();
 
@@ -138,7 +127,6 @@ describe('CriticalAlertsBand', () => {
       props: { client, scopes: [] },
     });
 
-    const waitFor = await waitForCondition();
     await waitFor(() =>
       expect(
         getByText('Requires system:read, reviews:read to see critical alerts here.'),
@@ -147,7 +135,6 @@ describe('CriticalAlertsBand', () => {
   });
 
   test('a 403 from diagnostics degrades to a partial lock note while reviews chips still render', async () => {
-    const { render } = await import('@testing-library/svelte');
     scripted = new ScriptedFetch();
     scripted.routeJsonRpcMethodForbidden('weft.tasks.diagnostics');
     const now = Date.now();
@@ -170,7 +157,6 @@ describe('CriticalAlertsBand', () => {
 
     const { getByText } = render(CriticalAlertsBandHarness, { props: { client } });
 
-    const waitFor = await waitForCondition();
     await waitFor(
       () => expect(getByText('1 review near timeout')).not.toBeNull(),
       WAIT_FOR_TWO_QUERIES,

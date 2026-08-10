@@ -1,3 +1,4 @@
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { WorkflowSummary } from '@lostgradient/weft';
@@ -18,7 +19,6 @@ function summary(overrides: Partial<WorkflowSummary> = {}): WorkflowSummary {
 
 describe('WorkflowTable', () => {
   test('renders a row per workflow with status label and truncated id', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(WorkflowTable, {
       props: { rows: [summary({ status: 'failed', type: 'payment-failing' })] },
     });
@@ -29,7 +29,6 @@ describe('WorkflowTable', () => {
   });
 
   test('renders every tag as a badge', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(WorkflowTable, {
       props: { rows: [summary({ tags: ['prod', 'nightly'] })] },
     });
@@ -39,7 +38,6 @@ describe('WorkflowTable', () => {
   });
 
   test('the id link points at the workflow detail route', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByRole } = render(WorkflowTable, { props: { rows: [summary()] } });
 
     const link = getByRole('link');
@@ -47,14 +45,12 @@ describe('WorkflowTable', () => {
   });
 
   test('no selection column when selectedIds is omitted', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { queryAllByRole } = render(WorkflowTable, { props: { rows: [summary()] } });
 
     expect(queryAllByRole('checkbox')).toHaveLength(0);
   });
 
   test('selection checkboxes call onSelectionChange with the updated set', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let latest: Set<string> | undefined;
     const { getAllByRole } = render(WorkflowTable, {
       props: {
@@ -77,7 +73,6 @@ describe('WorkflowTable', () => {
   });
 
   test('select-all toggles every row', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let latest: Set<string> | undefined;
     const rows = [
       summary({ id: 'wf_row_one_aaaaaaaaaaaaaaaa' }),
@@ -100,7 +95,6 @@ describe('WorkflowTable', () => {
   });
 
   test('applies a "recently changed" class for ids in recentlyChangedIds', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { container } = render(WorkflowTable, {
       props: { rows: [summary()], recentlyChangedIds: new Set([summary().id]) },
     });

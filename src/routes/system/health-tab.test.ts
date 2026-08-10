@@ -3,6 +3,7 @@
  * lease-not-available note, retention rendering, the recover-all Tier-2
  * confirm flow, and the codegen preview.
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import ToastHost from '../../app/toast-host.svelte';
@@ -53,7 +54,6 @@ function routeBaseline(fetch: ScriptedFetch): void {
  * intermittent cross-test flake observed empirically.
  */
 async function renderHealthTab() {
-  const { render } = await import('@testing-library/svelte');
   return render(SystemRouteTestHarness, {
     props: { client: realClient(), queryClient: createQueryClient(), component: HealthTab },
   });
@@ -110,7 +110,6 @@ describe('HealthTab', () => {
     // real host is mounted here too, matching `toast-host.test.ts`'s own
     // pattern. This also verifies the success toast copy, which was
     // previously untested.
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { findByText: findToastByText } = render(ToastHost);
 
     const { findByRole, findByText, findAllByRole, unmount } = await renderHealthTab();

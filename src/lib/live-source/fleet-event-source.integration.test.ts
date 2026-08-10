@@ -19,6 +19,7 @@
  * later starting point — the server-side half of what makes client-side
  * reconnect resume meaningful.
  */
+import { waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import {
@@ -30,11 +31,6 @@ import {
   startLiveSourceTestServer,
   type LiveSourceTestServer,
 } from './live-source-test-server.test-support.ts';
-
-async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
-  const { waitFor } = await import('@testing-library/svelte');
-  return waitFor;
-}
 
 /** `/v1/events/sse` (the fleet feed) declares `access: { kind: 'scoped', scopes: { anyOf: ['events:read'] } }` — an anonymous request 401s. */
 function authorizedFleetConfig(server: LiveSourceTestServer): FleetEventSourceConfig {
@@ -56,7 +52,6 @@ describe('FleetEventSource (integration, real server)', () => {
       await source.whenConnected();
       expect(source.status).toBe('live');
 
-      const waitFor = await waitForCondition();
       await waitFor(() => {
         expect(received.some((frame) => frame.kind === 'workflow:started')).toBe(true);
       });
@@ -94,7 +89,6 @@ describe('FleetEventSource (integration, real server)', () => {
       await server.engine.start('signal-stepped', { steps: 1 }, { id: workflowIdA });
       await server.engine.start('signal-stepped', { steps: 1 }, { id: workflowIdB });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => {
         expect(everything.length).toBeGreaterThanOrEqual(2);
       });
@@ -117,8 +111,6 @@ describe('FleetEventSource (integration, real server)', () => {
     try {
       const workflowId = 'fes-integration-cursor-resume';
       await server.engine.start('signal-stepped', { steps: 2 }, { id: workflowId });
-
-      const waitFor = await waitForCondition();
 
       const firstSource = new FleetEventSource(authorizedFleetConfig(server));
       const firstReceived: FleetEventFrame[] = [];

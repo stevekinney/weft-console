@@ -2,6 +2,7 @@
  * Component tests for the Schedule health dashboard card, against a REAL
  * in-process weft server.
  */
+import { fireEvent, render, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { DetachedWindowAPI } from 'happy-dom';
 
@@ -20,18 +21,12 @@ function resetLocation(path = '/'): void {
   router.navigate(path, { replace: true });
 }
 
-async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
-  const { waitFor } = await import('@testing-library/svelte');
-  return waitFor;
-}
-
 describe('Schedules dashboard card', () => {
   beforeEach(() => {
     resetLocation();
   });
 
   test('shows active/paused counts and the total', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -50,7 +45,6 @@ describe('Schedules dashboard card', () => {
 
     try {
       const { getByText } = render(DashboardCardHarness, { props: { client } });
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('2 schedules')).not.toBeNull());
       expect(getByText('Schedule health')).not.toBeNull();
     } finally {
@@ -59,7 +53,6 @@ describe('Schedules dashboard card', () => {
   });
 
   test('clicking the Active segment deep-links to the pre-filtered list URL', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -71,7 +64,6 @@ describe('Schedules dashboard card', () => {
 
     try {
       const { getByText } = render(DashboardCardHarness, { props: { client } });
-      const waitFor = await waitForCondition();
       const activeLabel = await waitFor(() => getByText('Active'));
 
       await fireEvent.click(activeLabel.closest('button')!);
@@ -84,13 +76,11 @@ describe('Schedules dashboard card', () => {
   });
 
   test('an empty schedule roster shows zero counts, not an error', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText } = render(DashboardCardHarness, { props: { client } });
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('0 schedules')).not.toBeNull());
     } finally {
       await server.stop();
@@ -98,11 +88,9 @@ describe('Schedules dashboard card', () => {
   });
 
   test('a fault renders the shared dashboard-card error treatment', async () => {
-    const { render } = await import('@testing-library/svelte');
     const client = new HttpClient({ baseUrl: 'http://127.0.0.1:1' });
 
     const { container } = render(DashboardCardHarness, { props: { client } });
-    const waitFor = await waitForCondition();
     await waitFor(
       () => {
         expect(container.querySelector('.weft-dashboard-card__error')).not.toBeNull();

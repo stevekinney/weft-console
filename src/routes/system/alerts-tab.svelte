@@ -1,9 +1,20 @@
 <script lang="ts">
   /**
    * Alerts & operational warnings tab (plan §9.7 T7.6; design `Weft New
-   * Surfaces.dc.html` §D). Session-scoped event log from `alert:fired`/
-   * `alert:resolved`/`constraint:violated` + the four operational-warning
-   * kinds — see `alerts-store.svelte.ts`'s module doc for the row model.
+   * Surfaces.dc.html` §D). Two sections as of `@lostgradient/weft@0.16.0`:
+   *
+   * 1. **Active alerts** — authoritative and reload-safe, from the
+   *    `weft.alerts.list` operation (weft#843, `GET /v1/alerts`,
+   *    `system:read`): the alert rules currently firing, regardless of when
+   *    this page loaded. Refetched whenever the shared fleet stream delivers
+   *    an alert-kind frame, so it tracks firing/resolution without polling.
+   * 2. **Recent activity** — the session-scoped event log from
+   *    `alert:fired`/`alert:resolved`/`constraint:violated` + the four
+   *    operational-warning kinds — see `alerts-store.svelte.ts`'s module doc
+   *    for the row model. This section is still honestly labeled as
+   *    session-scoped: weft has a list operation for *currently firing*
+   *    alerts but no durable alert *history* operation, and the
+   *    resolved/warning rows only exist as live events.
    *
    * ## Why this keeps its own `AlertsStore` instead of `NotificationStore`
    *
@@ -21,10 +32,15 @@
    */
   import EmptyState from '@lostgradient/cinder/empty-state';
   import Badge, { type BadgeVariant } from '@lostgradient/cinder/badge';
+  import Skeleton from '@lostgradient/cinder/skeleton';
+  import { createQuery, useQueryClient } from '@tanstack/svelte-query';
   import { BellOff, Info } from 'lucide-svelte';
+  import { toStore } from 'svelte/store';
 
   import { getFleetEventSource } from '../../app/engine-status.svelte.ts';
+  import { getClient } from '../../lib/client.ts';
   import type { FleetEventFrame } from '../../lib/live-source/fleet-event-source.svelte.ts';
+  import { formatBytes, formatDuration } from '../../lib/format/index.ts';
   import { router } from '../../lib/router.svelte.ts';
   import {
     AlertsStore,
@@ -32,17 +48,92 @@
     type AlertRow,
     type AlertRowState,
   } from './alerts-store.svelte.ts';
+  import QueryFaultBanner from './query-fault-banner.svelte';
 
+  /**
+   * Local shape for `weft.alerts.list`'s output (`ListAlertsOutput` /
+   * `ActiveAlert` in weft's server types — not exported from the client
+   * subpath, same local-`*Like` convention as `metrics-tab.svelte`'s
+   * `MetricsSnapshotLike`).
+   */
+  interface ActiveAlertLike {
+    readonly metric: string;
+    readonly threshold: number;
+    readonly currentValue: number;
+    readonly window: string | null;
+    readonly firedAt: number | null;
+  }
+
+  interface ListAlertsOutputLike {
+    readonly items: readonly ActiveAlertLike[];
+  }
+
+  const client = getClient();
+  const queryClient = useQueryClient();
   const source = getFleetEventSource();
   const store = new AlertsStore();
 
+  const ACTIVE_ALERTS_KEY = ['system', 'alerts', 'active'] as const;
+
+  const activeAlertsQuery = createQuery(
+    toStore(() => ({
+      queryKey: ACTIVE_ALERTS_KEY,
+      queryFn: () => client.operations['weft.alerts.list']({}) as Promise<ListAlertsOutputLike>,
+    })),
+  );
+
   $effect(() => {
     return source.subscribe((frame: FleetEventFrame) => {
-      if (isAlertEventKind(frame.kind)) store.ingest(frame);
+      if (!isAlertEventKind(frame.kind)) return;
+      store.ingest(frame);
+      // An alert-kind frame means the authoritative firing set may have
+      // changed — refetch rather than patching the cache from the frame
+      // (the operation is the source of truth; frames carry no
+      // threshold/currentValue data to patch with).
+      void queryClient.invalidateQueries({ queryKey: ACTIVE_ALERTS_KEY });
     });
   });
 
   const sessionStartedAtMs = Date.now();
+
+  /**
+   * Human labels + value formatting for weft's three `AlertMetric` kinds.
+   * Unknown metrics (a future weft adding a kind) fall back to the raw
+   * metric id and unformatted numbers — degraded but correct.
+   */
+  const METRIC_PRESENTATION: Readonly<
+    Record<string, { label: string; format: (value: number) => string }>
+  > = {
+    'workflow.failure_rate': {
+      label: 'Workflow failure rate',
+      format: (value) => `${(value * 100).toFixed(1)}%`,
+    },
+    'activity.p99_duration': {
+      label: 'Activity p99 duration',
+      format: (value) => formatDuration(value),
+    },
+    'storage.size': {
+      label: 'Storage size',
+      format: (value) => formatBytes(value),
+    },
+  };
+
+  function metricLabel(alert: ActiveAlertLike): string {
+    return METRIC_PRESENTATION[alert.metric]?.label ?? alert.metric;
+  }
+
+  function metricValue(alert: ActiveAlertLike, value: number): string {
+    const format = METRIC_PRESENTATION[alert.metric]?.format;
+    return format ? format(value) : String(value);
+  }
+
+  function activeAlertDetail(alert: ActiveAlertLike): string {
+    const parts = [
+      `${metricValue(alert, alert.currentValue)} · threshold ${metricValue(alert, alert.threshold)}`,
+    ];
+    if (alert.window !== null) parts.push(`window ${alert.window}`);
+    return parts.join(' · ');
+  }
 
   const STATE_BADGE: Readonly<Record<AlertRowState, { variant: BadgeVariant; label: string }>> = {
     firing: { variant: 'danger', label: 'Firing' },
@@ -71,18 +162,22 @@
 
 <div class="weft-alerts-tab">
   <div class="weft-alerts-tab__header">
-    <h2 class="weft-alerts-tab__title">Alerts &amp; warnings</h2>
+    <h2 class="weft-alerts-tab__title">Active alerts</h2>
   </div>
-  <p class="weft-alerts-tab__note">
-    <Info aria-hidden="true" size={13} />
-    Collected since page load ({formatTime(sessionStartedAtMs)}). Not a persistent history — earlier
-    alerts may exist.
-  </p>
 
-  {#if store.isEmpty}
+  {#if $activeAlertsQuery.isPending}
+    <div class="weft-alerts-tab__loading" aria-label="Loading active alerts">
+      <Skeleton height="52px" />
+    </div>
+  {:else if $activeAlertsQuery.isError}
+    <QueryFaultBanner
+      error={$activeAlertsQuery.error}
+      onRetry={() => $activeAlertsQuery.refetch()}
+    />
+  {:else if $activeAlertsQuery.data.items.length === 0}
     <EmptyState
-      title="No alerts since page load"
-      description="New alerts and warnings will appear here as they fire."
+      title="No active alerts"
+      description="No alert rule is currently firing. Alerts fire when a configured metric crosses its threshold."
     >
       {#snippet icon()}
         <BellOff aria-hidden="true" size={20} />
@@ -97,6 +192,41 @@
         >
           Open Diagnostics
         </a>
+      {/snippet}
+    </EmptyState>
+  {:else}
+    <ul class="weft-alerts-tab__list">
+      {#each $activeAlertsQuery.data.items as alert (alert.metric)}
+        <li class="weft-alerts-tab__row" style={`border-left-color:${EDGE_COLOR.firing}`}>
+          <div class="weft-alerts-tab__row-body">
+            <div class="weft-alerts-tab__row-title">{metricLabel(alert)}</div>
+            <div class="weft-alerts-tab__row-detail">{activeAlertDetail(alert)}</div>
+          </div>
+          <Badge variant="danger">Firing</Badge>
+          {#if alert.firedAt !== null}
+            <span class="weft-alerts-tab__row-time">{formatTime(alert.firedAt)}</span>
+          {/if}
+        </li>
+      {/each}
+    </ul>
+  {/if}
+
+  <div class="weft-alerts-tab__header weft-alerts-tab__header--activity">
+    <h2 class="weft-alerts-tab__title">Recent activity</h2>
+  </div>
+  <p class="weft-alerts-tab__note">
+    <Info aria-hidden="true" size={13} />
+    Collected since page load ({formatTime(sessionStartedAtMs)}) — resolved alerts and operational
+    warnings only exist as live events; the active list above is authoritative.
+  </p>
+
+  {#if store.isEmpty}
+    <EmptyState
+      title="No alert activity since page load"
+      description="New alerts and warnings will appear here as they fire."
+    >
+      {#snippet icon()}
+        <BellOff aria-hidden="true" size={20} />
       {/snippet}
     </EmptyState>
   {:else}
@@ -142,6 +272,15 @@
     display: flex;
     align-items: center;
     gap: 10px;
+  }
+
+  .weft-alerts-tab__header--activity {
+    margin-top: 18px;
+  }
+
+  .weft-alerts-tab__loading {
+    display: flex;
+    flex-direction: column;
   }
 
   .weft-alerts-tab__title {

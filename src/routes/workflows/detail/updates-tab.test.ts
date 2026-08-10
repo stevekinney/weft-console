@@ -1,3 +1,4 @@
+import { fireEvent, render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { CoordinatedUpdateResult, WorkflowState } from '@lostgradient/weft';
@@ -19,7 +20,6 @@ function workflow(overrides: Partial<WorkflowState> = {}): WorkflowState {
 
 describe('UpdatesTab', () => {
   test('shows "nothing sent yet" before any update is submitted', async () => {
-    const { render } = await import('@testing-library/svelte');
     const client = {
       submitCoordinatedUpdate: async (): Promise<CoordinatedUpdateResult> => ({ updateId: 'u1' }),
     };
@@ -29,7 +29,6 @@ describe('UpdatesTab', () => {
   });
 
   test('sends an update and shows the real settled result', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const received: { call: { id: string; name: string; payload: unknown } | null } = {
       call: null,
     };
@@ -66,7 +65,6 @@ describe('UpdatesTab', () => {
   });
 
   test('shows the handler error when the update resolves with one', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const client = {
       submitCoordinatedUpdate: async (): Promise<CoordinatedUpdateResult> => ({
         updateId: 'u1',
@@ -87,7 +85,6 @@ describe('UpdatesTab', () => {
   });
 
   test('rejects invalid JSON payloads without calling the client', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let called = false;
     const client = {
       submitCoordinatedUpdate: async (): Promise<CoordinatedUpdateResult> => {

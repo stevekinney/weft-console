@@ -1,7 +1,6 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-
 import { QueryClient } from '@tanstack/svelte-query';
-import { render } from '@testing-library/svelte';
+import { fireEvent, render } from '@testing-library/svelte';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import type { Principal } from '../../../lib/scopes.svelte.ts';
 import { realClient, ScriptedFetch } from '../list/workflow-test-support.test-support.ts';
@@ -70,7 +69,6 @@ describe('StartWizard', () => {
     const { findByLabelText, findByRole, getByRole, findByText } = render(StartWizardHarness, {
       props: { client: realClient(), principal: GRANTED_PRINCIPAL, queryClient: newQueryClient() },
     });
-    const { fireEvent } = await import('@testing-library/svelte');
 
     const typeInput = await findByLabelText('Workflow type');
     await fireEvent.input(typeInput, { target: { value: 'order-processing' } });

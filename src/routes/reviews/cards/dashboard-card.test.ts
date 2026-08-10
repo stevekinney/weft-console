@@ -2,6 +2,7 @@
  * Component tests for the Reviews dashboard card (plan §9.5: "Dashboard
  * card … pending count + nearest deadline").
  */
+import { render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { PendingReviewEntry } from '@lostgradient/weft';
@@ -33,7 +34,6 @@ function clientReturning(entries: PendingReviewEntry[]): HttpClient {
 
 describe('Reviews dashboard card', () => {
   test('shows a lock state when reviews:read is not granted', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(DashboardCardHarness, {
       props: { client: clientReturning([]), scopes: [] },
     });
@@ -44,7 +44,6 @@ describe('Reviews dashboard card', () => {
 
   test('shows the pending count and nearest deadline', async () => {
     const now = Date.now();
-    const { render } = await import('@testing-library/svelte');
     const { getByText, findByText } = render(DashboardCardHarness, {
       props: {
         client: clientReturning([
@@ -61,7 +60,6 @@ describe('Reviews dashboard card', () => {
 
   test('shows an em dash when no pending review has a deadline', async () => {
     const now = Date.now();
-    const { render } = await import('@testing-library/svelte');
     const noDeadlineEntry: PendingReviewEntry = {
       status: 'pending',
       reviewId: 'r1',
@@ -81,7 +79,6 @@ describe('Reviews dashboard card', () => {
   });
 
   test('links to /reviews', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { container } = render(DashboardCardHarness, {
       props: { client: clientReturning([]) },
     });

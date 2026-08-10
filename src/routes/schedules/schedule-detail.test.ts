@@ -2,6 +2,7 @@
  * Component tests for `<ScheduleDetail>` against a REAL in-process weft
  * server (`live-source-test-server.test-support.ts`).
  */
+import { fireEvent, render, waitFor, within } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import { HttpClient } from '@lostgradient/weft/client';
@@ -9,14 +10,8 @@ import { HttpClient } from '@lostgradient/weft/client';
 import { startLiveSourceTestServer } from '../../lib/live-source/live-source-test-server.test-support.ts';
 import ScheduleDetailHarness from './schedule-detail-test-harness.test-harness.svelte';
 
-async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
-  const { waitFor } = await import('@testing-library/svelte');
-  return waitFor;
-}
-
 describe('ScheduleDetail', () => {
   test('renders the not-found state for an unknown id', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
@@ -25,7 +20,6 @@ describe('ScheduleDetail', () => {
         props: { client, id: 'does-not-exist' },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('Schedule not found')).not.toBeNull());
     } finally {
       await server.stop();
@@ -33,7 +27,6 @@ describe('ScheduleDetail', () => {
   });
 
   test('renders the specification, next fires, and overlap consequence for an active schedule', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -49,7 +42,6 @@ describe('ScheduleDetail', () => {
         props: { client, id: 'nightly-rollup' },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('0 2 * * *')).not.toBeNull());
       expect(getByText('inventory-sync-sweep · Every day at 02:00')).not.toBeNull();
       expect(getByText('Overlap policy: Queue')).not.toBeNull();
@@ -60,7 +52,6 @@ describe('ScheduleDetail', () => {
   });
 
   test('a schedule with no current or queued runs shows the empty runs note', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -75,7 +66,6 @@ describe('ScheduleDetail', () => {
         props: { client, id: 'nightly-rollup' },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('No active or queued runs.')).not.toBeNull());
       await waitFor(() =>
         expect(getByText("No runs yet — this schedule hasn't fired.")).not.toBeNull(),
@@ -85,8 +75,27 @@ describe('ScheduleDetail', () => {
     }
   });
 
+  /**
+   * Polls a server-side condition until it holds, BEFORE the page under test
+   * mounts, so the page's own initial fetch already contains the data the
+   * assertion needs. Without this, the tests below race the engine's real
+   * scheduler (fire → run → persist) against the DOM `waitFor` window — a
+   * race the un-instrumented suite wins easily but the ~7×-slower
+   * `--coverage` run can lose (observed: the queued-runs assertion timing
+   * out at 5s only under coverage instrumentation). Waiting on the SERVER
+   * state rather than bumping the DOM timeout keeps the assertion about
+   * rendering, not about scheduler latency.
+   */
+  async function waitForServerState(check: () => Promise<boolean>, label: string): Promise<void> {
+    const deadline = Date.now() + 8_000;
+    while (Date.now() < deadline) {
+      if (await check()) return;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    throw new Error(`server never reached state: ${label}`);
+  }
+
   test('queued runs (weft 0.13+ ScheduleQueuedRun[]) render as links with a queued-at timestamp', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     // `long-sleeper` parks on a 24h `ctx.sleep()`, so its run stays "running"
     // for the lifetime of this test — the first occurrence occupies
@@ -105,6 +114,11 @@ describe('ScheduleDetail', () => {
     });
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
+    await waitForServerState(async () => {
+      const schedule = await client.getSchedule('queue-probe');
+      return (schedule?.queuedRuns?.length ?? 0) > 0;
+    }, 'queue-probe has a queued run');
+
     try {
       const { getByText } = render(ScheduleDetailHarness, {
         props: { client, id: 'queue-probe' },
@@ -114,7 +128,6 @@ describe('ScheduleDetail', () => {
       // schedule.queuedRuns as queued}` branch) — the current-run row (if
       // any) never renders "queued …" text, so this can only pass once a
       // real `ScheduleQueuedRun` entry has round-tripped through the API.
-      const waitFor = await waitForCondition();
       const queuedAtText = await waitFor(() => getByText(/^queued /), { timeout: 5000 });
       expect(queuedAtText).not.toBeNull();
       const queuedLink = queuedAtText.closest('li')?.querySelector('a');
@@ -125,7 +138,6 @@ describe('ScheduleDetail', () => {
   }, 10000);
 
   test('recent runs (weft.workflows.list scheduleId filter, weft 0.13+) shows persisted history, not just live fires', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     // `inventory-sync-sweep` completes near-instantly (one activity call),
     // so within a couple of the engine's 1s scheduler polls it has both
@@ -140,12 +152,16 @@ describe('ScheduleDetail', () => {
     });
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
+    await waitForServerState(async () => {
+      const history = await client.list({ scheduleId: 'history-probe', limit: 20 });
+      return history.items.some((run) => run.status === 'completed');
+    }, 'history-probe has a completed run');
+
     try {
       const { getByText } = render(ScheduleDetailHarness, {
         props: { client, id: 'history-probe' },
       });
 
-      const waitFor = await waitForCondition();
       const completedBadge = await waitFor(() => getByText('Completed'), { timeout: 5000 });
       expect(completedBadge).not.toBeNull();
       const runLink = completedBadge.closest('li')?.querySelector('a');
@@ -156,7 +172,6 @@ describe('ScheduleDetail', () => {
   }, 10000);
 
   test('a paused schedule shows "Not scheduled" instead of a next-fires list', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const handle = await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -172,7 +187,6 @@ describe('ScheduleDetail', () => {
         props: { client, id: 'weekly-digest' },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('Not scheduled — schedule is paused.')).not.toBeNull());
     } finally {
       await server.stop();
@@ -180,7 +194,6 @@ describe('ScheduleDetail', () => {
   });
 
   test('pause/resume toggles based on the current status, gated on schedules:write', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -195,7 +208,6 @@ describe('ScheduleDetail', () => {
         props: { client, id: 'nightly-rollup' },
       });
 
-      const waitFor = await waitForCondition();
       const pauseButton = await waitFor(() => getByRole('button', { name: /Pause/ }));
       await fireEvent.click(pauseButton);
 
@@ -206,7 +218,6 @@ describe('ScheduleDetail', () => {
   });
 
   test('pause/cancel actions are disabled when schedules:write is missing', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -221,7 +232,6 @@ describe('ScheduleDetail', () => {
         props: { client, id: 'nightly-rollup', scopes: ['schedules:read'] },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => {
         expect((getByRole('button', { name: /Pause/ }) as HTMLButtonElement).disabled).toBe(true);
       });
@@ -232,7 +242,6 @@ describe('ScheduleDetail', () => {
   });
 
   test('cancelling requires confirming the Tier-2 dialog', async () => {
-    const { render, fireEvent, within } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -247,7 +256,6 @@ describe('ScheduleDetail', () => {
         props: { client, id: 'nightly-rollup' },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByRole('button', { name: /Cancel/ })).not.toBeNull());
       await fireEvent.click(getByRole('button', { name: /Cancel/ }));
 
@@ -261,14 +269,12 @@ describe('ScheduleDetail', () => {
   });
 
   test('a fault (unreachable server) renders the fault banner with a retry action', async () => {
-    const { render } = await import('@testing-library/svelte');
     const client = new HttpClient({ baseUrl: 'http://127.0.0.1:1' });
 
     const { getByRole } = render(ScheduleDetailHarness, {
       props: { client, id: 'nightly-rollup' },
     });
 
-    const waitFor = await waitForCondition();
     await waitFor(() => expect(getByRole('button', { name: 'Retry' })).not.toBeNull(), {
       timeout: 3000,
     });

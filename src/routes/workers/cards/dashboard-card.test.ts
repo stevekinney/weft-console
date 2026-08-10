@@ -20,6 +20,7 @@
  * (plain REST, no JSON-RPC).
  */
 import { HttpClient, HttpClientError } from '@lostgradient/weft/client';
+import { render } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import WorkersCardTestHarness from './workers-card-test-harness.test-harness.svelte';
@@ -111,7 +112,6 @@ describe('Workers dashboard card', () => {
     });
 
     const client = new HttpClient({ baseUrl: 'https://weft.example.com' });
-    const { render } = await import('@testing-library/svelte');
     const { getByText, findByText } = render(WorkersCardTestHarness, { props: { client } });
 
     expect(await findByText('2 / 8')).not.toBeNull();
@@ -122,7 +122,6 @@ describe('Workers dashboard card', () => {
   test('shows the locked state when the principal lacks system:read', async () => {
     stubJsonRpc({});
     const client = new HttpClient({ baseUrl: 'https://weft.example.com' });
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(WorkersCardTestHarness, { props: { client, scopes: [] } });
 
     expect(getByText('Locked')).not.toBeNull();
@@ -138,7 +137,6 @@ describe('Workers dashboard card', () => {
     }) as typeof fetch;
 
     const client = new HttpClient({ baseUrl: 'https://weft.example.com' });
-    const { render } = await import('@testing-library/svelte');
     const { findByText } = render(WorkersCardTestHarness, { props: { client } });
 
     expect(await findByText('scope denied')).not.toBeNull();

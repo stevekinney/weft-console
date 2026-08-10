@@ -1,3 +1,4 @@
+import { waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { PollingSource } from './polling-source.svelte.ts';
@@ -27,14 +28,8 @@ afterEach(() => {
   setDocumentHidden(false);
 });
 
-async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
-  const { waitFor } = await import('@testing-library/svelte');
-  return waitFor;
-}
-
 describe('PollingSource', () => {
   test('fetches immediately on the first subscribe and delivers to the subscriber', async () => {
-    const waitFor = await waitForCondition();
     let calls = 0;
     const source = new PollingSource<number>(
       () => {
@@ -63,7 +58,6 @@ describe('PollingSource', () => {
   });
 
   test('delivers to every subscriber', async () => {
-    const waitFor = await waitForCondition();
     const source = new PollingSource<string>(() => Promise.resolve('frame'), {
       intervalMs: 50_000,
     });
@@ -80,7 +74,6 @@ describe('PollingSource', () => {
   });
 
   test('polls again after intervalMs elapses', async () => {
-    const waitFor = await waitForCondition();
     let calls = 0;
     const source = new PollingSource<number>(
       () => {
@@ -101,7 +94,6 @@ describe('PollingSource', () => {
   });
 
   test('closes after 5 consecutive failures', async () => {
-    const waitFor = await waitForCondition();
     const source = new PollingSource<never>(() => Promise.reject(new Error('boom')), {
       intervalMs: 1,
     });
@@ -113,7 +105,6 @@ describe('PollingSource', () => {
   });
 
   test('a single success resets the failure counter (does not close after failures interleaved with successes)', async () => {
-    const waitFor = await waitForCondition();
     let call = 0;
     const source = new PollingSource<string>(
       () => {
@@ -134,7 +125,6 @@ describe('PollingSource', () => {
   });
 
   test('suspends polling while document.hidden and resumes on visibilitychange', async () => {
-    const waitFor = await waitForCondition();
     let calls = 0;
     const source = new PollingSource<number>(
       () => {

@@ -3,13 +3,13 @@
  * derivable/undiscoverable split (module doc comment) across the three
  * `conditionalBatchSupported` states.
  */
+import { render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import CapabilitiesPanel from './capabilities-panel.svelte';
 
 describe('CapabilitiesPanel', () => {
   test('batch operations is always supported', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getAllByText } = render(CapabilitiesPanel, {
       props: { conditionalBatchSupported: true },
     });
@@ -19,7 +19,6 @@ describe('CapabilitiesPanel', () => {
   });
 
   test('shows "checking…" while the probe is pending (undefined)', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(CapabilitiesPanel, {
       props: { conditionalBatchSupported: undefined },
     });
@@ -28,7 +27,6 @@ describe('CapabilitiesPanel', () => {
   });
 
   test('shows "not supported" when the probe resolves false', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(CapabilitiesPanel, {
       props: { conditionalBatchSupported: false },
     });
@@ -37,7 +35,6 @@ describe('CapabilitiesPanel', () => {
   });
 
   test('links to the upstream capabilities-operation issue', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByRole } = render(CapabilitiesPanel, { props: { conditionalBatchSupported: true } });
 
     const link = getByRole('link', { name: /weft#727/ });

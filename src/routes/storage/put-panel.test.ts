@@ -3,6 +3,7 @@
  * on writes; reserved-prefix inline warning).
  */
 import type { HttpClient } from '@lostgradient/weft/client';
+import { fireEvent, render } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import PutPanelHarness from './put-panel-test-harness.test-harness.svelte';
@@ -23,7 +24,6 @@ describe('PutPanel', () => {
   test('does not write until the confirm dialog is accepted', async () => {
     activeStub = stubStorageFetch(() => new Response(null, { status: 204 }));
 
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getByLabelText, getByText, findByRole } = render(PutPanelHarness, {
       props: { client: fakeClient() },
     });
@@ -40,7 +40,6 @@ describe('PutPanel', () => {
   test('writes after the confirm dialog is accepted', async () => {
     activeStub = stubStorageFetch(() => new Response(null, { status: 204 }));
 
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getByLabelText, getByText, findByRole } = render(PutPanelHarness, {
       props: { client: fakeClient() },
     });
@@ -58,7 +57,6 @@ describe('PutPanel', () => {
   });
 
   test('shows the reserved-prefix warning when the key matches a Weft-owned prefix', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getByLabelText, findByText, queryByText } = render(PutPanelHarness, {
       props: { client: fakeClient() },
     });

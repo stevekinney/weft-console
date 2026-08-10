@@ -4,6 +4,7 @@
  * object with `subscribe`) rather than booting TanStack Query — this
  * component only reads `.data`/`.isPending` off the store.
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { CompletedReviewEntry, ReviewListEntry } from '@lostgradient/weft';
@@ -46,7 +47,6 @@ const entry: CompletedReviewEntry = {
 
 describe('ReviewsArchive', () => {
   test('shows a loading skeleton while pending', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { container } = render(ReviewsArchive, {
       props: { completedQuery: fakeQuery({ isPending: true }) },
     });
@@ -55,7 +55,6 @@ describe('ReviewsArchive', () => {
   });
 
   test('shows a fault banner instead of a false empty state when the query errors', async () => {
-    const { render } = await import('@testing-library/svelte');
     let refetched = false;
     const { getByText, queryByText, getByRole } = render(ReviewsArchive, {
       props: {
@@ -72,14 +71,11 @@ describe('ReviewsArchive', () => {
 
     expect(getByText('Not authorized')).not.toBeNull();
     expect(queryByText('No decisions yet')).toBeNull();
-    await import('@testing-library/svelte').then(({ fireEvent }) =>
-      fireEvent.click(getByRole('button', { name: 'Retry' })),
-    );
+    await fireEvent.click(getByRole('button', { name: 'Retry' }));
     expect(refetched).toBe(true);
   });
 
   test('shows an empty state with no completed reviews', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(ReviewsArchive, {
       props: { completedQuery: fakeQuery({ data: [], isPending: false }) },
     });
@@ -88,7 +84,6 @@ describe('ReviewsArchive', () => {
   });
 
   test('renders a row per completed review, read-only (no buttons)', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText, queryAllByRole } = render(ReviewsArchive, {
       props: { completedQuery: fakeQuery({ data: [entry], isPending: false }) },
     });

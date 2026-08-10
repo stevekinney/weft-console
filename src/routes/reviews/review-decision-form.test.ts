@@ -3,13 +3,13 @@
  * AT-critical review surface). `bun test` + happy-dom +
  * `@testing-library/svelte`, run via `bun run test`.
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import ReviewDecisionForm, { type ReviewDecisionSubmission } from './review-decision-form.svelte';
 
 describe('ReviewDecisionForm — unsectioned', () => {
   test('submit is disabled until an overall decision and reviewer are provided', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const submissions: ReviewDecisionSubmission[] = [];
     const { getByRole, getByLabelText } = render(ReviewDecisionForm, {
       props: {
@@ -32,7 +32,6 @@ describe('ReviewDecisionForm — unsectioned', () => {
   });
 
   test('approve submits without requiring feedback', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const submissions: ReviewDecisionSubmission[] = [];
     const { getByRole, getByLabelText } = render(ReviewDecisionForm, {
       props: {
@@ -53,7 +52,6 @@ describe('ReviewDecisionForm — unsectioned', () => {
   });
 
   test('reject requires feedback before submit is enabled', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const submissions: ReviewDecisionSubmission[] = [];
     const { getByRole, getByLabelText } = render(ReviewDecisionForm, {
       props: {
@@ -83,7 +81,6 @@ describe('ReviewDecisionForm — unsectioned', () => {
   });
 
   test('disables the submit button while submitting', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getByRole, getByLabelText } = render(ReviewDecisionForm, {
       props: { reviewId: 'r1', sectionKeys: [], submitting: true, onSubmit: () => {} },
     });
@@ -99,7 +96,6 @@ describe('ReviewDecisionForm — unsectioned', () => {
 
 describe('ReviewDecisionForm — sectioned (allowPartial)', () => {
   test('suggests the overall decision from section decisions until manually touched', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getAllByRole, getByText } = render(ReviewDecisionForm, {
       props: {
         reviewId: 'r2',
@@ -120,7 +116,6 @@ describe('ReviewDecisionForm — sectioned (allowPartial)', () => {
   });
 
   test('suggests needs-changes when any section is rejected', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getAllByRole, getByText } = render(ReviewDecisionForm, {
       props: {
         reviewId: 'r3',
@@ -139,7 +134,6 @@ describe('ReviewDecisionForm — sectioned (allowPartial)', () => {
   });
 
   test('a manual overall pick stops the auto-suggestion from overriding it', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getAllByRole } = render(ReviewDecisionForm, {
       props: {
         reviewId: 'r4',
@@ -159,7 +153,6 @@ describe('ReviewDecisionForm — sectioned (allowPartial)', () => {
   });
 
   test('submits per-section decisions alongside the overall decision', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const submissions: ReviewDecisionSubmission[] = [];
     const { getAllByRole, getByLabelText, getByRole } = render(ReviewDecisionForm, {
       props: {
@@ -195,7 +188,6 @@ describe('ReviewDecisionForm — sectioned (allowPartial)', () => {
   });
 
   test('does not require every section to be decided before submitting', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const submissions: ReviewDecisionSubmission[] = [];
     const { getAllByRole, getByLabelText, getByRole } = render(ReviewDecisionForm, {
       props: {

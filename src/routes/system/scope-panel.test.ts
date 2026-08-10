@@ -2,6 +2,7 @@
  * Component tests for `<ScopePanel>` (plan §9.7 T7.4). Covers the
  * granted/not-granted split driven by the principal store.
  */
+import { render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import { createQueryClient } from '../../lib/query.ts';
@@ -11,7 +12,6 @@ import SystemRouteTestHarness from './system-route-test-harness.test-harness.sve
 import { realClient } from './system-test-support.test-support.ts';
 
 async function renderScopePanel(principalScopes: readonly AuthorizationScope[]) {
-  const { render } = await import('@testing-library/svelte');
   return render(SystemRouteTestHarness, {
     props: {
       client: realClient(),

@@ -10,6 +10,7 @@
  * attachment cleanup and resets that module state back to `undefined`, so
  * tests stay isolated from each other without doing that by hand here.
  */
+import { render } from '@testing-library/svelte';
 import { describe, expect, spyOn, test } from 'bun:test';
 
 import { UNKNOWN_FAULT_TREATMENT } from '../lib/faults.ts';
@@ -35,7 +36,6 @@ describe('showToast — before <ToastHost> has mounted', () => {
 
 describe('showToast — after <ToastHost> has mounted', () => {
   test('renders the message into the DOM', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { findByText } = render(ToastHost);
 
     showToast('Saved your changes.');
@@ -44,7 +44,6 @@ describe('showToast — after <ToastHost> has mounted', () => {
   });
 
   test('returns the toast id Cinder assigned', async () => {
-    const { render } = await import('@testing-library/svelte');
     render(ToastHost);
 
     const id = showToast('has an id');
@@ -56,7 +55,6 @@ describe('showToast — after <ToastHost> has mounted', () => {
 
 describe('showFault', () => {
   test('renders "<title>: <message>" with a warning variant for a lower-stakes treatment (not-found)', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { findByText } = render(ToastHost);
 
     showFault({ kind: 'not-found', message: 'workflow wf-1 not found' });
@@ -68,7 +66,6 @@ describe('showFault', () => {
   });
 
   test('renders a danger variant for internal', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { findByText } = render(ToastHost);
 
     showFault(UNKNOWN_FAULT_TREATMENT);
@@ -80,7 +77,6 @@ describe('showFault', () => {
   });
 
   test('renders a danger variant for invalid', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { findByText } = render(ToastHost);
 
     showFault({ kind: 'invalid', message: 'name is required', fieldErrors: [] });
@@ -112,7 +108,6 @@ describe('showFault', () => {
   });
 
   test('renders inside the assertive (role=alert) live region for a danger-variant fault', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { findByText } = render(ToastHost);
 
     showFault(UNKNOWN_FAULT_TREATMENT);
@@ -130,7 +125,6 @@ describe('showFault', () => {
    * design's warning-is-polite split for a warning-tier fault.
    */
   test('a warning-variant fault renders polite (role=status), not assertive', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { findByText } = render(ToastHost);
 
     showFault({ kind: 'not-found', message: 'workflow wf-1 not found' });

@@ -100,7 +100,38 @@ async function installApiKeyInjection(page: Page): Promise<void> {
  * showed the correct settled `oklch(0.5 0.22 270)` background / `oklch(1 0
  * 0)` text (21:1) — so a FIXED frame count isn't a reliable bound here;
  * polling until the sample stops changing is.
+ *
+ * Cinder 0.21 added real `@starting-style` entry transitions to Modal and
+ * Drawer, which exposed a second sampling hazard this poll alone cannot
+ * see: the overlay PANEL fades in via `opacity`, and axe composites each
+ * control's colors through that translucent ancestor — so a button whose
+ * own `background-color`/`color` are already settled (signature stable)
+ * still measures as a washed-out blend (observed: the drain dialog's
+ * primary button flagged at 2.88:1 with bg `#8390ea` while its computed
+ * resting style was the correct `oklch(0.5 0.22 270)` / 21:1). Two
+ * additions close it: `waitForAnimationsToFinish` first awaits every
+ * finite animation/transition on the page (near-instant under this
+ * suite's `reducedMotion: 'reduce'`), and the signature below includes
+ * `opacity` so an ancestor fade is itself detected as unsettled paint.
  */
+async function waitForAnimationsToFinish(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    // `Document.getAnimations()` already spans the whole document (the
+    // `{ subtree }` option exists only on `Element.getAnimations()`).
+    const finite = document.getAnimations().filter((animation) => {
+      const timing = animation.effect?.getTiming();
+      // Infinite animations (spinners, indeterminate progress) never
+      // finish — awaiting them would deadlock; axe's contrast math is not
+      // affected by them on this suite's screens.
+      return timing !== undefined && timing.iterations !== Infinity;
+    });
+    await Promise.race([
+      Promise.allSettled(finite.map((animation) => animation.finished)),
+      new Promise((resolve) => setTimeout(resolve, 2_000)),
+    ]);
+  });
+}
+
 async function waitForPaintSettle(page: Page): Promise<void> {
   const MAX_FRAMES = 30;
   await page.evaluate((maxFrames) => {
@@ -110,10 +141,12 @@ async function waitForPaintSettle(page: Page): Promise<void> {
     // below suggests.
     // oxlint-disable-next-line unicorn/consistent-function-scoping
     function signature(): string {
-      return Array.from(document.querySelectorAll('button, input, textarea, select'))
+      return Array.from(
+        document.querySelectorAll('button, input, textarea, select, dialog, [role="dialog"]'),
+      )
         .map((el) => {
           const cs = getComputedStyle(el);
-          return `${cs.backgroundColor}|${cs.color}`;
+          return `${cs.backgroundColor}|${cs.color}|${cs.opacity}`;
         })
         .join(';');
     }
@@ -143,6 +176,7 @@ async function waitForPaintSettle(page: Page): Promise<void> {
  * the error message if the count is nonzero.
  */
 async function assertNoSeriousAxeViolations(page: Page, screenLabel: string): Promise<void> {
+  await waitForAnimationsToFinish(page);
   await waitForPaintSettle(page);
   const results = await new AxeBuilder({ page }).analyze();
   const blocking = results.violations.filter(

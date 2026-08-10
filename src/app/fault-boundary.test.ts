@@ -6,6 +6,7 @@
  * `<svelte:boundary>` error handler is compiled Svelte template behavior,
  * not something that survives being stubbed.
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import { HttpClientError } from '@lostgradient/weft/client';
@@ -18,7 +19,6 @@ async function renderHarness(props: {
   shouldThrow?: boolean;
   onFault?: (treatment: FaultTreatment, error: unknown) => void;
 }) {
-  const { render } = await import('@testing-library/svelte');
   return render(FaultBoundaryHarness, { props });
 }
 
@@ -184,6 +184,5 @@ describe('FaultBoundary', () => {
 });
 
 async function fireEventClick(element: Element): Promise<void> {
-  const { fireEvent } = await import('@testing-library/svelte');
   await fireEvent.click(element);
 }

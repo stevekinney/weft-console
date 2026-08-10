@@ -1,3 +1,4 @@
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import ConfigureStep from './configure-step.svelte';
@@ -11,7 +12,6 @@ const BASE_PROPS = {
 
 describe('ConfigureStep', () => {
   test('renders raw JSON mode when there is no schema', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByLabelText } = render(ConfigureStep, {
       props: {
         ...BASE_PROPS,
@@ -28,7 +28,6 @@ describe('ConfigureStep', () => {
   });
 
   test('shows a validation error for invalid JSON and disables Continue', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByLabelText, getByRole } = render(ConfigureStep, {
       props: {
         ...BASE_PROPS,
@@ -49,7 +48,6 @@ describe('ConfigureStep', () => {
   });
 
   test('valid JSON enables Continue and calls onContinue with the parsed value', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let continued: unknown;
     const { getByRole } = render(ConfigureStep, {
       props: {
@@ -70,7 +68,6 @@ describe('ConfigureStep', () => {
   });
 
   test('renders the Form/JSON toggle when a schema is present', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByRole } = render(ConfigureStep, {
       props: {
         ...BASE_PROPS,
@@ -88,7 +85,6 @@ describe('ConfigureStep', () => {
   });
 
   test('Back calls onBack', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let wentBack = false;
     const { getByRole } = render(ConfigureStep, {
       props: {

@@ -1,10 +1,10 @@
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import WorkflowListPagination from './workflow-list-pagination.svelte';
 
 describe('WorkflowListPagination', () => {
   test('shows the current page state via the total count', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(WorkflowListPagination, {
       props: {
         offset: 0,
@@ -19,7 +19,6 @@ describe('WorkflowListPagination', () => {
   });
 
   test('clicking "Next" advances the offset by one page', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let nextOffset: number | undefined;
     const { getByRole } = render(WorkflowListPagination, {
       props: {
@@ -38,7 +37,6 @@ describe('WorkflowListPagination', () => {
   });
 
   test('changing the page-size select resets the offset to 0', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let nextLimit: number | undefined;
     let nextOffset: number | undefined;
     const { getByLabelText } = render(WorkflowListPagination, {

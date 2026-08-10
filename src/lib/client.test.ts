@@ -14,6 +14,7 @@
  * normalization) — assertions below read `headers['authorization']`, not
  * `headers['Authorization']`.
  */
+import { render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { HttpClient } from '@lostgradient/weft/client';
@@ -127,7 +128,6 @@ describe('getClient — outside any provideClient() ancestor', () => {
     // renders as a real component, so `getContext()` succeeds (returns
     // `undefined` — no ancestor called `provideClient()`) and control reaches
     // `getClient()`'s own `if (!client) throw …` guard.
-    const { render } = await import('@testing-library/svelte');
     const harnessModule = await import('./get-client-harness.test-harness.svelte');
     const GetClientHarness = harnessModule.default;
     expect(() => render(GetClientHarness)).toThrow(
@@ -149,7 +149,6 @@ describe('provideClient + getClient — round trip through a real component tree
     // functions: `ProvideClientHarness` calls `provideClient()` during its
     // own setup, then renders `GetClientHarness` (reused from the "no
     // ancestor" tests above) as a child that calls `getClient()`.
-    const { render } = await import('@testing-library/svelte');
     const harnessModule = await import('./provide-client-harness.test-harness.svelte');
     const ProvideClientHarness = harnessModule.default;
     const client = createClient({ baseUrl: 'https://weft.example.com' });

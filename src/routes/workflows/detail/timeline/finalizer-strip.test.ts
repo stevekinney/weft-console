@@ -1,3 +1,4 @@
+import { render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { WorkflowFinalizerStatus } from '@lostgradient/weft';
@@ -6,7 +7,6 @@ import FinalizerStrip from './finalizer-strip.svelte';
 
 describe('FinalizerStrip', () => {
   test('renders nothing when the workflow recorded no finalizer work', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { container } = render(FinalizerStrip, {
       props: { baseStatus: 'cancelled', status: null },
     });
@@ -15,7 +15,6 @@ describe('FinalizerStrip', () => {
   });
 
   test('renders nothing while the finalizer query has not resolved yet', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { container } = render(FinalizerStrip, {
       props: { baseStatus: 'cancelled', status: undefined },
     });
@@ -24,7 +23,6 @@ describe('FinalizerStrip', () => {
   });
 
   test('an in-flight finalizer shows the Finalizing badge and pending row', async () => {
-    const { render } = await import('@testing-library/svelte');
     const status: WorkflowFinalizerStatus = { status: 'running', attempts: 1, startedAt: 1 };
     const { getByText } = render(FinalizerStrip, {
       props: { baseStatus: 'cancelled', status },
@@ -35,7 +33,6 @@ describe('FinalizerStrip', () => {
   });
 
   test('a failed finalizer shows the Failed badge, attempt count, and error text', async () => {
-    const { render } = await import('@testing-library/svelte');
     const status: WorkflowFinalizerStatus = {
       status: 'failed',
       attempts: 3,
@@ -54,7 +51,6 @@ describe('FinalizerStrip', () => {
   });
 
   test('a failed finalizer after a timeout uses "Timed out" wording, not "Cancelled"', async () => {
-    const { render } = await import('@testing-library/svelte');
     const status: WorkflowFinalizerStatus = {
       status: 'failed',
       attempts: 1,
@@ -70,7 +66,6 @@ describe('FinalizerStrip', () => {
   });
 
   test('a succeeded finalizer shows a completed row with no special-status badge and no error text', async () => {
-    const { render } = await import('@testing-library/svelte');
     const status: WorkflowFinalizerStatus = { status: 'succeeded', attempts: 1, completedAt: 1 };
     const { getByText, queryByText } = render(FinalizerStrip, {
       props: { baseStatus: 'cancelled', status },
@@ -82,7 +77,6 @@ describe('FinalizerStrip', () => {
   });
 
   test('a single attempt does not show an "N attempts" suffix', async () => {
-    const { render } = await import('@testing-library/svelte');
     const status: WorkflowFinalizerStatus = { status: 'succeeded', attempts: 1, completedAt: 1 };
     const { queryByText } = render(FinalizerStrip, {
       props: { baseStatus: 'cancelled', status },

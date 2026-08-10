@@ -5,6 +5,7 @@
  * `inventory-sync-sweep` (from `fixtures/schedules.ts`), so schedules are
  * created directly against that real workflow type per test.
  */
+import { fireEvent, render, waitFor, within } from '@testing-library/svelte';
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { DetachedWindowAPI } from 'happy-dom';
 
@@ -23,18 +24,12 @@ function resetLocation(path = '/schedules'): void {
   router.navigate(path, { replace: true });
 }
 
-async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
-  const { waitFor } = await import('@testing-library/svelte');
-  return waitFor;
-}
-
 describe('ScheduleList', () => {
   beforeEach(() => {
     resetLocation();
   });
 
   test('shows the onboarding empty state when no schedules exist', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
@@ -43,7 +38,6 @@ describe('ScheduleList', () => {
         props: { client },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('No schedules')).not.toBeNull());
       expect(getByText('Create one to run workflows on a cadence.')).not.toBeNull();
     } finally {
@@ -52,7 +46,6 @@ describe('ScheduleList', () => {
   });
 
   test('renders a schedule row with its status badge and human-readable cadence', async () => {
-    const { render, within } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -67,7 +60,6 @@ describe('ScheduleList', () => {
         props: { client },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('nightly-rollup')).not.toBeNull());
       const { getByText: getByTextInTable } = within(getByRole('table'));
       expect(getByTextInTable('Active')).not.toBeNull();
@@ -79,7 +71,6 @@ describe('ScheduleList', () => {
   });
 
   test('a paused schedule shows the Paused badge', async () => {
-    const { render, within } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const handle = await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -95,7 +86,6 @@ describe('ScheduleList', () => {
         props: { client },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('weekly-digest')).not.toBeNull());
       const { getByText: getByTextInTable } = within(getByRole('table'));
       expect(getByTextInTable('Paused')).not.toBeNull();
@@ -114,7 +104,6 @@ describe('ScheduleList', () => {
    * id-link pattern.
    */
   test('the schedule id renders as a real link to the detail URL (keyboard-reachable, not row-onclick-only)', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -129,7 +118,6 @@ describe('ScheduleList', () => {
         props: { client },
       });
 
-      const waitFor = await waitForCondition();
       const link = await waitFor(() => getByRole('link', { name: 'nightly-rollup' }));
       expect(link.getAttribute('href')).toContain('id=nightly-rollup');
     } finally {
@@ -138,7 +126,6 @@ describe('ScheduleList', () => {
   });
 
   test('clicking a row navigates to the schedule detail URL', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -153,7 +140,6 @@ describe('ScheduleList', () => {
         props: { client },
       });
 
-      const waitFor = await waitForCondition();
       const idCell = await waitFor(() => {
         const cell = getByText('nightly-rollup');
         expect(cell).not.toBeNull();
@@ -168,7 +154,6 @@ describe('ScheduleList', () => {
   });
 
   test('the Create schedule button is disabled with a reason when schedules:write is missing', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
@@ -177,7 +162,6 @@ describe('ScheduleList', () => {
         props: { client, scopes: ['schedules:read'] },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => {
         expect(
           (getByRole('button', { name: 'Create schedule' }) as HTMLButtonElement).disabled,
@@ -190,7 +174,6 @@ describe('ScheduleList', () => {
   });
 
   test('the Create schedule button is enabled with schedules:write granted', async () => {
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
@@ -199,7 +182,6 @@ describe('ScheduleList', () => {
         props: { client },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => {
         expect(
           (getByRole('button', { name: 'Create schedule' }) as HTMLButtonElement).disabled,
@@ -212,7 +194,6 @@ describe('ScheduleList', () => {
   });
 
   test('pausing an active schedule updates its badge to Paused', async () => {
-    const { render, fireEvent, within } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -227,7 +208,6 @@ describe('ScheduleList', () => {
         props: { client },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => {
         expect(within(getByRole('table')).getByText('Active')).not.toBeNull();
       });
@@ -245,7 +225,6 @@ describe('ScheduleList', () => {
   });
 
   test('cancelling a schedule requires Tier-2 confirmation before it takes effect (T8.2 tier sweep)', async () => {
-    const { render, fireEvent, within } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -260,7 +239,6 @@ describe('ScheduleList', () => {
         props: { client },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => {
         expect(within(getByRole('table')).getByText('Active')).not.toBeNull();
       });
@@ -289,7 +267,6 @@ describe('ScheduleList', () => {
   });
 
   test('dismissing the cancel confirm dialog leaves the schedule active', async () => {
-    const { render, fireEvent, within } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -304,7 +281,6 @@ describe('ScheduleList', () => {
         props: { client },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => {
         expect(within(getByRole('table')).getByText('Active')).not.toBeNull();
       });
@@ -327,14 +303,12 @@ describe('ScheduleList', () => {
   });
 
   test('a fault (unreachable server) renders the fault banner with a retry action', async () => {
-    const { render } = await import('@testing-library/svelte');
     const client = new HttpClient({ baseUrl: 'http://127.0.0.1:1' });
 
     const { getByRole } = render(ScheduleListHarness, {
       props: { client },
     });
 
-    const waitFor = await waitForCondition();
     await waitFor(() => expect(getByRole('button', { name: 'Retry' })).not.toBeNull(), {
       timeout: 3000,
     });
@@ -342,7 +316,6 @@ describe('ScheduleList', () => {
 
   test('a ?status= URL query param (dashboard-card deep link) pre-filters the status Select', async () => {
     resetLocation('/schedules?status=paused');
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const handle = await server.engine.schedule({
       workflow: 'inventory-sync-sweep',
@@ -364,7 +337,6 @@ describe('ScheduleList', () => {
         props: { client },
       });
 
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('weekly-digest')).not.toBeNull());
       expect(queryByText('nightly-rollup')).toBeNull();
       expect((getByRole('combobox', { name: 'Status' }) as HTMLSelectElement).value).toBe('paused');
@@ -375,13 +347,11 @@ describe('ScheduleList', () => {
 
   test('changing the status Select updates the URL (replacing, not pushing, history)', async () => {
     resetLocation('/schedules');
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole } = render(ScheduleListHarness, { props: { client } });
-      const waitFor = await waitForCondition();
       const statusSelect = await waitFor(() => getByRole('combobox', { name: 'Status' }));
 
       await fireEvent.change(statusSelect, { target: { value: 'active' } });

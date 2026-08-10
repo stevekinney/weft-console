@@ -8,13 +8,13 @@
  * documented `createQuery(() => ({...})); $query.data` pattern actually
  * resolves data under Svelte 5 runes mode, rather than only type-checking.
  */
+import { render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import TanstackQuerySmoke from './tanstack-query-smoke.svelte';
 
 describe('TanStack Query v5 store-API smoke test', () => {
   test('createQuery resolves data and the $query store updates the DOM', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const { getByTestId } = render(TanstackQuerySmoke);
 
     await waitFor(() => {

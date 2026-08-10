@@ -1,3 +1,4 @@
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import PendingReviewRow from './pending-review-row.svelte';
@@ -21,7 +22,6 @@ function entry(overrides: Partial<{ createdAt: number; timeout: number }> = {}) 
 
 describe('PendingReviewRow', () => {
   test('renders the review type, truncated workflow id, and countdown', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(PendingReviewRow, {
       props: { entry: entry(), selected: false, now: NOW, onSelect: () => {} },
     });
@@ -32,7 +32,6 @@ describe('PendingReviewRow', () => {
   });
 
   test('marks an urgent countdown (<20% remaining)', async () => {
-    const { render } = await import('@testing-library/svelte');
     const urgent = entry({ createdAt: NOW - 550_000, timeout: 600_000 });
     const { getByText } = render(PendingReviewRow, {
       props: { entry: urgent, selected: false, now: NOW, onSelect: () => {} },
@@ -43,7 +42,6 @@ describe('PendingReviewRow', () => {
   });
 
   test('calls onSelect with the reviewId when clicked', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const selected: string[] = [];
     const { getByRole } = render(PendingReviewRow, {
       props: { entry: entry(), selected: false, now: NOW, onSelect: (id) => selected.push(id) },
@@ -54,7 +52,6 @@ describe('PendingReviewRow', () => {
   });
 
   test('reflects the selected state via aria-pressed', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByRole } = render(PendingReviewRow, {
       props: { entry: entry(), selected: true, now: NOW, onSelect: () => {} },
     });

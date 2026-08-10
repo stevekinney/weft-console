@@ -3,6 +3,7 @@
  * query state switches between list/detail/create/edit, per that file's own
  * doc (no `/schedules/:id` entry in the frozen `routes.ts`).
  */
+import { fireEvent, render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 import type { DetachedWindowAPI } from 'happy-dom';
 
@@ -21,21 +22,14 @@ function resetLocation(path = '/schedules'): void {
   router.navigate(path, { replace: true });
 }
 
-async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
-  const { waitFor } = await import('@testing-library/svelte');
-  return waitFor;
-}
-
 describe('Schedules index router', () => {
   test('/schedules renders the list', async () => {
     resetLocation('/schedules');
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole } = render(IndexHarness, { props: { client } });
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByRole('heading', { name: 'Schedules' })).not.toBeNull());
     } finally {
       await server.stop();
@@ -51,12 +45,10 @@ describe('Schedules index router', () => {
       input: { warehouseId: 'wh-main' },
     });
     resetLocation('/schedules?id=nightly-rollup');
-    const { render } = await import('@testing-library/svelte');
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText, queryByRole } = render(IndexHarness, { props: { client } });
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('nightly-rollup')).not.toBeNull());
       expect(queryByRole('heading', { name: 'Schedules' })).toBeNull();
     } finally {
@@ -66,13 +58,11 @@ describe('Schedules index router', () => {
 
   test('/schedules?create=1 renders the list with the create drawer open', async () => {
     resetLocation('/schedules?create=1');
-    const { render } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole } = render(IndexHarness, { props: { client } });
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByRole('heading', { name: 'Schedules' })).not.toBeNull());
       expect(getByRole('dialog')).not.toBeNull();
     } finally {
@@ -89,12 +79,10 @@ describe('Schedules index router', () => {
       input: { warehouseId: 'wh-main' },
     });
     resetLocation('/schedules?id=nightly-rollup&edit=1');
-    const { render } = await import('@testing-library/svelte');
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByText, getByRole } = render(IndexHarness, { props: { client } });
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByText('nightly-rollup')).not.toBeNull());
       expect(getByRole('dialog')).not.toBeNull();
       expect(getByRole('heading', { name: 'Edit schedule' })).not.toBeNull();
@@ -105,13 +93,11 @@ describe('Schedules index router', () => {
 
   test('closing the create drawer navigates back to the plain list URL', async () => {
     resetLocation('/schedules?create=1');
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const server = await startLiveSourceTestServer();
     const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
 
     try {
       const { getByRole } = render(IndexHarness, { props: { client } });
-      const waitFor = await waitForCondition();
       await waitFor(() => expect(getByRole('dialog')).not.toBeNull());
 
       await fireEvent.click(getByRole('button', { name: 'Cancel' }));

@@ -1,10 +1,10 @@
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import TypeStep from './type-step.svelte';
 
 describe('TypeStep', () => {
   test('Continue is disabled with no value typed', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByRole } = render(TypeStep, {
       props: {
         knownTypes: [],
@@ -21,7 +21,6 @@ describe('TypeStep', () => {
   });
 
   test('Continue is enabled once a value is present', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByRole } = render(TypeStep, {
       props: {
         knownTypes: ['order-processing'],
@@ -38,7 +37,6 @@ describe('TypeStep', () => {
   });
 
   test('shows the fallback hint when the registry has no known types', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(TypeStep, {
       props: {
         knownTypes: [],
@@ -53,7 +51,6 @@ describe('TypeStep', () => {
   });
 
   test('clicking Continue calls onContinue', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let continued = false;
     const { getByRole } = render(TypeStep, {
       props: {
@@ -72,7 +69,6 @@ describe('TypeStep', () => {
   });
 
   test('typed free text survives losing focus when the registry has no known types (regression: Combobox reverts uncommitted text on blur)', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let value = '';
     const { getByLabelText, rerender } = render(TypeStep, {
       props: {

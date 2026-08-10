@@ -1,3 +1,4 @@
+import { fireEvent, render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { WorkflowEvent, WorkflowState, WorkflowTimelineEntry } from '@lostgradient/weft';
@@ -44,7 +45,6 @@ function client(events: WorkflowEvent[] = []) {
 
 describe('EventsTab', () => {
   test('renders checkpoint events honestly as "Checkpoint · step N"', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const events: WorkflowEvent[] = [
       { type: 'workflow:checkpoint', timestamp: 1_000, data: { step: 1 } },
       { type: 'workflow:checkpoint', timestamp: 2_000, data: { step: 2 } },
@@ -62,7 +62,6 @@ describe('EventsTab', () => {
   });
 
   test('shows an empty count with no events', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const { getByText } = render(EventsTabHarness, {
       props: { client: client([]), workflow: workflow() },
     });
@@ -73,7 +72,6 @@ describe('EventsTab', () => {
   });
 
   test('Live defaults on for a running workflow and can be paused', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const { getByRole } = render(EventsTabHarness, {
       props: { client: client([]), workflow: workflow({ status: 'running' }) },
     });
@@ -86,7 +84,6 @@ describe('EventsTab', () => {
   });
 
   test('Live defaults off for a terminal workflow', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByRole } = render(EventsTabHarness, {
       props: { client: client([]), workflow: workflow({ status: 'completed' }) },
     });
@@ -95,7 +92,6 @@ describe('EventsTab', () => {
   });
 
   test('a Timeline-tab step selection filters the events tab to matching rows, and Clear restores them', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const events: WorkflowEvent[] = [
       { type: 'workflow:checkpoint', timestamp: 1_000, data: { step: 1 } },
       { type: 'workflow:checkpoint', timestamp: 2_000, data: { step: 2 } },
@@ -129,7 +125,6 @@ describe('EventsTab', () => {
   });
 
   test('Download menu offers both export options', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const { getByRole, getByText } = render(EventsTabHarness, {
       props: { client: client([]), workflow: workflow() },
     });

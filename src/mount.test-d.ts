@@ -5,9 +5,9 @@
  * suffix intentionally does not match the `*.test.ts` glob `bun test`
  * runs) and is checked by `bun run typecheck` (svelte-check) instead.
  */
-import type { DashboardRouteTarget } from '@lostgradient/weft/server';
+import type { DashboardAssets, DashboardRouteTarget } from '@lostgradient/weft/server';
 
-import { weftConsole } from './mount.ts';
+import { weftConsole, weftConsoleAssets } from './mount.ts';
 
 const dashboard: DashboardRouteTarget = weftConsole();
 void dashboard;
@@ -16,3 +16,11 @@ const dashboardWithDistDir: DashboardRouteTarget = weftConsole({
   distDir: '/tmp/weft-console-dist',
 });
 void dashboardWithDistDir;
+
+const assets: DashboardAssets = weftConsoleAssets();
+void assets;
+
+const assetsWithDistDir: DashboardAssets = weftConsoleAssets({
+  distDir: '/tmp/weft-console-dist',
+});
+void assetsWithDistDir;

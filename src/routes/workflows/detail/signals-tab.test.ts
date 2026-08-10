@@ -1,3 +1,4 @@
+import { fireEvent, render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { WorkflowState, WorkflowTimelineEntry } from '@lostgradient/weft';
@@ -19,7 +20,6 @@ function workflow(overrides: Partial<WorkflowState> = {}): WorkflowState {
 
 describe('SignalsTab', () => {
   test('shows an empty message when no signal has been delivered to a wait point', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const client = {
       signal: async () => {},
       getTimeline: async (): Promise<WorkflowTimelineEntry[]> => [],
@@ -35,7 +35,6 @@ describe('SignalsTab', () => {
   });
 
   test('lists wait-signal timeline entries as received signals', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const client = {
       signal: async () => {},
       getTimeline: async (): Promise<WorkflowTimelineEntry[]> => [
@@ -60,7 +59,6 @@ describe('SignalsTab', () => {
   });
 
   test('sends a signal with the entered name and JSON payload', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const sent: { call: { id: string; name: string; payload: unknown } | null } = { call: null };
     const client = {
       // `id: string` (the only overload SignalsTab actually calls) plus a
@@ -86,7 +84,6 @@ describe('SignalsTab', () => {
   });
 
   test('rejects invalid JSON payloads without calling client.signal', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const outcome: { called: boolean } = { called: false };
     const client = {
       signal: async () => {

@@ -282,7 +282,7 @@ Two-panel KV browser (get / scan (NDJSON, prefix or start/end, paginated) / put 
 - **Discovery**: rendered OpenAPI / OpenRPC / AsyncAPI viewers (per-operation method/params/schemas/**required scope**, raw-JSON toggle) + MCP tab (`/.well-known/mcp.json` render, session-protocol sequence diagram (§7.3), interactive "Test MCP Session" panel showing full headers/body incl. `Mcp-Session-Id`/`Mcp-Session-Token` flow). Note `publicOrigin`/`trustedHosts` 503 behavior with an actionable message.
 - **Operation catalog**: searchable table (name, scope, REST path, JSON-RPC method, MCP availability, transports) + `PermissionMatrix` scope-matrix toggle.
 - **Health & lease**: lease status first (healthy / no-lease amber / **contested red banner also mirrored on Dashboard** with the split-brain warning copy), engine health, retention overview (`GET /api/v1/retention`), recover-all action (`POST /api/v1/recover`, Tier-2), codegen panel (renders `weft codegen`-equivalent output from `/api/v1/registry` in `CodeBlock`). Conformance is honest: `weft conformance` runs against a worker command from the CLI and has no server-trigger operation — the panel documents and links it, no fake "Run" button (the old plan's streaming-run panel is dropped).
-- **Alerts & operational warnings**: live `alert:fired`/`alert:resolved`, `constraint:violated`, and checkpoint-size/development/cleanup/storage-size warnings from the fleet feed land in the notification center with severity tiers; a System sub-view lists ones observed this session. **Caveat**: the alert-manager is engine-side with no list/ack operations, so a queryable "currently-active alerts" view (correct across page reloads) needs the upstream operation (§14.1) — until it lands, the session-scoped view carries a "since page load" label rather than pretending to be authoritative.
+- **Alerts & operational warnings**: live `alert:fired`/`alert:resolved`, `constraint:violated`, and checkpoint-size/development/cleanup/storage-size warnings from the fleet feed land in the notification center with severity tiers; a System sub-view lists ones observed this session. **Adopted (0.16.0)**: `weft.alerts.list` makes the "Active alerts" section authoritative and reload-safe; the session-scoped activity log below it keeps its "since page load" label because resolved/warning rows still only exist as live events (no history/ack operations upstream).
 - **Scope panel**: granted/not-granted scopes with one-line descriptions and the UI actions each unlocks.
 
 #### 9.8 Coverage Audit — Temporal UI Parity Check
@@ -461,7 +461,7 @@ Coordination rules that make the fan-out safe:
 - **T7.3** Discovery (OpenAPI/OpenRPC/AsyncAPI render, MCP tab + sequence diagram + test-session panel).
 - **T7.4** Operation catalog + PermissionMatrix + scope panel.
 - **T7.5** Health & lease (contested-lease dashboard mirror, retention, recover-all, codegen panel, conformance doc-link panel).
-- **T7.6** Alerts & operational-warnings view (session-scoped from the fleet feed, "since page load" labeled; upgrade to authoritative when the upstream alert list/ack ops land).
+- **T7.6** Alerts & operational-warnings view (authoritative "Active alerts" from `weft.alerts.list` as of 0.16.0; session-scoped activity log below it for resolved/warning history).
 - **Gate**: Appendix B System/Storage boxes all demo-able against the dev harness.
 
 #### Phase 8 — Bulk Operations and Destructive-action Hardening
@@ -492,12 +492,20 @@ Coordination rules that make the fan-out safe:
 
 #### 14.1 `stevekinney/weft`
 
-1. **Extend `DASHBOARD_PAGE_ROUTES`** with `/schedules`, `/storage`, `/system` (leaf prefixes; no `/api` shadow risk by construction). Includes tests + `component-standards` skill/doc updates.
-2. **`weft serve --console`**: optional-peer resolution of `@lostgradient/weft-console` with an actionable install error.
-3. **Verify `handleRequest` streams SSE responses** in a Service Worker context (needed for §3.3); file a bug with repro if it buffers.
-4. Confirm/expose a **principal introspection operation** (scopes for the current credential) if the catalog doesn't already include one (T1.2 pins this).
-5. **Alert operations**: `alert:fired`/`alert:resolved` events reach the fleet feed, but the alert-manager has no list/acknowledge operations — a reload-safe "active alerts" console view needs `weft.alerts.list` (and optionally ack). Until then the console's alerts view is session-scoped (T7.6).
-6. **Budget scopes decision**: `budget:read`/`budget:write` are declared in `AUTHORIZATION_SCOPES` but no operation uses them. Either wire budget operations (then the console grows a Budgets surface — new plan section at that point) or drop the scopes; declared-but-unused scopes are misleading in the operation-catalog/scope-matrix views.
+> **Adoption status (weft 0.16.0, adopted 2026-08-10).** Items 1, 2, 5, and 6 shipped in
+> `@lostgradient/weft@0.16.0` (weft#841, #842, #843, #844) alongside `ServeOptions.dashboardAssets`
+> (weft#840) and `setupServiceWorker({ handlerOptions })` (weft#845); the console adopted all six —
+> see `tests/deployment/bun-mount.test.ts`, `tests/deployment/service-worker.test.ts`,
+> `src/routes/system/alerts-tab.svelte`, and the README's rewritten deployment section. Item 3 was
+> resolved earlier by testing (`handleRequest` streams; the gap was options passthrough, closed by
+> #845). Item 4 (principal introspection) remains open upstream.
+
+1. **Extend `DASHBOARD_PAGE_ROUTES`** with `/schedules`, `/storage`, `/system` (leaf prefixes; no `/api` shadow risk by construction). Includes tests + `component-standards` skill/doc updates. *Shipped in 0.16.0; adopted.*
+2. **`weft serve --console`**: optional-peer resolution of `@lostgradient/weft-console` with an actionable install error. *Shipped in 0.16.0; documented in the README.*
+3. **Verify `handleRequest` streams SSE responses** in a Service Worker context (needed for §3.3); file a bug with repro if it buffers. *Verified — it streams; the real gap (no `HandlerOptions` passthrough) shipped as `setupServiceWorker({ handlerOptions })` in 0.16.0 and is adopted.*
+4. Confirm/expose a **principal introspection operation** (scopes for the current credential) if the catalog doesn't already include one (T1.2 pins this). *Still open as of 0.16.0.*
+5. **Alert operations**: `alert:fired`/`alert:resolved` events reach the fleet feed, but the alert-manager has no list/acknowledge operations — a reload-safe "active alerts" console view needs `weft.alerts.list` (and optionally ack). *`weft.alerts.list` shipped in 0.16.0 (`GET /v1/alerts`, `system:read`); adopted — the Alerts tab's active list is authoritative, the session log remains for resolved/warning history. No acknowledge operation exists yet.*
+6. **Budget scopes decision**: `budget:read`/`budget:write` are declared in `AUTHORIZATION_SCOPES` but no operation uses them. *Resolved in 0.16.0: the scopes were dropped; the console's vocabulary is now 21 scopes and the catalog entries are removed.*
 
 #### 14.2 `stevekinney/cinder`
 
@@ -505,9 +513,9 @@ C1 branch/coordination groups in `RunStepTimeline` · C2 `ConnectionIndicator` (
 
 ---
 
-### Appendix A — API Quick Reference (verified 2026-07-09)
+### Appendix A — API Quick Reference (verified 2026-07-09; mount/auth/SW/alerts rows re-verified against 0.16.0 on 2026-08-10)
 
-- **Mount**: `ServeOptions.dashboard?: DashboardRouteTarget`; `DASHBOARD_PAGE_ROUTES = ['/', '/workflows', '/workflows/*', '/reviews', '/workers']`; shell served pre-auth; API under `/api`; root-stable: `/v1/health`, `/v1/metrics`, `/openapi.json`, `/openrpc.json`, `/asyncapi.json`, `/.well-known/{api-catalog,mcp.json}`.
+- **Mount**: `ServeOptions.dashboard?: DashboardRouteTarget` + `dashboardAssets?: DashboardAssets` (`{ prefix, directory }`, 0.16.0); `DASHBOARD_PAGE_ROUTES = ['/', '/workflows', '/workflows/*', '/reviews', '/workers', '/schedules', '/storage', '/system']` (0.16.0); shell served pre-auth; API under `/api`; root-stable: `/v1/health`, `/v1/metrics`, `/openapi.json`, `/openrpc.json`, `/asyncapi.json`, `/.well-known/{api-catalog,mcp.json}`.
 - **Workflows**: `POST/GET /api/v1/workflows`, `GET /api/v1/workflows/aggregate`, `POST …/start-or-signal`, per-id `GET`/`DELETE`(cancel)/`suspend`/`resume`/`timeout`/`fork`/`result`(long-poll)/`attributes`/`events`/`timeline`/`checkpoints(/:step)`/`replay/:step`/`streams/:key`/`signal/:name`/`query/:name`/`update/:name`; `GET /api/v1/updates/:updateId`; bulk `cancel`/`signal`/`retry-failed`/`DELETE bulk`/`PATCH bulk/tags`/`purge` (admin, dry-run/confirm-token).
 - **Reviews**: `GET /api/v1/reviews`, `POST /api/v1/reviews/:reviewId/decision`.
 - **Schedules**: CRUD + `pause`/`resume` under `/api/v1/schedules`.
@@ -516,8 +524,9 @@ C1 branch/coordination groups in `RunStepTimeline` · C2 `ConnectionIndicator` (
 - **System**: `GET /api/v1/registry`, `GET /api/v1/retention`, `GET /api/v1/metrics/json`, `POST /api/v1/recover`; storage KV under `/api/v1/storage`.
 - **Realtime**: WS `/api/v1/workflows/:id/watch` (`events:read`) / `…/stream` (`streams:read`) with `?resumeFrom=`; SSE `GET /api/v1/workflows/:id/events/sse` (`selector=events|tokens`, `fromCursor`, `Last-Event-ID`), fleet `GET /api/v1/events/sse` (`events:read`; `workflowId`/`kind` filters); JSON-RPC WS `weft.workflows.subscribe` / `weft.events.subscribe` → `weft.events.deliver`. Replay caps 1,000 events / 1,000 buffered frames → close `1008`; per-workflow connection cap default 100 (WS `1008` / SSE `429`); `ping` keepalives carry no cursor; `replayComplete: true` marks catch-up done.
 - **Client**: `HttpClient({ baseUrl, headers?, token?, eventTransport?, webSocketFactory? })` — full `WeftClient` + `operations`/`call` + `activity` + `tail`; resolution order explicit options → `WEFT_ADDR`/`WEFT_TOKEN` → `~/.weft/config` → `http://localhost:7233`.
-- **Auth**: `AuthConfig` (apiKeys/jwt/mtls/publicPaths/resolveApiKeyPrincipal/defaultApiKeyScopes/auditSink); 23 flat scopes; `unauthenticatedAccess: 'warn'|'allow'|'reject'`; CORS opt-in, wildcard+credentials rejected at boot; `publicOrigin`/`trustedHosts` required for absolute-URL discovery in production (else 503).
-- **Service Worker**: `setupServiceWorker({ pathPrefix: '/weft/', … })` → `handleRequest(request, engine)`; storage `resolveDefaultStorage()` → IndexedDB in browsers.
+- **Auth**: `AuthConfig` (apiKeys/jwt/mtls/publicPaths/resolveApiKeyPrincipal/defaultApiKeyScopes/auditSink); 21 flat scopes (0.16.0 dropped `budget:read`/`budget:write`); `unauthenticatedAccess: 'warn'|'allow'|'reject'`; CORS opt-in, wildcard+credentials rejected at boot; `publicOrigin`/`trustedHosts` required for absolute-URL discovery in production (else 503).
+- **Service Worker**: `setupServiceWorker({ pathPrefix: '/weft/', handlerOptions?, … })` → `handleRequest(request, engine, handlerOptions)`; `handlerOptions` (0.16.0) carries `authContext`/`workflowEventFeed`/`fleetEventFeed`/`acquireWorkflowStreamConnection`; storage `resolveDefaultStorage()` → IndexedDB in browsers.
+- **Alerts**: `weft.alerts.list` (`GET /v1/alerts`, `system:read`, 0.16.0) → `{ items: ActiveAlert[] }` (`metric`, `threshold`, `currentValue`, `window`, `firedAt`); no acknowledge/history operations.
 - **Faults**: NotFound 404 / Conflict 409 / Invalid 400 / Unauthorized 401·403 / NotSupported 501 / Internal 500; REST masks internal as `{ error: "Internal server error" }`, JSON-RPC returns the full fault object.
 
 ### Appendix B — Acceptance Checklist (definition of "complete")
@@ -528,6 +537,6 @@ Carried from the wireframe brief, updated to current component truth. Every box 
 
 **Patterns**: status badge set (incl. finalizing + finalizer-failed) · payload editor form + JSON modes · query builder (visual + raw) · confirmation Tiers 1/2/3 + bulk progress · fault display (six treatments) · empty states (workflows/schedules/workers/reviews/storage/registry) · live indicator states (connected/reconnecting/polling/disconnected).
 
-**Screens**: Dashboard (default/loading/empty/unreachable) · Workflow list (default/bulk-selection/empty×2/denied) · Workflow detail — Overview (running + failed), Lineage panel (fork/start-new/schedule/children), Timeline (coordination + saga + finalizer), Events (live, with history export), Logs, Checkpoints, Signals, Updates (pending), Children, not-found · Aggregate view · Start wizard (+409) · Replay confirm + read-only view · Fork dialog + success · Async completion panel · Schedule list (missed>0) / detail (overlap text, queued runs) / create-edit (cron preview, backfill warning) · Workers fleet (deployment groups, stale heartbeat) / list / detail (draining) · Task queues / queue detail (dead-letter clear) / diagnostics (five kinds + guidance) · Review inbox + decision (partial sections) / completed / timeout-expired / archive · Storage KV (get/scan/put-confirm/reserved-prefix) + capabilities · Registry (schema tree) · Metrics (dashboard + raw) · Discovery (OpenAPI/OpenRPC/AsyncAPI/MCP + sequence diagram + test panel) · Operation catalog (+ matrix) · Health & lease (three states) + codegen + retention + conformance doc panel · Alerts & operational warnings (session-scoped, labeled) · Scope panel.
+**Screens**: Dashboard (default/loading/empty/unreachable) · Workflow list (default/bulk-selection/empty×2/denied) · Workflow detail — Overview (running + failed), Lineage panel (fork/start-new/schedule/children), Timeline (coordination + saga + finalizer), Events (live, with history export), Logs, Checkpoints, Signals, Updates (pending), Children, not-found · Aggregate view · Start wizard (+409) · Replay confirm + read-only view · Fork dialog + success · Async completion panel · Schedule list (missed>0) / detail (overlap text, queued runs) / create-edit (cron preview, backfill warning) · Workers fleet (deployment groups, stale heartbeat) / list / detail (draining) · Task queues / queue detail (dead-letter clear) / diagnostics (five kinds + guidance) · Review inbox + decision (partial sections) / completed / timeout-expired / archive · Storage KV (get/scan/put-confirm/reserved-prefix) + capabilities · Registry (schema tree) · Metrics (dashboard + raw) · Discovery (OpenAPI/OpenRPC/AsyncAPI/MCP + sequence diagram + test panel) · Operation catalog (+ matrix) · Health & lease (three states) + codegen + retention + conformance doc panel · Alerts & operational warnings (authoritative active list + session activity log) · Scope panel.
 
 **Cross-cutting rules**: color never alone · IDs truncated + copyable, never nav labels · missing scopes disable-with-reason, never hide · every empty state names a next step · dense theme, Dashboard the clarity exception · reviewer screens legible without JSON knowledge · destructive actions on the correct tier · Cinder components only outside the §7.3 net-new list · Cinder tokens + `data-theme`, status via StatusDot/Badge tones.

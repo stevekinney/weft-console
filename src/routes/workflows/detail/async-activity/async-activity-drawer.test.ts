@@ -1,3 +1,4 @@
+import { fireEvent, render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import { HttpClientError } from '@lostgradient/weft/client';
@@ -19,7 +20,6 @@ function activity(overrides: Partial<AttachedPendingActivity> = {}): AttachedPen
 
 describe('AsyncActivityDrawer', () => {
   test('shows the token and the "not a secret" label', async () => {
-    const { render } = await import('@testing-library/svelte');
     const client = {
       activity: { complete: async () => {}, completeExceptionally: async () => {} },
     };
@@ -32,7 +32,6 @@ describe('AsyncActivityDrawer', () => {
   });
 
   test('completing calls client.activity.complete with the parsed JSON result and fires onResolved', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const received: { call: { token: string; result: unknown } | null } = { call: null };
     const client = {
       activity: {
@@ -66,7 +65,6 @@ describe('AsyncActivityDrawer', () => {
   });
 
   test('failing calls client.activity.completeExceptionally with the plain-text error message', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const received: { call: { token: string; error: unknown } | null } = { call: null };
     const client = {
       activity: {
@@ -93,7 +91,6 @@ describe('AsyncActivityDrawer', () => {
   });
 
   test('a NotFound fault shows the spent-token treatment and hides the form', async () => {
-    const { render, fireEvent, waitFor } = await import('@testing-library/svelte');
     const client = {
       activity: {
         complete: async () => {
@@ -116,7 +113,6 @@ describe('AsyncActivityDrawer', () => {
   });
 
   test('rejects invalid JSON in complete mode without calling the client', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let called = false;
     const client = {
       activity: {

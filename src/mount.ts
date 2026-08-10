@@ -1,16 +1,20 @@
 /**
- * The Bun mount export (plan §1, §3.1, T0.2): `serve({ dashboard: weftConsole() })`
- * serves the built console shell at exactly `DASHBOARD_PAGE_ROUTES` — it never
- * shadows `/api/*` or the root-stable discovery routes, because weft's Bun
- * route table matches those first (see `@lostgradient/weft/server`'s own
- * `DASHBOARD_PAGE_ROUTES` doc comment for why that ordering is load-bearing).
+ * The Bun mount export (plan §1, §3.1, T0.2): `serve({ dashboard: weftConsole(),
+ * dashboardAssets: weftConsoleAssets() })` serves the built console shell at
+ * exactly `DASHBOARD_PAGE_ROUTES` (eight page routes as of
+ * `@lostgradient/weft@0.16.0` — `/`, `/workflows`, `/workflows/*`, `/reviews`,
+ * `/workers`, `/schedules`, `/storage`, `/system`) and the shell's
+ * content-hashed JS/CSS under `/assets/*`. It never shadows `/api/*` or the
+ * root-stable discovery routes, because weft's Bun route table matches those
+ * first (see `@lostgradient/weft/server`'s own `DASHBOARD_PAGE_ROUTES` doc
+ * comment for why that ordering is load-bearing).
  *
  * @module mount
  */
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { DashboardRouteTarget } from '@lostgradient/weft/server';
+import type { DashboardAssets, DashboardRouteTarget } from '@lostgradient/weft/server';
 
 export interface WeftConsoleOptions {
   /**
@@ -39,4 +43,21 @@ export function weftConsole(options: WeftConsoleOptions = {}): DashboardRouteTar
   return new Response(Bun.file(indexPath), {
     headers: { 'content-type': 'text/html; charset=utf-8' },
   });
+}
+
+/**
+ * Returns the `ServeOptions.dashboardAssets` descriptor for the console's
+ * content-hashed asset files, suitable for
+ * `serve({ dashboard: weftConsole(), dashboardAssets: weftConsoleAssets() })`
+ * (`@lostgradient/weft@0.16.0`, weft#840). The shell's `index.html`
+ * references its JS/CSS chunks under `/assets/*`; weft mounts
+ * `${prefix}/*` as verified static file routes from `directory`, so a bare
+ * Bun mount serves the complete console with no reverse proxy in front.
+ *
+ * Pass the same `distDir` you passed `weftConsole()` — the directory must
+ * exist before `serve()` is called (weft validates it at boot).
+ */
+export function weftConsoleAssets(options: WeftConsoleOptions = {}): DashboardAssets {
+  const distDir = options.distDir ?? DEFAULT_DIST_DIR;
+  return { prefix: '/assets', directory: join(distDir, 'assets') };
 }

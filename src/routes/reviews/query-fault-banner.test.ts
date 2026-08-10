@@ -1,3 +1,4 @@
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import { HttpClientError } from '@lostgradient/weft/client';
@@ -6,7 +7,6 @@ import QueryFaultBanner from './query-fault-banner.svelte';
 
 describe('QueryFaultBanner', () => {
   test('renders the treatment title and message for a classified fault', async () => {
-    const { render } = await import('@testing-library/svelte');
     const error = new HttpClientError(401, 'authentication required', {
       faultCode: 'Unauthorized',
     });
@@ -17,7 +17,6 @@ describe('QueryFaultBanner', () => {
   });
 
   test('falls back to the unknown treatment for a non-wire error', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(QueryFaultBanner, {
       props: { error: new Error('offline'), onRetry: () => {} },
     });
@@ -26,7 +25,6 @@ describe('QueryFaultBanner', () => {
   });
 
   test('Retry calls onRetry', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let retried = false;
     const error = new HttpClientError(500, 'boom');
     const { getByRole } = render(QueryFaultBanner, {

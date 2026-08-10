@@ -3,6 +3,7 @@
  * lock-states"): the `storage:admin` scope gate.
  */
 import type { HttpClient } from '@lostgradient/weft/client';
+import { render } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { stubStorageFetch } from './storage-fetch-stub.test-support.ts';
@@ -21,7 +22,6 @@ afterEach(() => {
 
 describe('Storage route', () => {
   test('shows a lock state naming the required scope when storage:admin is not granted', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText, queryByRole } = render(StorageRouteHarness, {
       props: { client: fakeClient(), scopes: [] },
     });
@@ -37,7 +37,6 @@ describe('Storage route', () => {
       () => new Response(JSON.stringify({ applied: true }), { status: 200 }),
     );
 
-    const { render } = await import('@testing-library/svelte');
     const { getByText, queryByText } = render(StorageRouteHarness, {
       props: { client: fakeClient() },
     });
@@ -52,7 +51,6 @@ describe('Storage route', () => {
       () => new Response(JSON.stringify({ applied: true }), { status: 200 }),
     );
 
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(StorageRouteHarness, { props: { client: fakeClient() } });
 
     expect(getByText(/used internally by the/)).not.toBeNull();

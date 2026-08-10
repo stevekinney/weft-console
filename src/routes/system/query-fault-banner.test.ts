@@ -6,6 +6,7 @@
  * same `faultTreatment` classification and renders the shared banner
  * classes.
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import { HttpClientError } from '@lostgradient/weft/client';
@@ -14,7 +15,6 @@ import QueryFaultBanner from './query-fault-banner.svelte';
 
 describe('QueryFaultBanner', () => {
   test('renders the not-found treatment with a neutral tone', async () => {
-    const { render } = await import('@testing-library/svelte');
     const error = new HttpClientError(404, 'Workflow wf_missing not found.');
     const { container, getByText } = render(QueryFaultBanner, { props: { error } });
 
@@ -24,7 +24,6 @@ describe('QueryFaultBanner', () => {
   });
 
   test('renders the unauthorized treatment with a danger tone', async () => {
-    const { render } = await import('@testing-library/svelte');
     const error = new HttpClientError(403, 'Requires system:admin.', { faultCode: 'Forbidden' });
     const { container, getByText } = render(QueryFaultBanner, { props: { error } });
 
@@ -33,7 +32,6 @@ describe('QueryFaultBanner', () => {
   });
 
   test('shows a Retry button and calls onRetry when clicked', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let retried = 0;
     const error = new HttpClientError(500, 'boom');
     const { getByRole } = render(QueryFaultBanner, {
@@ -45,14 +43,12 @@ describe('QueryFaultBanner', () => {
   });
 
   test('omits the Retry button when onRetry is not provided', async () => {
-    const { render } = await import('@testing-library/svelte');
     const error = new HttpClientError(500, 'boom');
     const { queryByRole } = render(QueryFaultBanner, { props: { error } });
     expect(queryByRole('button', { name: 'Retry' })).toBeNull();
   });
 
   test('an unclassifiable error falls back to the internal treatment', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(QueryFaultBanner, { props: { error: new Error('network down') } });
     expect(getByText('Something went wrong')).not.toBeNull();
   });

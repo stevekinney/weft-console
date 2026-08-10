@@ -1,3 +1,4 @@
+import { render, waitFor } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type {
@@ -48,8 +49,6 @@ function baseClient(
 
 describe('LineagePanel', () => {
   test('renders no forked-from row, no continuation chain, and an empty children note for a normal run', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
-
     const { getByText, queryByText } = render(LineagePanelHarness, {
       props: { client: baseClient(), workflow: workflow() },
     });
@@ -63,7 +62,6 @@ describe('LineagePanel', () => {
   });
 
   test('renders the forked-from row using the source workflow type as the link label', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const client = baseClient({
       get: async (id) =>
         id === 'wf_source' ? workflow({ id: 'wf_source', type: 'reconcile-ledger' }) : null,
@@ -83,7 +81,6 @@ describe('LineagePanel', () => {
   });
 
   test('falls back to a truncated-id label when the forked-from source is no longer visible', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const client = baseClient();
 
     const { getByText } = render(LineagePanelHarness, {
@@ -101,7 +98,6 @@ describe('LineagePanel', () => {
   });
 
   test('renders real, clickable child workflow rows from client.list({ parentWorkflowId }) (weft#732 item 1)', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const client = baseClient({
       list: async () => ({
         items: [
@@ -132,7 +128,6 @@ describe('LineagePanel', () => {
   });
 
   test('shows a "+N more" note when the parent has more children than the preview limit', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const client = baseClient({
       list: async () => ({
         items: [
@@ -161,7 +156,6 @@ describe('LineagePanel', () => {
   });
 
   test('renders the real schedule-provenance row when the run was schedule-launched (weft#732 item 3)', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const client = baseClient({
       scheduleProvenance: async () => ({
         scheduleId: 'nightly-reconcile',
@@ -179,7 +173,6 @@ describe('LineagePanel', () => {
   });
 
   test('renders no schedule-provenance row for a non-schedule-launched run', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const client = baseClient();
 
     const { queryByText, getByText } = render(LineagePanelHarness, {
@@ -193,7 +186,6 @@ describe('LineagePanel', () => {
   });
 
   test('renders the continuation chain — previous run (no fabricated status), this run, no successor — for a start-new replacement (weft#732 item 2)', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const client = baseClient();
 
     const { getByText } = render(LineagePanelHarness, {
@@ -218,7 +210,6 @@ describe('LineagePanel', () => {
   });
 
   test('renders no continuation chain when the run was not started via start-new', async () => {
-    const { render, waitFor } = await import('@testing-library/svelte');
     const client = baseClient();
 
     const { queryByText, getByText } = render(LineagePanelHarness, {

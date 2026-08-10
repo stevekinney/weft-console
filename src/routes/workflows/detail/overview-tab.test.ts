@@ -1,3 +1,4 @@
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { PaginatedResult, WorkflowState, WorkflowSummary } from '@lostgradient/weft';
@@ -35,7 +36,6 @@ function baseClient() {
 
 describe('OverviewTab', () => {
   test('running workflow shows the pending-result message, not a result panel', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText, queryByText } = render(OverviewTabHarness, {
       props: { client: baseClient(), workflow: workflow({ status: 'running' }) },
     });
@@ -45,7 +45,6 @@ describe('OverviewTab', () => {
   });
 
   test('completed workflow shows a Result panel', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(OverviewTabHarness, {
       props: {
         client: baseClient(),
@@ -57,7 +56,6 @@ describe('OverviewTab', () => {
   });
 
   test('failed workflow shows the failure-category badge and plain-language explanation', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(OverviewTabHarness, {
       props: {
         client: baseClient(),
@@ -75,7 +73,6 @@ describe('OverviewTab', () => {
   });
 
   test('cancelled workflow shows a neutral no-result message', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(OverviewTabHarness, {
       props: { client: baseClient(), workflow: workflow({ status: 'cancelled' }) },
     });
@@ -84,7 +81,6 @@ describe('OverviewTab', () => {
   });
 
   test('renders existing tags', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(OverviewTabHarness, {
       props: { client: baseClient(), workflow: workflow({ tags: ['prod', 'tier-1'] }) },
     });
@@ -94,7 +90,6 @@ describe('OverviewTab', () => {
   });
 
   test('adding a tag calls client.addTags with the trimmed value', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const added: { tag: string | null } = { tag: null };
     const client = {
       ...baseClient(),

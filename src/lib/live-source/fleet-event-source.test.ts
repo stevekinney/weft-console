@@ -1,3 +1,4 @@
+import { waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { RECONNECT_BASE_DELAY_MS } from './backoff.ts';
@@ -106,11 +107,6 @@ function pingChunk(replayComplete = false): string {
   return `event: ping\ndata: ${JSON.stringify({ emittedAtMs: 0, replayComplete })}\n\n`;
 }
 
-async function waitForCondition(): Promise<typeof import('@testing-library/svelte').waitFor> {
-  const { waitFor } = await import('@testing-library/svelte');
-  return waitFor;
-}
-
 let scripted: ScriptedFetch;
 
 afterEach(() => {
@@ -141,7 +137,6 @@ describe('FleetEventSource', () => {
         }),
       ]),
     );
-    const waitFor = await waitForCondition();
 
     const source = new FleetEventSource({ baseUrl: '' });
     const received: FleetEventFrame[] = [];
@@ -201,7 +196,6 @@ describe('FleetEventSource', () => {
         }),
       ]),
     );
-    const waitFor = await waitForCondition();
 
     const source = new FleetEventSource({ baseUrl: '' });
     const workflowOnly: FleetEventFrame[] = [];
@@ -280,7 +274,6 @@ describe('FleetEventSource', () => {
         }),
       ]),
     );
-    const waitFor = await waitForCondition();
 
     const source = new FleetEventSource({ baseUrl: '', computeReconnectDelayMs: () => 1 });
     const received: FleetEventFrame[] = [];
@@ -299,7 +292,6 @@ describe('FleetEventSource', () => {
     scripted = new ScriptedFetch();
     scripted.enqueue(() => new Response('nope', { status: 500 }));
     scripted.enqueue(openSseResponse([pingChunk(true)]));
-    const waitFor = await waitForCondition();
 
     const source = new FleetEventSource({ baseUrl: '', computeReconnectDelayMs: () => 1 });
     source.subscribe(() => {});
@@ -375,7 +367,6 @@ describe('FleetEventSource', () => {
         }),
       ]),
     );
-    const waitFor = await waitForCondition();
 
     const source = new FleetEventSource({ baseUrl: '' });
     const received: FleetEventFrame[] = [];
@@ -393,7 +384,6 @@ describe('FleetEventSource', () => {
     scripted = new ScriptedFetch();
     scripted.enqueue(finiteSseResponse([pingChunk(true)]));
     scripted.enqueue(openSseResponse([]));
-    const waitFor = await waitForCondition();
 
     // A delay wide enough that the `caughtUp === true` window below is
     // reliably observable before the reconnect (triggered by

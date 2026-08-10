@@ -3,6 +3,7 @@
  * fault, 3-step onboarding empty state, the definitions list, and drilling
  * into a definition's detail panel (Appendix B: "Registry (schema tree)").
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { createQueryClient } from '../../lib/query.ts';
@@ -18,7 +19,6 @@ afterEach(() => {
 });
 
 async function renderRegistryTab() {
-  const { render } = await import('@testing-library/svelte');
   return render(SystemRouteTestHarness, {
     props: { client: realClient(), queryClient: createQueryClient(), component: RegistryTab },
   });
@@ -71,7 +71,6 @@ describe('RegistryTab', () => {
     });
 
     const { findByText, findAllByText, getByRole } = await renderRegistryTab();
-    const { fireEvent } = await import('@testing-library/svelte');
 
     expect(await findByText('order-processing')).not.toBeNull();
     expect(await findByText('chargeCard')).not.toBeNull();

@@ -3,6 +3,7 @@
  * found/loading/fault states").
  */
 import type { HttpClient } from '@lostgradient/weft/client';
+import { fireEvent, render } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import GetPanelHarness from './get-panel-test-harness.test-harness.svelte';
@@ -21,7 +22,6 @@ afterEach(() => {
 
 describe('GetPanel', () => {
   test('shows a prompt before any lookup', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(GetPanelHarness, { props: { client: fakeClient() } });
 
     expect(getByText('Enter a key')).not.toBeNull();
@@ -32,7 +32,6 @@ describe('GetPanel', () => {
       () => new Response(new TextEncoder().encode('{"owner":"ops"}'), { status: 200 }),
     );
 
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getByLabelText, getByText, findByText } = render(GetPanelHarness, {
       props: { client: fakeClient() },
     });
@@ -46,7 +45,6 @@ describe('GetPanel', () => {
   test('shows a not-found empty state for a missing key', async () => {
     activeStub = stubStorageFetch(() => new Response(null, { status: 404 }));
 
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getByLabelText, getByText, findByText } = render(GetPanelHarness, {
       props: { client: fakeClient() },
     });
@@ -66,7 +64,6 @@ describe('GetPanel', () => {
         }),
     );
 
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getByLabelText, getByText, findByText } = render(GetPanelHarness, {
       props: { client: fakeClient() },
     });

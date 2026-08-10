@@ -1,3 +1,4 @@
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { FaultTreatment } from '../../lib/faults.ts';
@@ -5,7 +6,6 @@ import FaultBanner from './fault-banner.svelte';
 
 describe('FaultBanner', () => {
   test('renders the treatment title and message', async () => {
-    const { render } = await import('@testing-library/svelte');
     const treatment: FaultTreatment = { kind: 'not-found', message: 'Schedule not found.' };
 
     const { getByText } = render(FaultBanner, { props: { treatment } });
@@ -15,7 +15,6 @@ describe('FaultBanner', () => {
   });
 
   test('shows the JSON-RPC hint only for a REST-masked internal fault', async () => {
-    const { render } = await import('@testing-library/svelte');
     const masked: FaultTreatment = {
       kind: 'internal',
       message: 'Something went wrong.',
@@ -40,7 +39,6 @@ describe('FaultBanner', () => {
   });
 
   test('renders a Retry button only when onRetry is supplied', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const treatment: FaultTreatment = { kind: 'not-supported', message: 'Not supported here.' };
 
     const { queryByRole, getByRole, rerender } = render(FaultBanner, {

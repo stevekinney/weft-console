@@ -2,6 +2,7 @@
  * Component tests for `<NotificationBell>` (design `Weft New Surfaces.dc.html`
  * §C: bell + dropdown, grouped Critical/Warning/Info, "Mark all read").
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { FleetEventFrame } from '../../lib/live-source/fleet-event-source.svelte.ts';
@@ -14,7 +15,6 @@ function fleetFrame(kind: string, overrides: Partial<FleetEventFrame> = {}): Fle
 
 describe('NotificationBell', () => {
   test('shows no unread count badge when there are no notifications', async () => {
-    const { render } = await import('@testing-library/svelte');
     const store = new NotificationStore();
     const { getByRole, container } = render(NotificationBell, {
       props: { store, liveStatus: 'live' },
@@ -25,7 +25,6 @@ describe('NotificationBell', () => {
   });
 
   test('shows the unread count badge and grouped items after opening', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const store = new NotificationStore();
     store.ingest(fleetFrame('alert:fired', { cursor: 'c1', payload: { name: 'dlq' } }));
     store.ingest(fleetFrame('schedule:missed-fire', { cursor: 'c2' }));
@@ -46,7 +45,6 @@ describe('NotificationBell', () => {
   });
 
   test('empty state renders when there are no items yet', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const store = new NotificationStore();
     const { getByRole, getByText } = render(NotificationBell, {
       props: { store, liveStatus: 'live' },
@@ -58,7 +56,6 @@ describe('NotificationBell', () => {
   });
 
   test('"Mark all read" clears the unread count', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const store = new NotificationStore();
     store.ingest(fleetFrame('workflow:started', { cursor: 'c1', workflowId: 'wf-1' }));
     store.ingest(fleetFrame('workflow:completed', { cursor: 'c2', workflowId: 'wf-2' }));
@@ -71,7 +68,6 @@ describe('NotificationBell', () => {
   });
 
   test('clicking a notification marks it read and navigates', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const store = new NotificationStore();
     store.ingest(fleetFrame('workflow:started', { cursor: 'c1', workflowId: 'wf-1' }));
 

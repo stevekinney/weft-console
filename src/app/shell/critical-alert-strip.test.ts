@@ -2,6 +2,7 @@
  * Component tests for `<CriticalAlertStrip>` (design `Weft New Surfaces.dc.html`
  * §C: "Critical strip below header, dismissible").
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { FleetEventFrame } from '../../lib/live-source/fleet-event-source.svelte.ts';
@@ -14,7 +15,6 @@ function fleetFrame(kind: string, overrides: Partial<FleetEventFrame> = {}): Fle
 
 describe('CriticalAlertStrip', () => {
   test('renders nothing when there are no unread critical items', async () => {
-    const { render } = await import('@testing-library/svelte');
     const store = new NotificationStore();
     const { container } = render(CriticalAlertStrip, { props: { store } });
 
@@ -22,7 +22,6 @@ describe('CriticalAlertStrip', () => {
   });
 
   test('renders one row per unread critical item, ignoring warning/info tiers', async () => {
-    const { render } = await import('@testing-library/svelte');
     const store = new NotificationStore();
     store.ingest(fleetFrame('alert:fired', { cursor: 'c1', payload: { name: 'dlq' } }));
     store.ingest(fleetFrame('task:dead-lettered', { cursor: 'c2' }));
@@ -34,7 +33,6 @@ describe('CriticalAlertStrip', () => {
   });
 
   test('dismissing a row calls dismissCritical and removes it from the strip', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const store = new NotificationStore();
     store.ingest(fleetFrame('alert:fired', { cursor: 'c1', payload: { name: 'dlq' } }));
 

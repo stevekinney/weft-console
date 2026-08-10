@@ -17,6 +17,7 @@
  * (`fault-boundary.svelte`, `schedules/fault-banner.svelte`,
  * `system/query-fault-banner.svelte`, …).
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { DetachedWindowAPI } from 'happy-dom';
 
@@ -48,7 +49,6 @@ afterEach(() => {
 });
 
 async function renderWorkersRoute() {
-  const { render } = await import('@testing-library/svelte');
   return render(WorkersRouteTestHarness, {
     props: {
       client: realClient(),
@@ -111,7 +111,6 @@ describe('Workers route — fault title mapping', () => {
     });
 
     const { findByRole, findByText, queryByText } = await renderWorkersRoute();
-    const { fireEvent } = await import('@testing-library/svelte');
 
     await fireEvent.click(await findByRole('tab', { name: 'Task queues' }));
 

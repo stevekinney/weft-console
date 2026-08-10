@@ -1,3 +1,4 @@
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import AdvancedOptions from './advanced-options.svelte';
@@ -5,7 +6,6 @@ import { EMPTY_ADVANCED_START_OPTIONS } from './start-wizard-state.ts';
 
 describe('AdvancedOptions', () => {
   test('renders the collapsible trigger', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(AdvancedOptions, {
       props: { value: EMPTY_ADVANCED_START_OPTIONS, onChange: () => {} },
     });
@@ -23,7 +23,6 @@ describe('AdvancedOptions', () => {
   // a real bindable prop specifically so tests (and any future "expand all"
   // caller) don't need to.
   test('editing the id field calls onChange with the updated value', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let latest = EMPTY_ADVANCED_START_OPTIONS;
     const { getByLabelText } = render(AdvancedOptions, {
       props: {
@@ -42,7 +41,6 @@ describe('AdvancedOptions', () => {
   });
 
   test('"Add attribute" appends a blank row', async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let latest = EMPTY_ADVANCED_START_OPTIONS;
     const { getByRole } = render(AdvancedOptions, {
       props: {

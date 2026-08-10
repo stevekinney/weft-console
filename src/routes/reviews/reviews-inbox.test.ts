@@ -8,6 +8,7 @@
  * "all caught up" / "no decisions yet" empty state a failed fetch would
  * otherwise fall through to via `?? []`.
  */
+import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
 import type { ReviewListEntry } from '@lostgradient/weft';
@@ -40,7 +41,6 @@ function fakeClient(): HttpClient {
 
 describe('ReviewsInbox', () => {
   test('shows a fault banner instead of "All caught up" when the pending query errors', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText, queryByText } = render(ReviewsInboxTestHarness, {
       props: {
         client: fakeClient(),
@@ -59,7 +59,6 @@ describe('ReviewsInbox', () => {
   });
 
   test("Retry on the fault banner calls the failed query's refetch", async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     let refetched = false;
     const { getByRole } = render(ReviewsInboxTestHarness, {
       props: {
@@ -81,7 +80,6 @@ describe('ReviewsInbox', () => {
   });
 
   test('renders the ordinary empty state when the pending query succeeds with no data', async () => {
-    const { render } = await import('@testing-library/svelte');
     const { getByText } = render(ReviewsInboxTestHarness, {
       props: {
         client: fakeClient(),
@@ -94,7 +92,6 @@ describe('ReviewsInbox', () => {
   });
 
   test("switching to Decided surfaces the completed query's error, not the pending query's", async () => {
-    const { render, fireEvent } = await import('@testing-library/svelte');
     const { getByRole, getByText, queryByText } = render(ReviewsInboxTestHarness, {
       props: {
         client: fakeClient(),
