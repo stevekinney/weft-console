@@ -34,42 +34,19 @@
  * the gap.
  */
 import { Engine, RemoteWorker } from '@lostgradient/weft';
-import { serve } from '@lostgradient/weft/server';
+import { AUTHORIZATION_SCOPES, serve } from '@lostgradient/weft/server';
 
 import { seed, workflows } from '../../fixtures/workflows.ts';
 import { E2E_API_KEY, E2E_DEPLOYMENT_NAME, E2E_SERVER_PORT } from './e2e-constants.ts';
 
-// Mirrors `weft/src/server/authorization-scope.ts`'s `AUTHORIZATION_SCOPES`
-// (not a public export — `src/lib/scopes.svelte.ts` keeps its own copy for
-// the same reason, see that module's doc). This file can't import that
-// module instead: it's a `.svelte.ts` rune-backed module that only parses
-// under the Svelte compiler, and this script runs as plain Bun. Left
-// untyped (no `AuthorizationScope` annotation, also not a public export)
-// so each literal is checked contextually against `AuthConfig`'s own type
-// at the `auth: { defaultApiKeyScopes: ALL_SCOPES }` call site below.
-const ALL_SCOPES = [
-  'workflows:read',
-  'workflows:write',
-  'workflows:admin',
-  'schedules:read',
-  'schedules:write',
-  'signals:write',
-  'updates:write',
-  'queries:read',
-  'reviews:read',
-  'reviews:write',
-  'attributes:read',
-  'attributes:write',
-  'tags:write',
-  'streams:read',
-  'events:read',
-  'storage:read',
-  'storage:write',
-  'storage:admin',
-  'workers:write',
-  'system:read',
-  'system:admin',
-] as const;
+// `AUTHORIZATION_SCOPES` became a public export of
+// `@lostgradient/weft/server` in weft 0.18.0, so this file no longer keeps a
+// hand-copied list that could drift from the runtime's own vocabulary. (The
+// console's `src/lib/scopes.svelte.ts` still keeps a browser-safe copy —
+// importing the server barrel into bundled code would pull weft's server
+// module graph into the browser — but that copy is now pinned
+// byte-identical against this same export by `scopes.svelte.test.ts`.)
+const ALL_SCOPES = AUTHORIZATION_SCOPES;
 
 const engine = await Engine.create({ workflows });
 

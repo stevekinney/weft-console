@@ -197,6 +197,7 @@
         categoryKey="label"
         series={[{ id: 'count', label: 'Count', valueKey: 'count' }]}
         orientation="horizontal"
+        tooltip
       />
 
       <table class="weft-aggregate-view__table">

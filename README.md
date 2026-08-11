@@ -30,19 +30,21 @@ production mount path this package exists for — `serve({ dashboard: weftConsol
 runtime-verified the same way: a real `serve({ engine, dashboard: weftConsole() })` instance returns
 the built shell (`index.html` with its `weft-console-config` block) at `200`.
 
-**A real dev harness needs a real credential, not `unauthenticatedAccess`.** `unauthenticatedAccess`
-only controls whether `serve()` refuses to _start_ with no `auth` configured — it has no per-request
-effect once running. A credential-less request always resolves to a zero-scope anonymous principal,
-so only `access: 'public'` operations (most workflow reads and single-item actions) succeed against
-`bun run dev:server` out of the box; `access: 'scoped'`/`'authenticated'` operations (schedules,
-reviews, storage, system/registry, …) correctly 401 — confirmed live
-(`curl localhost:7233/api/v1/schedules` → `401 {"error":"authentication required"}`). This is
-narrower than `@lostgradient/weft@0.11.0`'s workaround, which hand-injected a full-scope principal
-on every request regardless of credentials; `serve()` has no equivalent hook. `src/lib/scopes.svelte.ts`
-already designs the console around exactly this (optimistic scope grant, graceful 401/403 degrade),
-so the console itself renders correctly either way — it just shows real auth-required states for
-those surfaces in the dev harness until a real `auth` config (and a matching token the console
-sends) is wired up, which is a deliberate follow-up, not done here.
+**A real dev harness needs a real credential, not `unauthenticatedAccess`** — and now has one.
+`unauthenticatedAccess` only controls whether `serve()` refuses to _start_ with no `auth`
+configured; it has no per-request effect once running, so a credential-less request always resolves
+to a zero-scope anonymous principal and every `access: 'scoped'`/`'authenticated'` operation
+(schedules, reviews, storage, system/registry, …) correctly 401s.
+
+That was survivable while `src/lib/scopes.svelte.ts` optimistically granted every scope and degraded
+on observed `403`s. As of the weft 0.18.0 adoption it no longer does: `resolvePrincipal()` calls
+`weft.system.principal` and reports the server's real answer, so an unauthenticated dev server would
+render every scope-gated control disabled-with-reason — truthful, but useless for building those
+surfaces. So `bun run dev:server` now configures `auth` with a fixed, localhost-only dev key
+(`scripts/dev-credentials.ts`) and the Vite dev proxy attaches it to every proxied request and
+WebSocket upgrade. The frozen `index.html`/`client.ts` runtime-config contract is untouched and
+`vite build` never reaches that code, so no token can reach a build artifact. Net effect: scoped
+surfaces work in the dev harness now, where they previously 401'd.
 
 ## Scripts
 

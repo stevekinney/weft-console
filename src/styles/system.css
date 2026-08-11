@@ -11,6 +11,10 @@
 @import '@lostgradient/cinder/code-block/styles';
 @import '@lostgradient/cinder/connection-indicator/styles';
 @import '@lostgradient/cinder/line-chart/styles';
+/* LineChart's opt-in `tooltip` renders through Popover (cinder 0.23's shared
+ * `_internal/chart-tooltip.svelte`), and cinder ships per-component CSS — without
+ * this the tooltip mounts unstyled and unpositioned. */
+@import '@lostgradient/cinder/popover/styles';
 @import '@lostgradient/cinder/segmented-control/styles';
 @import '@lostgradient/cinder/statistic/styles';
 @import '@lostgradient/cinder/statistic-group/styles';

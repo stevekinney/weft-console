@@ -44,11 +44,15 @@
  * every request regardless of credentials — `serve()` has no equivalent
  * hook; the only way to grant elevated scopes to anonymous callers would be
  * `serve({ auth: { apiKeys: […] } })` plus a matching token the console
- * itself sends, which is a real design decision (touches the frozen
- * `index.html`/`client.ts` runtime-config contract), not made here.
- * `src/lib/scopes.svelte.ts`'s module doc already designs the console
- * around exactly this: optimistic scope grant, graceful 401/403 degrade —
- * this dev harness is a real instance of that degrade, not a bug in it.
+ * itself sends — which is exactly what this harness now does, as of the
+ * weft 0.18.0 adoption. The deferral reasoned that it "touches the frozen
+ * `index.html`/`client.ts` runtime-config contract"; it turns out not to,
+ * because `vite.config.ts`'s dev proxy attaches the header on the way
+ * through and no build artifact ever carries a token. See
+ * `scripts/dev-credentials.ts` for why an authenticated harness became
+ * necessary once `resolvePrincipal()` started reporting the server's real
+ * answer instead of optimistically granting every scope. Scoped surfaces
+ * (schedules, storage, system, workers) work here now; they used to 401.
  * This is a dev-only harness serving a `MemoryStorage`-backed engine on
  * localhost; there is no real access boundary to preserve for what IS
  * reachable.
@@ -84,7 +88,9 @@
  * `/v1/health` alone.
  */
 import { Engine } from '@lostgradient/weft';
-import { serve } from '@lostgradient/weft/server';
+import { AUTHORIZATION_SCOPES, serve } from '@lostgradient/weft/server';
+
+import { DEV_API_KEY } from './dev-credentials.ts';
 
 import { seed, workflows } from '../fixtures/workflows.ts';
 
@@ -95,7 +101,7 @@ const engine = await Engine.create({ workflows });
 const server = serve({
   engine,
   port: PORT,
-  unauthenticatedAccess: 'warn',
+  auth: { apiKeys: [DEV_API_KEY], defaultApiKeyScopes: AUTHORIZATION_SCOPES },
 });
 
 await seed(engine);

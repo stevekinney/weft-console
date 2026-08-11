@@ -73,7 +73,7 @@
       <div class="weft-workers-panel__header">Activities</div>
       <div class="weft-worker-detail__activities">
         {#each worker.activities as activity (activity)}
-          <Badge variant="neutral" monochrome>{activity}</Badge>
+          <Badge variant="neutral" monospace>{activity}</Badge>
         {/each}
       </div>
     </div>

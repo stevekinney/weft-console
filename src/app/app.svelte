@@ -26,10 +26,6 @@
   const queryClient = createQueryClient();
   const config: WeftConsoleRuntimeConfig = readRuntimeConfig();
 
-  function hasInlineCredential(cfg: WeftConsoleRuntimeConfig): boolean {
-    return cfg.token !== undefined || cfg.headers?.['Authorization'] !== undefined;
-  }
-
   type BootPhase =
     | { readonly status: 'resolving' }
     | { readonly status: 'needs-api-key' }
@@ -41,7 +37,7 @@
     let cancelled = false;
     const initialClient = createClient(config);
 
-    resolvePrincipal(initialClient, { credentialed: hasInlineCredential(config) }).then(
+    resolvePrincipal(initialClient).then(
       (principal) => {
         if (cancelled) return;
         phase =
@@ -71,7 +67,7 @@
 
   async function onApiKeySubmit(apiKey: string): Promise<void> {
     const client = setApiKey(config, apiKey);
-    const principal = await resolvePrincipal(client, { credentialed: true });
+    const principal = await resolvePrincipal(client);
     if (principal === null) {
       throw new Error('This API key was not accepted.');
     }

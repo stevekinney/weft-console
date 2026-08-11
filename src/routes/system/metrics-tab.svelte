@@ -147,6 +147,7 @@
           label={metric.label}
           height={140}
           legendPosition="none"
+          tooltip
           series={[
             { id: metric.name, label: metric.label, data: [...history.series(metric.name)] },
           ]}

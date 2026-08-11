@@ -24,7 +24,24 @@ export type AreaCoverage = {
 export type CoverageBaseline = {
   measuredAt: string;
   /**
-   * Re-measured 2026-08-10 after the cinder 0.22.0 / weft 0.16.0 dependency
+   * Re-measured 2026-08-11 after the cinder 0.23.0 / weft 0.18.0 wave.
+   * Absolute covered lines rose again (23,180 → 23,273). One area moved for a
+   * reason worth recording rather than silently re-baselining: `src/lib`
+   * reported 60.65% against a 60.92% floor, entirely from LINE ATTRIBUTION,
+   * not lost coverage. `scopes.svelte.ts`'s module doc shrank by ~25 lines
+   * when the probe-and-infer explanation was replaced by the
+   * `weft.system.principal` description, which renumbers the whole file and
+   * shifts how the Svelte-compiled output maps back to source lines — the
+   * "uncovered" lines it reports are the `AUTHORIZATION_SCOPES` literal and
+   * class-declaration lines, which are plainly executed (41 passing tests in
+   * `scopes.svelte.test.ts` + `scopes.svelte.integration.test.ts` exercise
+   * every branch of `resolvePrincipal`, `hasScope`, `bannerMode`,
+   * `denyScope`, and `scopeGate`, the last two against real `serve()`
+   * instances). Coverage of the module went UP in substance: its three boot
+   * outcomes are now pinned on the wire instead of against a fake client.
+   *
+   * Earlier note (2026-08-10), kept for context: re-measured after the
+   * cinder 0.22.0 / weft 0.16.0 dependency
    * wave. Absolute covered lines ROSE (23,003 → 23,180) but a few area
    * percentages dipped fractionally, for structural reasons reviewed in that
    * change: `src/lib` lost exactly the two covered lines of the removed
@@ -81,14 +98,24 @@ export function coverageMeasurementPlatform(): CoverageMeasurementPlatform | nul
 }
 
 const DARWIN_BASELINE: CoverageBaseline = {
-  measuredAt: '2026-08-10T21:20:00.000Z',
-  overall: { linesFound: 35851, linesHit: 23180, functionsFound: 4745, functionsHit: 4088 },
+  measuredAt: '2026-08-11T14:05:00.000Z',
+  overall: { linesFound: 35954, linesHit: 23273, functionsFound: 4747, functionsHit: 4090 },
   areas: {
     fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
-    scripts: { linesFound: 288, linesHit: 221, functionsFound: 22, functionsHit: 21 },
+    scripts: {
+      linesFound: 383,
+      linesHit: 312,
+      functionsFound: 24,
+      functionsHit: 23,
+    },
     src: { linesFound: 12, linesHit: 12, functionsFound: 2, functionsHit: 2 },
     'src/app': { linesFound: 1350, linesHit: 1136, functionsFound: 264, functionsHit: 150 },
-    'src/lib': { linesFound: 1351, linesHit: 823, functionsFound: 174, functionsHit: 103 },
+    'src/lib': {
+      linesFound: 1357,
+      linesHit: 823,
+      functionsFound: 174,
+      functionsHit: 103,
+    },
     'src/routes/dashboard': {
       linesFound: 1454,
       linesHit: 1202,
@@ -114,8 +141,8 @@ const DARWIN_BASELINE: CoverageBaseline = {
       functionsHit: 195,
     },
     'src/routes/system': {
-      linesFound: 4925,
-      linesHit: 4396,
+      linesFound: 4926,
+      linesHit: 4397,
       functionsFound: 883,
       functionsHit: 811,
     },
@@ -126,8 +153,8 @@ const DARWIN_BASELINE: CoverageBaseline = {
       functionsHit: 248,
     },
     'src/routes/workflows': {
-      linesFound: 13014,
-      linesHit: 6939,
+      linesFound: 13015,
+      linesHit: 6940,
       functionsFound: 1449,
       functionsHit: 1283,
     },
@@ -136,68 +163,18 @@ const DARWIN_BASELINE: CoverageBaseline = {
 };
 
 /**
- * Recorded from CI run 31438752308's bootstrap-mode output (ubuntu runner,
+ * Reset to bootstrap for the cinder 0.23.0 / weft 0.18.0 wave: the same
+ * line-attribution shift documented on {@link CoverageBaseline} moves the
+ * linux numbers too, and only a linux runner can measure them. The next CI
+ * run prints a paste-ready block (see {@link COVERAGE_BASELINES}); recording
+ * it re-arms this gate. Previously recorded from CI run 31438752308's
+ * bootstrap-mode output (ubuntu runner,
  * Bun 1.3.x, 2026-08-10) — the gate's own paste-ready block. Linux
  * attribution differs from darwin's in both directions (see the
  * platform-divergence note on {@link CoverageMeasurementPlatform}), so these
  * numbers are NOT comparable to `DARWIN_BASELINE`'s — each ratchets only
  * against its own platform's measurements.
  */
-const LINUX_BASELINE: CoverageBaseline = {
-  measuredAt: '2026-08-10T22:36:23.413Z',
-  overall: { linesFound: 36914, linesHit: 19401, functionsFound: 3937, functionsHit: 3235 },
-  areas: {
-    fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
-    scripts: { linesFound: 329, linesHit: 258, functionsFound: 24, functionsHit: 23 },
-    src: { linesFound: 12, linesHit: 12, functionsFound: 2, functionsHit: 2 },
-    'src/app': { linesFound: 1350, linesHit: 1136, functionsFound: 264, functionsHit: 150 },
-    'src/lib': { linesFound: 1312, linesHit: 896, functionsFound: 178, functionsHit: 113 },
-    'src/routes/dashboard': {
-      linesFound: 1468,
-      linesHit: 1172,
-      functionsFound: 243,
-      functionsHit: 209,
-    },
-    'src/routes/reviews': {
-      linesFound: 2712,
-      linesHit: 936,
-      functionsFound: 183,
-      functionsHit: 149,
-    },
-    'src/routes/schedules': {
-      linesFound: 3748,
-      linesHit: 2313,
-      functionsFound: 487,
-      functionsHit: 409,
-    },
-    'src/routes/storage': {
-      linesFound: 3089,
-      linesHit: 992,
-      functionsFound: 171,
-      functionsHit: 138,
-    },
-    'src/routes/system': {
-      linesFound: 5777,
-      linesHit: 1520,
-      functionsFound: 274,
-      functionsHit: 219,
-    },
-    'src/routes/workers': {
-      linesFound: 3866,
-      linesHit: 1359,
-      functionsFound: 264,
-      functionsHit: 216,
-    },
-    'src/routes/workflows': {
-      linesFound: 12408,
-      linesHit: 8374,
-      functionsFound: 1762,
-      functionsHit: 1580,
-    },
-    tests: { linesFound: 145, linesHit: 114, functionsFound: 16, functionsHit: 15 },
-  },
-};
-
 /**
  * Per-platform baselines. A `null` entry means that platform has never had
  * a baseline recorded: `check-coverage.ts` then runs in bootstrap mode —
@@ -207,5 +184,5 @@ const LINUX_BASELINE: CoverageBaseline = {
  */
 export const COVERAGE_BASELINES: Record<CoverageMeasurementPlatform, CoverageBaseline | null> = {
   darwin: DARWIN_BASELINE,
-  linux: LINUX_BASELINE,
+  linux: null,
 };

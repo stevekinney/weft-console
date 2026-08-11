@@ -161,7 +161,7 @@
     <div class="weft-workflow-detail__identity">
       <div class="weft-workflow-detail__badges">
         <h1 class="weft-workflow-detail__title">{workflow.type}</h1>
-        <Badge variant="accent" monochrome>v{workflow.versionTuple.workflowVersion}</Badge>
+        <Badge variant="accent" monospace>v{workflow.versionTuple.workflowVersion}</Badge>
         {#if presentation.tooltip}
           <Tooltip text={presentation.tooltip}>
             <Badge variant={presentation.variant}>

@@ -21,6 +21,8 @@
  * not a correctness issue. */
 @import '@lostgradient/cinder/badge/styles';
 @import '@lostgradient/cinder/bar-chart/styles';
+/* BarChart's opt-in `tooltip` renders through Popover — see system.css. */
+@import '@lostgradient/cinder/popover/styles';
 @import '@lostgradient/cinder/button/styles';
 @import '@lostgradient/cinder/card/styles';
 @import '@lostgradient/cinder/checkbox/styles';

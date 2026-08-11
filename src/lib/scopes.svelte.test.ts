@@ -8,6 +8,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import { HttpClient, HttpClientError } from '@lostgradient/weft/client';
+import { AUTHORIZATION_SCOPES as UPSTREAM_AUTHORIZATION_SCOPES } from '@lostgradient/weft/server';
 
 import {
   AUTHORIZATION_SCOPES,
@@ -22,9 +23,22 @@ import {
 } from './scopes.svelte.ts';
 
 describe('AUTHORIZATION_SCOPES', () => {
+  test('is byte-identical to weft’s own exported vocabulary, in order', () => {
+    // The real drift detector, available since weft 0.18.0 made
+    // `AUTHORIZATION_SCOPES` a public export. The console still keeps its own
+    // copy because `src/lib/scopes.svelte.ts` is bundled for the browser and a
+    // value import from the server barrel would pull weft's server module
+    // graph in with it — but the copy is no longer unverifiable. This test
+    // runs under Bun, where importing the server entry point is free, so a
+    // weft release that adds, removes, or reorders a scope fails here instead
+    // of silently desynchronizing the console's gating vocabulary.
+    expect(AUTHORIZATION_SCOPES).toEqual([...UPSTREAM_AUTHORIZATION_SCOPES]);
+  });
+
   test('is the flat 21-scope vocabulary, verbatim, in order', () => {
-    // Mirrors weft's internal AUTHORIZATION_SCOPES (`weft/src/server/authorization-scope.ts`,
-    // not currently a public export) — this pins the console's copy against drift.
+    // Kept alongside the upstream comparison rather than replaced by it: this
+    // spells the vocabulary out, so a review of a weft bump sees exactly which
+    // scopes changed rather than just "both sides moved together."
     expect(AUTHORIZATION_SCOPES).toEqual([
       'workflows:read',
       'workflows:write',
@@ -55,19 +69,20 @@ describe('AUTHORIZATION_SCOPES', () => {
   });
 });
 
-describe('the missing principal-introspection operation (T1.2 pin)', () => {
+describe('the principal-introspection operation (T1.2 pin, adopted in weft 0.18.0)', () => {
   // Constructing an HttpClient does no network I/O (`operations` is a plain
   // object built synchronously from the static catalog name list) — safe to
   // assert against without a live server.
   const client = new HttpClient({ baseUrl: 'http://localhost:0' });
 
-  test('plan §6 names `weft.system.principal` as the expected op; it does not exist', () => {
-    expect('weft.system.principal' in client.operations).toBe(false);
-  });
-
-  test('the fallback probe depends on `weft.workflows.list` (client.list), which does exist', () => {
-    expect(typeof client.list).toBe('function');
-    expect('weft.workflows.list' in client.operations).toBe(true);
+  // This pin ran inverted from weft 0.11.0 through 0.17.0, asserting the
+  // operation did NOT exist and that the console's probe-and-infer fallback
+  // was therefore load-bearing (plan §14.1 item 4). weft 0.18.0 shipped it;
+  // the assertion flips rather than being deleted, so a dependency
+  // downgrade that removes the operation fails here instead of silently
+  // reverting `resolvePrincipal()` to guessing.
+  test('plan §6 names `weft.system.principal` as the expected op; it exists', () => {
+    expect('weft.system.principal' in client.operations).toBe(true);
   });
 });
 
@@ -195,80 +210,113 @@ describe('PrincipalStore.setPrincipal / clear', () => {
   });
 });
 
+/**
+ * Stubs the ONE operation `resolvePrincipal()` calls. `HttpClient.operations`
+ * is a plain record keyed by every catalog name, so a structurally complete
+ * stub would be ~100 no-op entries for no added coverage — this narrows to
+ * the single key under test. The real wire contract (what an auth-configured
+ * weft does to a credential-less caller) is pinned by
+ * `scopes.svelte.integration.test.ts` against a booted `serve()`.
+ */
+function principalClient(respond: () => Promise<unknown>): Parameters<typeof resolvePrincipal>[0] {
+  return { operations: { 'weft.system.principal': respond } } as unknown as Parameters<
+    typeof resolvePrincipal
+  >[0];
+}
+
 describe('PrincipalStore.bootstrap', () => {
   test('applies a successful resolvePrincipal() result', async () => {
     const store = new PrincipalStore();
-    const client = { list: async () => ({ items: [], total: 0, offset: 0, limit: 1 }) };
-    await store.bootstrap(client, { credentialed: false });
+    await store.bootstrap(
+      principalClient(async () => ({
+        method: 'api-key',
+        subject: 'boot',
+        scopes: ['system:read'],
+      })),
+    );
     expect(store.principal).toEqual({
-      scopes: AUTHORIZATION_SCOPES,
-      unauthenticatedAccess: 'warn',
+      scopes: ['system:read'],
+      unauthenticatedAccess: null,
     });
   });
 
   test('applies a rejected (401) resolvePrincipal() result as null', async () => {
     const store = new PrincipalStore();
-    const client = {
-      list: async () => {
+    await store.bootstrap(
+      principalClient(async () => {
         throw new HttpClientError(401, 'No valid credentials provided');
-      },
-    };
-    await store.bootstrap(client, { credentialed: false });
+      }),
+    );
     expect(store.principal).toBeNull();
   });
 });
 
 describe('resolvePrincipal', () => {
-  test('credentialed + probe success → fully granted, no banner (unauthenticatedAccess: null)', async () => {
-    const client = { list: async () => ({ items: [], total: 0, offset: 0, limit: 1 }) };
-    const principal = await resolvePrincipal(client, { credentialed: true });
-    expect(principal).toEqual({ scopes: AUTHORIZATION_SCOPES, unauthenticatedAccess: null });
+  test('an authenticated principal reports its granted scopes verbatim, no banner', async () => {
+    const principal = await resolvePrincipal(
+      principalClient(async () => ({
+        method: 'api-key',
+        subject: 'console',
+        scopes: ['workflows:read', 'system:read'],
+      })),
+    );
+    expect(principal).toEqual({
+      scopes: ['workflows:read', 'system:read'],
+      unauthenticatedAccess: null,
+    });
   });
 
-  test('credentialed + probe 401 (invalid/expired credential) → null', async () => {
-    const client = {
-      list: async () => {
-        throw new HttpClientError(401, 'No valid credentials provided');
-      },
+  test('the reported scope set is copied, not aliased to the response array', async () => {
+    // `Principal.scopes` outlives the response object; `denyScope()` rebuilds
+    // it by filtering, so a shared reference would be a latent aliasing bug
+    // rather than an observable one today. Pin the copy.
+    const response = {
+      method: 'api-key',
+      subject: 'console',
+      scopes: ['workflows:read'],
     };
-    const principal = await resolvePrincipal(client, { credentialed: true });
-    expect(principal).toBeNull();
+    const principal = await resolvePrincipal(principalClient(async () => response));
+    expect(principal?.scopes).not.toBe(response.scopes);
+    expect(principal?.scopes).toEqual(['workflows:read']);
   });
 
-  test('uncredentialed + probe success → fully granted, unauthenticated-warn banner', async () => {
-    const client = { list: async () => ({ items: [], total: 0, offset: 0, limit: 1 }) };
-    const principal = await resolvePrincipal(client, { credentialed: false });
-    expect(principal).toEqual({ scopes: AUTHORIZATION_SCOPES, unauthenticatedAccess: 'warn' });
+  test('an anonymous principal reports zero scopes and the unauthenticated-warn banner', async () => {
+    // Reaching this state at all means the server has no `auth` configured:
+    // an auth-configured weft 401s a credential-less caller at the transport
+    // edge (pinned in the integration test), so it never answers anonymously.
+    const principal = await resolvePrincipal(
+      principalClient(async () => ({ method: 'unauthenticated', subject: null, scopes: [] })),
+    );
+    expect(principal).toEqual({ scopes: [], unauthenticatedAccess: 'warn' });
   });
 
-  test('uncredentialed + probe 401 (auth required) → null', async () => {
-    const client = {
-      list: async () => {
+  test('a 401 (no/invalid credential) → null', async () => {
+    const principal = await resolvePrincipal(
+      principalClient(async () => {
         throw new HttpClientError(401, 'No valid credentials provided');
-      },
-    };
-    const principal = await resolvePrincipal(client, { credentialed: false });
+      }),
+    );
     expect(principal).toBeNull();
   });
 
   test('a non-401 HttpClientError (e.g. 500) is rethrown, not swallowed', async () => {
-    const client = {
-      list: async () => {
-        throw new HttpClientError(500, 'Internal server error');
-      },
-    };
-    await expect(resolvePrincipal(client, { credentialed: false })).rejects.toThrow(
-      'Internal server error',
-    );
+    await expect(
+      resolvePrincipal(
+        principalClient(async () => {
+          throw new HttpClientError(500, 'Internal server error');
+        }),
+      ),
+    ).rejects.toThrow('Internal server error');
   });
 
   test('a non-HttpClientError failure (e.g. a network error) is rethrown, not swallowed', async () => {
-    const client = {
-      list: async () => {
-        throw new TypeError('fetch failed');
-      },
-    };
-    await expect(resolvePrincipal(client, { credentialed: false })).rejects.toThrow('fetch failed');
+    await expect(
+      resolvePrincipal(
+        principalClient(async () => {
+          throw new TypeError('fetch failed');
+        }),
+      ),
+    ).rejects.toThrow('fetch failed');
   });
 });
 
