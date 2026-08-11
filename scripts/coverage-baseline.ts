@@ -163,26 +163,69 @@ const DARWIN_BASELINE: CoverageBaseline = {
 };
 
 /**
- * Reset to bootstrap for the cinder 0.23.0 / weft 0.18.0 wave: the same
- * line-attribution shift documented on {@link CoverageBaseline} moves the
- * linux numbers too, and only a linux runner can measure them. The next CI
- * run prints a paste-ready block (see {@link COVERAGE_BASELINES}); recording
- * it re-arms this gate. Previously recorded from CI run 31438752308's
- * bootstrap-mode output (ubuntu runner,
- * Bun 1.3.x, 2026-08-10) — the gate's own paste-ready block. Linux
- * attribution differs from darwin's in both directions (see the
+ * Recorded from CI run 31500023108's bootstrap-mode output (ubuntu runner,
+ * 2026-08-11) after the cinder 0.23.0 / weft 0.18.0 wave re-bootstrapped it.
+ * Linux attribution differs from darwin's in both directions (see the
  * platform-divergence note on {@link CoverageMeasurementPlatform}), so these
  * numbers are NOT comparable to `DARWIN_BASELINE`'s — each ratchets only
  * against its own platform's measurements.
  */
-/**
- * Per-platform baselines. A `null` entry means that platform has never had
- * a baseline recorded: `check-coverage.ts` then runs in bootstrap mode —
- * it measures, prints a paste-ready baseline object, and passes — so the
- * first run on a new platform supplies the numbers a follow-up commit
- * records here.
- */
+const LINUX_BASELINE: CoverageBaseline = {
+  measuredAt: '2026-08-11T14:13:26.903Z',
+  overall: { linesFound: 36932, linesHit: 19412, functionsFound: 3937, functionsHit: 3235 },
+  areas: {
+    fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
+    scripts: { linesFound: 339, linesHit: 268, functionsFound: 24, functionsHit: 23 },
+    src: { linesFound: 12, linesHit: 12, functionsFound: 2, functionsHit: 2 },
+    'src/app': { linesFound: 1350, linesHit: 1136, functionsFound: 264, functionsHit: 150 },
+    'src/lib': { linesFound: 1318, linesHit: 896, functionsFound: 178, functionsHit: 113 },
+    'src/routes/dashboard': {
+      linesFound: 1468,
+      linesHit: 1172,
+      functionsFound: 243,
+      functionsHit: 209,
+    },
+    'src/routes/reviews': {
+      linesFound: 2712,
+      linesHit: 936,
+      functionsFound: 183,
+      functionsHit: 149,
+    },
+    'src/routes/schedules': {
+      linesFound: 3748,
+      linesHit: 2313,
+      functionsFound: 487,
+      functionsHit: 409,
+    },
+    'src/routes/storage': {
+      linesFound: 3089,
+      linesHit: 992,
+      functionsFound: 171,
+      functionsHit: 138,
+    },
+    'src/routes/system': {
+      linesFound: 5778,
+      linesHit: 1520,
+      functionsFound: 274,
+      functionsHit: 219,
+    },
+    'src/routes/workers': {
+      linesFound: 3866,
+      linesHit: 1359,
+      functionsFound: 264,
+      functionsHit: 216,
+    },
+    'src/routes/workflows': {
+      linesFound: 12409,
+      linesHit: 8375,
+      functionsFound: 1762,
+      functionsHit: 1580,
+    },
+    tests: { linesFound: 145, linesHit: 114, functionsFound: 16, functionsHit: 15 },
+  },
+};
+
 export const COVERAGE_BASELINES: Record<CoverageMeasurementPlatform, CoverageBaseline | null> = {
   darwin: DARWIN_BASELINE,
-  linux: null,
+  linux: LINUX_BASELINE,
 };
