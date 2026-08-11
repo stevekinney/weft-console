@@ -56,7 +56,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
-    "@lostgradient/cinder": "0.23.0",
+    "@lostgradient/cinder": "0.23.1",
     "@lostgradient/markdown": "0.2.0",
     "@lostgradient/weft": "0.18.0",
     "@playwright/test": "^1.61.1",

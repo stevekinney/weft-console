@@ -98,13 +98,16 @@ export function coverageMeasurementPlatform(): CoverageMeasurementPlatform | nul
 }
 
 const DARWIN_BASELINE: CoverageBaseline = {
-  measuredAt: '2026-08-11T14:05:00.000Z',
-  overall: { linesFound: 35954, linesHit: 23273, functionsFound: 4747, functionsHit: 4090 },
+  measuredAt: '2026-08-11T16:22:00.000Z',
+  overall: { linesFound: 35964, linesHit: 23283, functionsFound: 4747, functionsHit: 4090 },
   areas: {
     fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
+    // +10 lines over the 14:05 measurement, all covered: `LINUX_BASELINE` below
+    // is itself instrumented `scripts/` code, so recording it raised this area's
+    // own watermark. Ratcheted rather than left slack.
     scripts: {
-      linesFound: 383,
-      linesHit: 312,
+      linesFound: 393,
+      linesHit: 322,
       functionsFound: 24,
       functionsHit: 23,
     },
