@@ -30,10 +30,76 @@ import {
   type AreaCoverage,
   type CoverageBaseline,
 } from './coverage-baseline.ts';
+import {
+  DARWIN_BASELINE_COVERAGE_TEST_ORDER,
+  LINUX_BASELINE_COVERAGE_TEST_ORDER,
+} from './coverage-test-order.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..');
 const COVERAGE_DIRECTORY = join(REPO_ROOT, 'coverage');
 const LCOV_PATH = join(COVERAGE_DIRECTORY, 'lcov.info');
+const COVERAGE_TEST_ROOTS = ['scripts', 'src', 'tests'] as const;
+const BUN_TEST_FILE_PATTERN = /(?:\.test|_test|\.spec|_spec)\.(?:[cm]?[jt]s|[jt]sx)$/;
+function baselineCoverageTestRank(platform: NodeJS.Platform): ReadonlyMap<string, number> {
+  const order =
+    platform === 'darwin'
+      ? DARWIN_BASELINE_COVERAGE_TEST_ORDER
+      : platform === 'linux'
+        ? LINUX_BASELINE_COVERAGE_TEST_ORDER
+        : [];
+  return new Map<string, number>(order.map((path, index) => [path, index]));
+}
+
+function compareCoverageTestFiles(
+  left: string,
+  right: string,
+  rank: ReadonlyMap<string, number>,
+): number {
+  const leftRank = rank.get(left);
+  const rightRank = rank.get(right);
+  if (leftRank !== undefined && rightRank !== undefined) return leftRank - rightRank;
+  if (leftRank !== undefined) return -1;
+  if (rightRank !== undefined) return 1;
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/** Keep repository tests in the versioned baseline order, then append new files lexically. */
+export function selectCoverageTestFiles(
+  paths: Iterable<string>,
+  platform: NodeJS.Platform = process.platform,
+): string[] {
+  const rank = baselineCoverageTestRank(platform);
+  return [...paths]
+    .filter(
+      (path) =>
+        /^(?:scripts|src|tests)\//.test(path) &&
+        !path.startsWith('tests/e2e/') &&
+        BUN_TEST_FILE_PATTERN.test(path),
+    )
+    .toSorted((left, right) => compareCoverageTestFiles(left, right, rank));
+}
+
+/** Convert selected files to exact Bun test paths so Bun preserves the supplied order. */
+export function coverageTestArguments(
+  paths: Iterable<string>,
+  platform: NodeJS.Platform = process.platform,
+): string[] {
+  return selectCoverageTestFiles(paths, platform).map((path) => `./${path}`);
+}
+
+/** Discover every coverage test explicitly so filesystem enumeration cannot reorder the suite. */
+export function discoverCoverageTestFiles(
+  repositoryRoot = REPO_ROOT,
+  platform: NodeJS.Platform = process.platform,
+): string[] {
+  const testGlob = new Bun.Glob('**/*.{cjs,mjs,js,jsx,cts,mts,ts,tsx}');
+  const candidates = COVERAGE_TEST_ROOTS.flatMap((root) =>
+    [...testGlob.scanSync({ cwd: join(repositoryRoot, root), onlyFiles: true })].map(
+      (path) => `${root}/${path}`,
+    ),
+  );
+  return selectCoverageTestFiles(candidates, platform);
+}
 
 /** One file's coverage counts, straight off an LCOV `end_of_record` block. */
 export type FileCoverage = {

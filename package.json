@@ -48,7 +48,7 @@
     "format:check": "prettier --check \"**/*.{ts,svelte,js,json,md,css,html}\"",
     "prepare": "husky",
     "test": "TZ=UTC bun test --conditions browser --conditions svelte",
-    "test:coverage": "TZ=UTC bun test --parallel=1 --conditions browser --conditions svelte --coverage --coverage-reporter=lcov",
+    "test:coverage": "bun run scripts/run-coverage.ts",
     "test:e2e": "playwright test"
   },
   "peerDependencies": {
