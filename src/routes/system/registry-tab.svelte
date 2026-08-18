@@ -39,6 +39,10 @@
   let selectedType = $state<string | null>(null);
 </script>
 
+{#snippet registryBadge(label: string, variant: 'neutral' | 'success')}
+  <Badge {variant}>{label}</Badge>
+{/snippet}
+
 {#if $query.isPending}
   <div class="weft-registry-skeleton" role="status" aria-busy="true" aria-label="Loading registry">
     <Skeleton height="1.25rem" width="220px" />
@@ -100,11 +104,12 @@
               <Table.Cell>{row.description ?? '—'}</Table.Cell>
               <Table.Cell>
                 {#if row.hasInputSchema}
-                  <Badge variant="success">
-                    {row.inputFields.length} field{row.inputFields.length === 1 ? '' : 's'}
-                  </Badge>
+                  {@render registryBadge(
+                    `${row.inputFields.length} field${row.inputFields.length === 1 ? '' : 's'}`,
+                    'success',
+                  )}
                 {:else}
-                  <Badge variant="neutral">none</Badge>
+                  {@render registryBadge('none', 'neutral')}
                 {/if}
               </Table.Cell>
             </Table.Row>
@@ -130,13 +135,12 @@
                 <span class="weft-registry-activity-card__name">{activity.name}</span>
               </div>
               <div class="weft-registry-activity-card__meta">
-                <Badge variant="neutral">queue: {activity.queue}</Badge>
+                {@render registryBadge(`queue: ${activity.queue}`, 'neutral')}
                 {#if activity.hasInputSchema}
-                  <Badge variant="success">
-                    {activity.inputFields.length} field{activity.inputFields.length === 1
-                      ? ''
-                      : 's'}
-                  </Badge>
+                  {@render registryBadge(
+                    `${activity.inputFields.length} field${activity.inputFields.length === 1 ? '' : 's'}`,
+                    'success',
+                  )}
                 {/if}
               </div>
             </div>

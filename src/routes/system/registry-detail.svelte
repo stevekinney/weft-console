@@ -23,18 +23,27 @@
   let { row, onBack }: Props = $props();
 </script>
 
+{#snippet schemaBadge(
+  label: string,
+  variant: 'neutral' | 'warning',
+  monospace = false,
+  className = '',
+)}
+  <Badge class={className} {variant} {monospace}>{label}</Badge>
+{/snippet}
+
 {#snippet schemaNode(node: SchemaTreeNode)}
   <Tree.Item id={node.id} label={node.name} branch={node.children.length > 0}>
     {#snippet row(context)}
       <span class="weft-schema-node" data-expanded={context.expanded}>
         <span class="weft-schema-node__name">{node.name}</span>
-        <Badge variant="neutral" monospace>{node.type}</Badge>
-        <Badge
-          class="weft-schema-node__requirement"
-          variant={node.required ? 'warning' : 'neutral'}
-        >
-          {node.required ? 'required' : 'optional'}
-        </Badge>
+        {@render schemaBadge(node.type, 'neutral', true)}
+        {@render schemaBadge(
+          node.required ? 'required' : 'optional',
+          node.required ? 'warning' : 'neutral',
+          false,
+          'weft-schema-node__requirement',
+        )}
       </span>
     {/snippet}
     {#each node.children as child (child.id)}
