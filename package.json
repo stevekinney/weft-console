@@ -38,8 +38,9 @@
   "scripts": {
     "dev": "vite",
     "dev:server": "bun scripts/dev-server.ts",
-    "build": "vite build && bun scripts/build-mount.ts && bun run check:bundle",
+    "build": "vite build && bun run check:styles && bun scripts/build-mount.ts && bun run check:bundle",
     "check:bundle": "bun scripts/check-bundle-size.ts",
+    "check:styles": "bun scripts/check-cinder-styles.ts",
     "check:coverage": "bun run scripts/check-coverage.ts",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json",
     "lint": "oxlint",

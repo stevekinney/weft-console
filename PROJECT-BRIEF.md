@@ -17,12 +17,11 @@ engine. Read this file completely before touching code. Then read:
 - **Own your paths only.** Your task prompt names the directories you own. Never edit files outside
   them (shared files listed in your prompt are the only exception). Other agents work in parallel.
 - **Do not run `git` at all.** The orchestrator commits at phase boundaries.
-- **Cinder-first.** Every UI need uses `@lostgradient/cinder` (v0.17.0) when a component exists.
-  Ground truth for props/API: `/Users/stevekinney/Developer/cinder/packages/components/src/components/<kebab-name>/`
-  (read the `.svelte` file's `$props()` interface, plus `README.md`/schema in the same dir).
-  Import styles per component: base `@lostgradient/cinder/styles` is already wired in the entry CSS;
-  add `@lostgradient/cinder/<name>/styles` imports to YOUR track's CSS file
-  (`src/styles/<track>.css`, named in your prompt) — never to the shared `src/styles/index.css`.
+- **Cinder-first.** Every UI need uses the installed `@lostgradient/cinder` package when a
+  component exists. Treat `package.json`, the installed package, and its supported public
+  entrypoints as version and API truth. Cinder component entrypoints load their own styles. The
+  base `@lostgradient/cinder/styles` import is already wired in the entry CSS; do not add component
+  style sidecars.
   Key components that EXIST upstream (do not hand-roll): ConnectionIndicator, ScheduleBuilder,
   RunStepTimeline (branch groups, `rewound`, `compensates`, child lanes, waiting_approval),
   EventStreamViewer, FacetedFilterBar, PayloadInspector, SchemaForm, DataTable, ApprovalCard,

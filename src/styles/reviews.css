@@ -1,26 +1,3 @@
-/* reviews — track-owned stylesheet. Add `@lostgradient/cinder/<component>/styles`
- * imports and route-local rules here; never in src/styles/index.css. */
-
-@import '@lostgradient/cinder/empty-state/styles';
-@import '@lostgradient/cinder/skeleton/styles';
-@import '@lostgradient/cinder/payload-inspector/styles';
-@import '@lostgradient/cinder/card/styles';
-@import '@lostgradient/cinder/badge/styles';
-@import '@lostgradient/cinder/status-dot/styles';
-@import '@lostgradient/cinder/segmented-control/styles';
-@import '@lostgradient/cinder/textarea/styles';
-@import '@lostgradient/cinder/input/styles';
-@import '@lostgradient/cinder/button/styles';
-@import '@lostgradient/cinder/description-list/styles';
-@import '@lostgradient/cinder/copy-button/styles';
-@import '@lostgradient/cinder/tooltip/styles';
-@import '@lostgradient/cinder/connection-indicator/styles';
-@import '@lostgradient/cinder/resizable-panels/styles';
-@import '@lostgradient/cinder/avatar/styles';
-@import '@lostgradient/cinder/alert/styles';
-@import '@lostgradient/cinder/toggle/styles';
-@import '@lostgradient/cinder/statistic/styles';
-
 /* ---------------------------------------------------------------------- */
 /* Route shell (index.svelte)                                             */
 /* ---------------------------------------------------------------------- */

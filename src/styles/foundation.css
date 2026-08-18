@@ -1,28 +1,3 @@
-/* foundation — track-owned stylesheet. Add `@lostgradient/cinder/<component>/styles`
- * imports and route-local rules here; never in src/styles/index.css. */
-
-@import '@lostgradient/cinder/empty-state/styles';
-@import '@lostgradient/cinder/card/styles';
-@import '@lostgradient/cinder/input/styles';
-@import '@lostgradient/cinder/button/styles';
-
-/* T1.5 handoff (fault-boundary.svelte / toast-host.svelte module docs):
- * neither owns a track CSS file, so the shell — which mounts both — carries
- * their per-component style imports. */
-@import '@lostgradient/cinder/toast-region/styles';
-@import '@lostgradient/cinder/badge/styles';
-@import '@lostgradient/cinder/collapsible/styles';
-
-/* T1.6 shell components. */
-@import '@lostgradient/cinder/connection-indicator/styles';
-@import '@lostgradient/cinder/sidebar/styles';
-@import '@lostgradient/cinder/side-navigation/styles';
-@import '@lostgradient/cinder/navigation-item/styles';
-@import '@lostgradient/cinder/command-palette/styles';
-@import '@lostgradient/cinder/command-item/styles';
-@import '@lostgradient/cinder/dropdown/styles';
-@import '@lostgradient/cinder/skeleton/styles';
-
 /* API-key entry surface (T1.1, plan §6) — full-page auth-required
  * treatment per §10.4's fault-presentation rules. */
 .weft-console-api-key-entry {

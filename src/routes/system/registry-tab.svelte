@@ -11,6 +11,7 @@
    * as of `@lostgradient/weft@0.12.0` (`scripts/dev-server.ts`'s plain
    * `serve()` now routes `/jsonrpc`).
    */
+  import Badge from '@lostgradient/cinder/badge';
   import EmptyState from '@lostgradient/cinder/empty-state';
   import { Table } from '@lostgradient/cinder/table';
   import Skeleton from '@lostgradient/cinder/skeleton';
@@ -99,11 +100,11 @@
               <Table.Cell>{row.description ?? '—'}</Table.Cell>
               <Table.Cell>
                 {#if row.hasInputSchema}
-                  <span class="cinder-badge" data-cinder-variant="success">
+                  <Badge variant="success">
                     {row.inputFields.length} field{row.inputFields.length === 1 ? '' : 's'}
-                  </span>
+                  </Badge>
                 {:else}
-                  <span class="cinder-badge" data-cinder-variant="neutral">none</span>
+                  <Badge variant="neutral">none</Badge>
                 {/if}
               </Table.Cell>
             </Table.Row>
@@ -129,15 +130,13 @@
                 <span class="weft-registry-activity-card__name">{activity.name}</span>
               </div>
               <div class="weft-registry-activity-card__meta">
-                <span class="cinder-badge" data-cinder-variant="neutral"
-                  >queue: {activity.queue}</span
-                >
+                <Badge variant="neutral">queue: {activity.queue}</Badge>
                 {#if activity.hasInputSchema}
-                  <span class="cinder-badge" data-cinder-variant="success">
+                  <Badge variant="success">
                     {activity.inputFields.length} field{activity.inputFields.length === 1
                       ? ''
                       : 's'}
-                  </span>
+                  </Badge>
                 {/if}
               </div>
             </div>

@@ -5,21 +5,7 @@
  * this track's CSS additions out of `src/styles/workflows.css`, which
  * Track A1's list/wizard surfaces also touch, so the two tracks never
  * conflict on the same file).
- *
- * `badge`, `card`, `button`, `input`, `skeleton`, `empty-state`,
- * `connection-indicator`, and `dropdown` styles are already loaded globally
- * via `src/styles/foundation.css` (Foundation/shell) — not re-imported here.
  */
-@import '@lostgradient/cinder/tabs/styles';
-@import '@lostgradient/cinder/description-list/styles';
-@import '@lostgradient/cinder/payload-inspector/styles';
-@import '@lostgradient/cinder/feed/styles';
-@import '@lostgradient/cinder/confirm-dialog/styles';
-@import '@lostgradient/cinder/copy-button/styles';
-@import '@lostgradient/cinder/tooltip/styles';
-@import '@lostgradient/cinder/textarea/styles';
-@import '@lostgradient/cinder/status-dot/styles';
-
 /* ---------------------------------------------------------------------- */
 /* Header                                                                  */
 /* ---------------------------------------------------------------------- */

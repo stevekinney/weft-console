@@ -28,20 +28,13 @@
     {#snippet row(context)}
       <span class="weft-schema-node" data-expanded={context.expanded}>
         <span class="weft-schema-node__name">{node.name}</span>
-        <span
-          class="cinder-badge"
-          data-cinder-variant="neutral"
-          style="font-family:var(--cinder-font-mono);"
-        >
-          {node.type}
-        </span>
-        <span
-          class="cinder-badge"
-          data-cinder-variant={node.required ? 'warning' : 'neutral'}
-          style="margin-left:auto;"
+        <Badge variant="neutral" monospace>{node.type}</Badge>
+        <Badge
+          class="weft-schema-node__requirement"
+          variant={node.required ? 'warning' : 'neutral'}
         >
           {node.required ? 'required' : 'optional'}
-        </span>
+        </Badge>
       </span>
     {/snippet}
     {#each node.children as child (child.id)}
@@ -205,5 +198,9 @@
     font-family: var(--cinder-font-mono);
     font-size: var(--cinder-text-sm);
     font-weight: 600;
+  }
+
+  :global(.weft-schema-node__requirement) {
+    margin-left: auto;
   }
 </style>

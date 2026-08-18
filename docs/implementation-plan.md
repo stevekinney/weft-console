@@ -3,7 +3,7 @@
 > **This document supersedes and combines** `Weft UI.md` (architecture + UX/IA/flows) and `Weft UI - Wireframe Requirements.md` (visual spec + Cinder mapping) into a single plan **organized for Fable-driven execution**: locked decisions up front, ground truth verified against the current repositories, a Cinder-first component policy, and a phased task breakdown where every task is PR-sized with explicit acceptance criteria and verification commands.
 >
 > - Engine: `stevekinney/weft` → npm `@lostgradient/weft` (pre-release; breaking changes welcome, no compatibility layers)
-> - Components: `stevekinney/cinder` → npm `@lostgradient/cinder` (**v0.9.0**, Svelte 5 runes, ~196 components)
+> - Components: `stevekinney/cinder` → npm `@lostgradient/cinder`; `package.json` is live version truth and currently pins **v0.24.0**. Use supported public entrypoints and the [README's current dependency and adoption record](../README.md#historical-cinder-first-evaluations-after-the-0190-bump).
 > - Visual direction: Claude Design project `78301189-3414-48f4-bf40-8d4bc28da7b7` (`Weft Console.dc.html`, `Weft Patterns.dc.html`, screenshots for workflow list/timeline/saga, schedules, reviews, diagnostics, discovery, confirmation tiers) — indigo-on-cool-blue-grey, OKLCH + `light-dark()`, 14px base, Lucide icons, "the brand is the restraint"
 
 ---
@@ -16,7 +16,7 @@ Both source documents were verified against the repositories on 2026-07-09. Seve
 |---|---|---|
 | "No fleet-wide / cross-workflow stream; ~18 engine events never reach a wire channel; lists and notifications must be polling-backed stopgaps" (issues #574/#575) | **Fleet-wide channels exist**: `GET /api/v1/events/sse` (scope `events:read`, accepts `workflowId`, `kind`, `fromCursor`, `Last-Event-ID` resume) and JSON-RPC WebSocket `weft.events.subscribe` (+ per-workflow `weft.workflows.subscribe`), with events delivered as `weft.events.deliver` notifications. Fleet subscriptions include worker connection lifecycle events. | The realtime layer is **push-first from day one**. `LiveSource` remains the abstraction, but `FleetEventSource` is a v1 implementation, not a future upgrade. Polling survives only as the degraded fallback. |
 | "Watch/stream WebSocket upgrades bypass scope authorization" (#573) | Fixed: `/v1/workflows/:id/watch` requires `events:read`, `/v1/workflows/:id/stream` requires `streams:read`; classification in `src/server/runtime/websocket-upgrade.ts`. Cross-origin WS upgrades are rejected 403 when a `cors` policy is set and Origin mismatches. | No security caveat to design around; scope-gate the Live toggles instead. |
-| Cinder verified at **v0.3.0**; net-new list included schema-driven forms, payload inspector shape, query-builder rows | Cinder is at **v0.9.0** (0.8.0→0.9.0 delta is Chat-suite work, a redesigned `ApprovalCard` (#697: single callback, decision-first layout), caller-owned tab panel ids, and release infra — nothing that changes the gap analysis) with ~196 components. Now upstream: `SchemaForm` (form from JSON Schema), `JsonSchemaEditor`, `PayloadInspector` (Summary/Tree/Raw + truncation metadata), `JsonViewer` (depth/byte caps + oversized fallback), `DataTable` (sortable, virtualized), `DataGrid` (ARIA grid, pinned columns), `VirtualList` (TanStack virtual-core), `RunStepTimeline` (pending/running/waiting-approval/succeeded/failed/cancelled/skipped/retrying states, durations, attempt counts, **nested child-workflow lanes**, expandable detail panels), `EventStreamViewer` (dense append-only run-log viewer), `FacetedFilterBar` (built for "workflow queues, failure triage dashboards, and schedule browsers"), `ApprovalCard`, `PermissionMatrix`, `InvocationRuleBuilder` (condition field/operator/value rows), `CommandPalette`, `SecretValueField`, charts (`AreaChart`/`BarChart`/`LineChart`/`MatrixChart`/`Sparkbar`/`Meter`). | The net-new component list shrinks dramatically (§7.3). The payload editor, scope matrix, query builder, timeline, and virtualized views are compositions over upstream Cinder, not custom builds. |
+| Cinder verified at **v0.3.0**; net-new list included schema-driven forms, payload inspector shape, query-builder rows | **Historical authoring snapshot:** Cinder was at **v0.9.0** when this inventory was written. It recorded `SchemaForm`, `JsonSchemaEditor`, `PayloadInspector`, `JsonViewer`, `DataTable`, `DataGrid`, `VirtualList`, `RunStepTimeline`, `EventStreamViewer`, `FacetedFilterBar`, `ApprovalCard`, `PermissionMatrix`, `InvocationRuleBuilder`, `CommandPalette`, `SecretValueField`, and chart components available at that time. This inventory is decision context, not current API truth. | For current work, inspect the installed package's supported public entrypoints. The payload editor, scope matrix, query builder, timeline, and virtualized views remain Cinder-first compositions, not custom-build defaults. |
 | "Import the generated `operation-client.generated.ts` and build a `call<T>()` transport" | `HttpClient` from `@lostgradient/weft/client` is **browser-ready as-is**: `new HttpClient({ baseUrl, headers?, token?, eventTransport?, webSocketFactory? })`, exposing the full ergonomic `WeftClient` surface plus `client.operations['weft.<name>'](input)` / `call(name, input)` typed against the generated catalog, `client.activity.complete/completeExceptionally`, and `tail(id)` with `eventTransport: 'auto' | 'websocket' | 'sse'`. | The console's data transport is `HttpClient`, full stop. No parallel HTTP layer, no hand-rolled `call<T>()`. The type pipeline is "keep `@lostgradient/weft` current." |
 | REST paths shown as `/v1/…` | Everything functional is served under **`/api`** (`API_PREFIX`): `/api/v1/workflows`, `/api/jsonrpc`, `/api/mcp`, WS upgrades. Seven routes stay root-relative: `/v1/health`, `/v1/metrics`, `/openapi.json`, `/openrpc.json`, `/asyncapi.json`, `/.well-known/api-catalog`, `/.well-known/mcp.json`. | Dev proxy and `HttpClient` baseUrl handling must respect the split. (`HttpClient` already does.) |
 | Dashboard mount described without an auth caveat | `serve({ dashboard })` registers the shell via Bun's static `routes` table, which is matched **before** Weft's `fetch`/auth handler — the shell HTML itself is **never authenticated**, only the API calls it makes. Bun's route table also physically prevents the shell from shadowing `/api/*` or root discovery routes. | Deployment docs must say: put the shell behind a reverse proxy / private network if the HTML itself needs access control. The app treats "who am I" as an API question, not a page-load question. |
@@ -63,7 +63,7 @@ weft-console/
 │   │   ├── scopes.ts         #   principal store + hasScope()
 │   │   ├── faults.ts         #   fault → UI treatment mapping
 │   │   └── format/           #   ids (truncate 8…4), durations, cron preview, bytes
-│   └── styles/               # entry CSS: @lostgradient/cinder/styles + per-component styles + console-level tokens
+│   └── styles/               # entry CSS: @lostgradient/cinder/styles + app-owned rules
 ├── tests/                    # integration (real serve()) + Playwright e2e
 └── scripts/                  # build, size-budget check, coverage gate
 ```
@@ -164,13 +164,13 @@ Implementations in `src/lib/live-source/` (plain `.svelte.ts`, no component coup
 
 ---
 
-### 7. Component Policy — Cinder V0.9.0
+### 7. Component Policy—Current Cinder Contract
 
-#### 7.1 Master Mapping (updated to v0.9.0)
+#### 7.1 Historical authoring snapshot and current usage
 
-Import per-component styles (`@lostgradient/cinder/<name>/styles`) alongside the base `@lostgradient/cinder/styles` (+ dev `styles/guard`). Peers: `svelte`, `lucide-svelte`.
+The mapping below is the historical v0.8.0/v0.9.0 authoring snapshot. Preserve it as decision context, but verify current APIs against `package.json`, the installed package, and supported public Cinder entrypoints before implementation. Import the base `@lostgradient/cinder/styles` stylesheet once; component JavaScript entrypoints load their own CSS, so do not maintain per-component style sidecars or import `styles/all`. Peers remain `svelte` and `lucide-svelte`.
 
-| UI need | Cinder (v0.8.0) |
+| UI need | Historical Cinder authoring snapshot (v0.8.0) |
 |---|---|
 | Shell: sidebar, header, breadcrumbs | `Sidebar`, `SideNavigation(Group/Item)`, `NavigationBar`, `Breadcrumbs`, `Toolbar` |
 | Cmd+K search | `CommandPalette` (+ `CommandItem`, `Kbd`, `KeyboardShortcuts`) |
@@ -187,7 +187,7 @@ Import per-component styles (`@lostgradient/cinder/<name>/styles`) alongside the
 | Activity feed | `Feed`/`FeedEvent` (live-region) |
 | Charts | `BarChart` (aggregates, failure categories), `LineChart`/`AreaChart` (metrics sparklines), `MatrixChart` (scope matrix heat), `Sparkbar`/`Meter` (inline capacity/utilization) |
 | Scope matrix | **`PermissionMatrix`** |
-| Reviews | **`ApprovalCard`** (redesigned in v0.9.0 — single callback, decision-first layout, simplified `PayloadInspector` embedding; evaluate against the partial-section-decision requirement), `SegmentedControl` + `Textarea` decision form, `Avatar(Group)`, markdown artifacts via `@lostgradient/cinder/markdown/*` |
+| Reviews | **`ApprovalCard`** (redesigned in v0.9.0—single callback, decision-first layout, simplified `PayloadInspector` embedding; evaluate against the partial-section-decision requirement), `SegmentedControl` + `Textarea` decision form, `Avatar(Group)`, Markdown artifacts via `@lostgradient/markdown/rendering` |
 | Query builder | **`InvocationRuleBuilder`** pattern (condition field/operator/value rows) — reuse/extend upstream rather than building rows from scratch (§7.2) |
 | Wizards / steps | `Steps`, `Modal`/`Drawer`/`Sheet` |
 | Confirmations | `ConfirmDialog` (Tiers 1–2), `AlertDialog` + `Input` type-to-confirm + `Progress` (Tier 3 + bulk progress) |
@@ -269,7 +269,7 @@ List (human-readable spec, next/last fire, missed count red >0, pause/resume/can
 
 #### 9.5 Reviews
 
-Two-panel inbox (`ResizablePanels`): pending list (countdown red <20% remaining) + detail/decision surface. Artifact rendering by structure (string → text; markdown → `@lostgradient/cinder/markdown`; `imageUrl`/`htmlContent` keys → media; else `PayloadInspector` with humanized keys). Evaluate `ApprovalCard` as the decision container first. Partial section decisions when `allowPartial`; overall decision suggested from sections but never locked. Completed archive read-only. `human-review:requested/completed` on the fleet feed drive inbox liveness + notifications. API: `GET /api/v1/reviews?status=…`, `POST /api/v1/reviews/:reviewId/decision`, per-workflow `GET …/review/:reviewId`. Must be fully usable without developer context and fully keyboard-operable.
+Two-panel inbox (`ResizablePanels`): pending list (countdown red <20% remaining) + detail/decision surface. Artifact rendering by structure (string → text; Markdown → `@lostgradient/markdown/rendering`; `imageUrl`/`htmlContent` keys → media; else `PayloadInspector` with humanized keys). Evaluate `ApprovalCard` as the decision container first. Partial section decisions when `allowPartial`; overall decision suggested from sections but never locked. Completed archive read-only. `human-review:requested/completed` on the fleet feed drive inbox liveness + notifications. API: `GET /api/v1/reviews?status=…`, `POST /api/v1/reviews/:reviewId/decision`, per-workflow `GET …/review/:reviewId`. Must be fully usable without developer context and fully keyboard-operable.
 
 #### 9.6 Storage
 
@@ -398,7 +398,7 @@ Coordination rules that make the fan-out safe:
 
 #### Phase 0 — Repositories, Scaffold, upstream Tickets
 
-- **T0.1** Create `weft-console` repo: Bun + Svelte 5 + Cinder wiring (base styles + guard), lint (oxlint)/format (prettier + organize-imports)/typecheck/bun-test CI, kebab-case + file-size conventions, pre-commit hooks mirroring weft's.
+- **T0.1** Create `weft-console` repo: Bun + Svelte 5 + Cinder wiring (base styles; component entrypoints load their own CSS), lint (oxlint)/format (prettier + organize-imports)/typecheck/bun-test CI, kebab-case + file-size conventions, pre-commit hooks mirroring weft's.
 - **T0.2** Build pipeline: Svelte compile + `bun build --splitting`, hashed assets, `weftConsole()` mount export + type test against `DashboardRouteTarget`, mount smoke test (serve at five routes, no API shadowing). Decide bun-plugin-svelte vs Vite here and record the decision in the README.
 - **T0.3** Dev harness: `bun run dev` boots a seeded local weft server (fixtures module) + the console dev server with proxy and **full HMR**; document `WEFT_API_BASE_URL`. HMR acceptance tests (manual checklist in the PR + a scripted smoke where feasible): (1) edit a `.svelte` component → updates in place, no full reload, sibling component state survives; (2) edit component CSS → styles hot-apply; (3) edit a `LiveSource` module while a tail is open → old connection closes, exactly one new connection opens (assert via the weft server's connection count); (4) syntax error → overlay, then recovers on fix without manual reload.
 - **T0.4** File upstream tickets: cinder C1–C4 (§7.2, with specs); weft — `DASHBOARD_PAGE_ROUTES` extension (`/schedules`, `/storage`, `/system`), `weft serve --console` CLI mount, SW streaming-SSE verification if needed (§14).
