@@ -42,8 +42,12 @@ describe('RegistryTab', () => {
       },
       { status: 200 },
     );
-    const { findByText } = await renderRegistryTab();
+    scripted.enqueueJsonRpcResult({ registryVersion: 1, workflows: {}, activities: {} });
+    const { findByText, getByRole } = await renderRegistryTab();
     expect(await findByText('Not authorized')).not.toBeNull();
+
+    await fireEvent.click(getByRole('button', { name: 'Retry' }));
+    expect(await findByText('Install the SDK', { exact: false })).not.toBeNull();
   });
 
   test('renders the 3-step onboarding empty state when nothing is registered', async () => {
