@@ -60,6 +60,7 @@ describe('RegistryTab', () => {
       workflows: {
         'order-processing': {
           description: 'Processes an order end to end.',
+          tags: ['payments'],
           inputSchema: {
             type: 'object',
             required: ['orderId'],
@@ -71,7 +72,16 @@ describe('RegistryTab', () => {
         },
         heartbeat: {},
       },
-      activities: { chargeCard: { queue: 'default' } },
+      activities: {
+        chargeCard: {
+          queue: 'default',
+          inputSchema: {
+            type: 'object',
+            required: ['amount'],
+            properties: { amount: { type: 'number' } },
+          },
+        },
+      },
     });
 
     const { findByText, findAllByText, getByRole } = await renderRegistryTab();
@@ -90,9 +100,19 @@ describe('RegistryTab', () => {
     expect(queueBadge.getAttribute('data-cinder-variant')).toBe('neutral');
     expect(queueBadge.getAttribute('data-cinder-size')).toBe('md');
 
+    const activityFieldCountBadge = await findByText('1 field');
+    expect(activityFieldCountBadge.getAttribute('data-cinder-variant')).toBe('success');
+    expect(activityFieldCountBadge.getAttribute('data-cinder-size')).toBe('md');
+
     await fireEvent.click(getByRole('button', { name: /order-processing/ }));
 
     expect(await findByText('Processes an order end to end.')).not.toBeNull();
+    const paymentElements = await findAllByText('payments');
+    const tagBadge = paymentElements.find(
+      (element) => element.getAttribute('data-cinder-variant') !== null,
+    );
+    expect(tagBadge?.getAttribute('data-cinder-variant')).toBe('neutral');
+    expect(tagBadge?.getAttribute('data-cinder-size')).toBe('md');
     const orderIdMatches = await findAllByText('orderId');
     expect(orderIdMatches.length).toBeGreaterThan(0);
 
