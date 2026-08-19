@@ -10,6 +10,7 @@ import type { DetachedWindowAPI } from 'happy-dom';
 import { createQueryClient } from '../../lib/query.ts';
 import { router } from '../../lib/router.svelte.ts';
 import SystemRoute from './index.svelte';
+import type { RegistrySnapshotSource } from './registry-view.ts';
 import SystemRouteTestHarness from './system-route-test-harness.test-harness.svelte';
 import { realClient, ScriptedFetch } from './system-test-support.test-support.ts';
 
@@ -40,13 +41,15 @@ afterEach(() => {
   scripted = undefined;
 });
 
-async function renderSystemRoute() {
-  scripted = new ScriptedFetch();
-  scripted.routeJsonRpcMethod('weft.system.registry', {
+async function renderSystemRoute(
+  registry: RegistrySnapshotSource = {
     registryVersion: 1,
     workflows: {},
     activities: {},
-  });
+  },
+) {
+  scripted = new ScriptedFetch();
+  scripted.routeJsonRpcMethod('weft.system.registry', registry);
   // The "deep-linking to ?tab=alerts" test below mounts `<AlertsTab>`, which
   // subscribes to the harness's shared `FleetEventSource` on mount — an
   // open-ended stream avoids a real fetch failure driving a background
@@ -88,5 +91,53 @@ describe('System route', () => {
     const { findByRole } = await renderSystemRoute();
     const registryTrigger = await findByRole('tab', { name: 'Registry' });
     expect(registryTrigger.getAttribute('aria-selected')).toBe('true');
+  });
+
+  test('renders public Cinder badges throughout the Registry route', async () => {
+    const { findAllByText, findByRole, findByText } = await renderSystemRoute({
+      registryVersion: 1,
+      workflows: {
+        'order-processing': {
+          tags: ['payments'],
+          inputSchema: {
+            type: 'object',
+            required: ['orderId'],
+            properties: {
+              note: { type: 'string' },
+              orderId: { type: 'string' },
+            },
+          },
+        },
+        heartbeat: {},
+      },
+      activities: {
+        chargeCard: {
+          queue: 'default',
+          inputSchema: {
+            type: 'object',
+            properties: { amount: { type: 'number' } },
+          },
+        },
+      },
+    });
+
+    const workflowFieldCountBadge = await findByText('2 fields');
+    const noSchemaBadge = await findByText('none');
+    const queueBadge = await findByText('queue: default');
+    const activityFieldCountBadge = await findByText('1 field');
+    expect(workflowFieldCountBadge.getAttribute('data-cinder-variant')).toBe('success');
+    expect(noSchemaBadge.getAttribute('data-cinder-variant')).toBe('neutral');
+    expect(queueBadge.getAttribute('data-cinder-variant')).toBe('neutral');
+    expect(activityFieldCountBadge.getAttribute('data-cinder-variant')).toBe('success');
+
+    await fireEvent.click(await findByRole('button', { name: /order-processing/ }));
+
+    const typeBadges = await findAllByText('string');
+    expect(typeBadges).toHaveLength(2);
+    expect(typeBadges[0]?.getAttribute('data-cinder-monospace')).toBe('');
+    const requiredBadge = await findByText('required');
+    const optionalBadge = await findByText('optional');
+    expect(requiredBadge.getAttribute('data-cinder-variant')).toBe('warning');
+    expect(optionalBadge.getAttribute('data-cinder-variant')).toBe('neutral');
   });
 });

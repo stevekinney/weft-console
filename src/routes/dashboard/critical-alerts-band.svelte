@@ -125,9 +125,15 @@
     return list;
   });
 
-  const isLoading = $derived(
-    (canReadSystem && $diagnosticsQuery.isPending) || (canReadReviews && $reviewsQuery.isPending),
-  );
+  // Read both query states in every evaluation. A short-circuit expression
+  // can skip the reviews state while diagnostics is pending; no later
+  // notification then arrives for the skipped dependency and the empty state
+  // remains stuck on its loading skeleton.
+  const isLoading = $derived.by(() => {
+    const systemLoading = canReadSystem && $diagnosticsQuery.isPending;
+    const reviewsLoading = canReadReviews && $reviewsQuery.isPending;
+    return systemLoading || reviewsLoading;
+  });
 
   const bothScopesDenied = $derived(!canReadSystem && !canReadReviews);
 
