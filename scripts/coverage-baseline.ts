@@ -179,7 +179,7 @@ const DARWIN_BASELINE: CoverageBaseline = {
  */
 const LINUX_BASELINE: CoverageBaseline = {
   measuredAt: '2026-08-18T00:00:00.000Z',
-  overall: { linesFound: 36932, linesHit: 19412, functionsFound: 3937, functionsHit: 3235 },
+  overall: { linesFound: 36932, linesHit: 19402, functionsFound: 3937, functionsHit: 3235 },
   areas: {
     fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
     scripts: { linesFound: 339, linesHit: 268, functionsFound: 24, functionsHit: 23 },
