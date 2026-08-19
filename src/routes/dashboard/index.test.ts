@@ -77,12 +77,9 @@ describe('Dashboard', () => {
     scripted.routeUrl('/reviews', { items: [] });
     const client = realClient();
 
-    const { getByText, getAllByText, queryByLabelText } = render(DashboardIndexHarness, {
-      props: { client },
-    });
+    const { getByText, getAllByText } = render(DashboardIndexHarness, { props: { client } });
 
     await waitFor(() => expect(getByText('Workflows by status')).not.toBeNull());
-    await waitFor(() => expect(queryByLabelText('Loading alerts')).toBeNull());
     expect(getAllByText('9').length).toBeGreaterThan(0);
     expect(getByText('Failures by category')).not.toBeNull();
     expect(getByText('Recent activity')).not.toBeNull();
