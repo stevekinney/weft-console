@@ -125,15 +125,14 @@
     return list;
   });
 
-  // Bitwise OR evaluates both query states before coercing the result. A
-  // logical OR can skip the reviews state while diagnostics is pending,
-  // leaving the empty state stuck on its loading skeleton.
-  const isLoading = $derived(
-    Boolean(
-      Number(canReadSystem ? $diagnosticsQuery.isPending : false) |
-      Number(canReadReviews ? $reviewsQuery.isPending : false),
-    ),
-  );
+  // Read both query states before deciding whether either is pending. A
+  // single logical OR can skip the reviews state while diagnostics is
+  // pending, leaving it out of this derived value's dependency set.
+  const isLoading = $derived.by(() => {
+    const diagnosticsPending = canReadSystem && $diagnosticsQuery.isPending;
+    const reviewsPending = canReadReviews && $reviewsQuery.isPending;
+    return diagnosticsPending || reviewsPending;
+  });
 
   const bothScopesDenied = $derived(!canReadSystem && !canReadReviews);
 
@@ -176,7 +175,6 @@
         }}
       >
         <span class="weft-alert-chip__label">{chip.label}</span>
-        {#if chip.meta}<span class="weft-alert-chip__meta">{chip.meta}</span>{/if}
       </a>
     {/each}
     {#if deniedScope}

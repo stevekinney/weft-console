@@ -37,8 +37,6 @@ export interface AlertChip {
   readonly icon: string;
   readonly tone: AlertChipTone;
   readonly label: string;
-  /** Small metadata fragment shown after the label, e.g. a queue name. Omitted when there's nothing to add. */
-  readonly meta?: string;
   /** Router-relative deep link. */
   readonly href: string;
 }

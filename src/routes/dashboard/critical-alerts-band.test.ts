@@ -27,7 +27,7 @@ const EMPTY_DIAGNOSTICS_SUMMARY = {
 
 function alertClient(options: {
   diagnostics: unknown | HttpClientError;
-  reviews: unknown;
+  reviews: unknown | Promise<unknown>;
 }): HttpClient {
   return {
     baseUrl: 'http://weft.test/api',
@@ -58,6 +58,31 @@ describe('CriticalAlertsBand', () => {
       WAIT_FOR_TWO_QUERIES,
     );
     expect(container.textContent).toBe('');
+  });
+
+  test('keeps the loading skeleton visible until both alert queries settle', async () => {
+    let resolveReviews!: (reviews: unknown) => void;
+    const reviews = new Promise<unknown>((resolve) => {
+      resolveReviews = resolve;
+    });
+    const client = alertClient({
+      diagnostics: { items: [], summary: EMPTY_DIAGNOSTICS_SUMMARY, limit: 50 },
+      reviews,
+    });
+
+    const { queryByLabelText } = render(CriticalAlertsBandHarness, { props: { client } });
+
+    await waitFor(
+      () => expect(queryByLabelText('Loading alerts')).not.toBeNull(),
+      WAIT_FOR_TWO_QUERIES,
+    );
+
+    resolveReviews([]);
+
+    await waitFor(
+      () => expect(queryByLabelText('Loading alerts')).toBeNull(),
+      WAIT_FOR_TWO_QUERIES,
+    );
   });
 
   test('renders a diagnostic chip that deep-links to the workers queue view', async () => {
@@ -152,5 +177,81 @@ describe('CriticalAlertsBand', () => {
       WAIT_FOR_TWO_QUERIES,
     );
     expect(getByText('Requires system:read')).not.toBeNull();
+  });
+
+  test('a 403 from reviews preserves diagnostic chips and reports the reviews lock note', async () => {
+    const client = alertClient({
+      diagnostics: {
+        items: [],
+        summary: { ...EMPTY_DIAGNOSTICS_SUMMARY, deadLettered: 3 },
+        limit: 50,
+      },
+      reviews: Promise.reject(new HttpClientError(403, 'Forbidden')),
+    });
+
+    const { getByText } = render(CriticalAlertsBandHarness, { props: { client } });
+
+    await waitFor(
+      () => expect(getByText('3 dead-lettered tasks')).not.toBeNull(),
+      WAIT_FOR_TWO_QUERIES,
+    );
+    expect(getByText('Requires reviews:read')).not.toBeNull();
+  });
+
+  test('two forbidden alert queries settle on the combined lock notice', async () => {
+    const client = alertClient({
+      diagnostics: new HttpClientError(403, 'Forbidden'),
+      reviews: Promise.reject(new HttpClientError(403, 'Forbidden')),
+    });
+
+    const { getByText } = render(CriticalAlertsBandHarness, { props: { client } });
+
+    await waitFor(
+      () =>
+        expect(
+          getByText('Requires system:read, reviews:read to see critical alerts here.'),
+        ).not.toBeNull(),
+      WAIT_FOR_TWO_QUERIES,
+    );
+  });
+
+  test('alert chips handle clicks through the client router', async () => {
+    const now = Date.now();
+    const client = alertClient({
+      diagnostics: {
+        items: [],
+        summary: { ...EMPTY_DIAGNOSTICS_SUMMARY, deadLettered: 3 },
+        limit: 50,
+      },
+      reviews: [
+        {
+          status: 'pending',
+          reviewId: 'review-1',
+          workflowId: 'wf-1',
+          artifact: {},
+          reviewType: 'content',
+          reviewers: ['alice@example.com'],
+          allowPartial: false,
+          createdAt: now - 950_000,
+          timeout: 1_000_000,
+        },
+      ],
+    });
+
+    const { getByText } = render(CriticalAlertsBandHarness, { props: { client } });
+
+    await waitFor(
+      () => expect(getByText('3 dead-lettered tasks')).not.toBeNull(),
+      WAIT_FOR_TWO_QUERIES,
+    );
+
+    const diagnosticLink = getByText('3 dead-lettered tasks').closest('a');
+    const reviewLink = getByText('1 review near timeout').closest('a');
+    expect(
+      diagnosticLink?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })),
+    ).toBe(false);
+    expect(
+      reviewLink?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })),
+    ).toBe(false);
   });
 });
