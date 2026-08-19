@@ -97,16 +97,6 @@
 
 <script lang="ts">
   import ToastRegion, { useToast } from '@lostgradient/cinder/toast-region';
-
-  /*
-   * STYLES: this component renders `<ToastRegion>`, which needs
-   * `@lostgradient/cinder/toast-region/styles` on the page or it renders
-   * unstyled. T1.5 owns no `src/styles/<track>.css` file (PROJECT-BRIEF's
-   * per-track CSS convention names one per track; none was named for this
-   * task) — the shell/Foundation track (T1.6, `src/styles/foundation.css`,
-   * which mounts `<ToastHost>` into the real app shell) is where that import
-   * belongs.
-   */
 </script>
 
 <ToastRegion position="bottom-right">

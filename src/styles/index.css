@@ -9,6 +9,8 @@
  * every other CSS rule, all imports stay grouped at the top of this file.
  */
 @import '@lostgradient/cinder/styles';
+/* Charts render Cinder's internal Popover for tooltips; chart entrypoints do not include this transitive CSS. */
+@import '@lostgradient/cinder/popover/styles';
 @import './foundation.css';
 @import './dashboard.css';
 @import './workflows.css';

@@ -99,7 +99,7 @@ export function coverageMeasurementPlatform(): CoverageMeasurementPlatform | nul
 
 const DARWIN_BASELINE: CoverageBaseline = {
   measuredAt: '2026-08-18T00:00:00.000Z',
-  overall: { linesFound: 35964, linesHit: 23283, functionsFound: 4747, functionsHit: 4090 },
+  overall: { linesFound: 35954, linesHit: 23266, functionsFound: 4742, functionsHit: 4086 },
   areas: {
     fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
     // +10 lines over the 14:05 measurement, all covered: `LINUX_BASELINE` below

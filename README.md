@@ -398,8 +398,9 @@ See plan §2 for the authoritative layout description. The short version:
   `scopes.svelte.ts`, `router.svelte.ts`, `filters.ts`, `faults.ts`, `format/`, `live-source/`.
   Frozen after the Phase 1 Foundation gate.
 - `src/styles/` — `index.css` (shared entry, Cinder base styles + theme contract) plus one
-  per-track stylesheet each domain owns exclusively (`@lostgradient/cinder/<component>/styles`
-  imports plus route-local rules — never added to `index.css`).
+  per-track stylesheet each domain owns exclusively (route-local rules — never added to
+  `index.css`). Component entrypoints load their own styles; only documented transitive
+  dependencies such as chart tooltips' Popover CSS belong here.
 - `fixtures/` — deterministic demo data for the dev server and integration tests, split by
   concern (`workflows.ts` is the base module + orchestrating `seed()`; `coordination.ts`,
   `saga.ts`, `finalizer.ts`, `async-activity.ts`, `children.ts`, `history.ts`, `tagged.ts`,

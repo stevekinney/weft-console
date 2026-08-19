@@ -761,3 +761,6 @@
     flex: 1 1 100%;
   }
 }
+@import '@lostgradient/cinder/popover/styles';
+
+/* Charts render Cinder's internal Popover for tooltips; chart entrypoints do not include this transitive CSS. */

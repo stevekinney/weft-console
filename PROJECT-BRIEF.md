@@ -20,8 +20,9 @@ engine. Read this file completely before touching code. Then read:
 - **Cinder-first.** Every UI need uses the installed `@lostgradient/cinder` package when a
   component exists. Treat `package.json`, the installed package, and its supported public
   entrypoints as version and API truth. Cinder component entrypoints load their own styles. The
-  base `@lostgradient/cinder/styles` import is already wired in the entry CSS; do not add component
-  style sidecars.
+  base `@lostgradient/cinder/styles` import is already wired in the entry CSS; do not add a
+  component style ledger. A documented transitive dependency may retain its specific stylesheet
+  when the owning entrypoint does not bundle it.
   Key components that EXIST upstream (do not hand-roll): ConnectionIndicator, ScheduleBuilder,
   RunStepTimeline (branch groups, `rewound`, `compensates`, child lanes, waiting_approval),
   EventStreamViewer, FacetedFilterBar, PayloadInspector, SchemaForm, DataTable, ApprovalCard,
