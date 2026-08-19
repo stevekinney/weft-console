@@ -47,15 +47,6 @@
     type FaultTreatmentKind,
   } from '../lib/faults.ts';
 
-  /*
-   * STYLES: this component uses `Badge`, `Button`, and `Collapsible`, which
-   * need `@lostgradient/cinder/{badge,button,collapsible}/styles` on the
-   * page or they render unstyled. T1.5 owns no `src/styles/<track>.css` file
-   * (PROJECT-BRIEF's per-track CSS convention names one per track; none was
-   * named for this task) — the shell/Foundation track (T1.6,
-   * `src/styles/foundation.css`) is where those imports belong.
-   */
-
   interface FaultBoundaryProps {
     /** The content that may fail. */
     children: Snippet;

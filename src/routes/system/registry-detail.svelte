@@ -23,25 +23,27 @@
   let { row, onBack }: Props = $props();
 </script>
 
+{#snippet schemaBadge(
+  label: string,
+  variant: 'neutral' | 'warning',
+  monospace = false,
+  className = '',
+)}
+  <Badge class={className} {variant} {monospace}>{label}</Badge>
+{/snippet}
+
 {#snippet schemaNode(node: SchemaTreeNode)}
   <Tree.Item id={node.id} label={node.name} branch={node.children.length > 0}>
     {#snippet row(context)}
       <span class="weft-schema-node" data-expanded={context.expanded}>
         <span class="weft-schema-node__name">{node.name}</span>
-        <span
-          class="cinder-badge"
-          data-cinder-variant="neutral"
-          style="font-family:var(--cinder-font-mono);"
-        >
-          {node.type}
-        </span>
-        <span
-          class="cinder-badge"
-          data-cinder-variant={node.required ? 'warning' : 'neutral'}
-          style="margin-left:auto;"
-        >
-          {node.required ? 'required' : 'optional'}
-        </span>
+        {@render schemaBadge(node.type, 'neutral', true)}
+        {@render schemaBadge(
+          node.required ? 'required' : 'optional',
+          node.required ? 'warning' : 'neutral',
+          false,
+          'weft-schema-node__requirement',
+        )}
       </span>
     {/snippet}
     {#each node.children as child (child.id)}
@@ -205,5 +207,9 @@
     font-family: var(--cinder-font-mono);
     font-size: var(--cinder-text-sm);
     font-weight: 600;
+  }
+
+  :global(.weft-schema-node__requirement) {
+    margin-left: auto;
   }
 </style>

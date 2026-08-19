@@ -24,8 +24,9 @@ hand-rolled `Bun.serve()`, no `handleRequest()` workaround, no manual `/api`-pre
 reimplemented event feed. WebSocket upgrades, the per-workflow SSE/WS tail, and JSON-RPC over HTTP
 (`/jsonrpc`) all work against `bun run dev:server` as a result. (An earlier `@lostgradient/weft@0.11.0`
 bug made that impossible — `serve({ engine })` threw for any root-imported `Engine`
-(https://github.com/stevekinney/weft/issues/710); fixed upstream in `0.12.0` (#716), the version this
-package is pinned to. See `scripts/dev-server.ts`'s module doc if you need the full history.) The
+(https://github.com/stevekinney/weft/issues/710); fixed upstream in the historical `0.12.0` release
+(#716). This package now pins `0.18.0`; see `scripts/dev-server.ts`'s module doc if you need the full
+history.) The
 production mount path this package exists for — `serve({ dashboard: weftConsole() })` — is
 runtime-verified the same way: a real `serve({ engine, dashboard: weftConsole() })` instance returns
 the built shell (`index.html` with its `weft-console-config` block) at `200`.
@@ -333,19 +334,21 @@ available on the server` for every component test — not a real regression, jus
   env-var equivalent for `--conditions` (checked: a top-level `conditions` key and `BUN_CONDITIONS`
   are both silently no-ops for `bun test`/`bun run`); the CLI flags are a hard requirement, per the
   comment at the top of `scripts/svelte-test-plugin.ts`.
-- **Cinder v0.19.0, `@lostgradient/weft` v0.15.0** — pinned exact versions, bumped from the
-  scaffolding task's v0.16.1/v0.12.0 (ahead of the plan document's recorded v0.9.0/v0.11.0
-  ground-truth pass at authoring time). `lucide-svelte` is pinned inside Cinder's declared peer
+- **Current package baseline: Cinder v0.24.0 and `@lostgradient/weft` v0.18.0.** These are the exact
+  versions pinned in `package.json`; the lockfile resolves the same versions. The historical
+  adoption baseline was Cinder v0.19.0 and Weft v0.15.0, following the scaffolding task's historical
+  v0.16.1/v0.12.0 pair and the implementation plan's v0.9.0/v0.11.0 authoring snapshot.
+  `lucide-svelte` is pinned inside Cinder's declared peer
   range (`>=0.400.0 <1`) rather than the latest `1.x` line, which falls outside that peer contract.
   Cinder 0.17.0 finished extracting markdown/editor into standalone packages and deleted the
   `@lostgradient/cinder/markdown/*` shim — the console's one consumer (`artifact-view.svelte`)
   now imports `@lostgradient/markdown/rendering` directly, and `@lostgradient/markdown` is a
   direct dependency.
 
-## Cinder-first evaluations against landed upstream work (post-0.19.0 bump)
+## Historical Cinder-first evaluations after the 0.19.0 bump
 
-The 0.18.0 and 0.19.0 additions were re-evaluated against the installed component source, not
-assumed from the issue title:
+This historical adoption record covers the 0.18.0 and 0.19.0 additions that were re-evaluated
+against the installed component source at the time, not assumed from issue titles:
 
 - **`RunStepTimeline`'s `timed-out` status (cinder#848, fixed by cinder#853)** — adopted outright.
   `timeline-step-state.ts` previously collapsed Weft's `timed-out` timeline status into Cinder's
@@ -395,8 +398,9 @@ See plan §2 for the authoritative layout description. The short version:
   `scopes.svelte.ts`, `router.svelte.ts`, `filters.ts`, `faults.ts`, `format/`, `live-source/`.
   Frozen after the Phase 1 Foundation gate.
 - `src/styles/` — `index.css` (shared entry, Cinder base styles + theme contract) plus one
-  per-track stylesheet each domain owns exclusively (`@lostgradient/cinder/<component>/styles`
-  imports plus route-local rules — never added to `index.css`).
+  per-track stylesheet each domain owns exclusively (route-local rules — never added to
+  `index.css`). Component entrypoints load their own styles; only documented transitive
+  dependencies such as chart tooltips' Popover CSS belong here.
 - `fixtures/` — deterministic demo data for the dev server and integration tests, split by
   concern (`workflows.ts` is the base module + orchestrating `seed()`; `coordination.ts`,
   `saga.ts`, `finalizer.ts`, `async-activity.ts`, `children.ts`, `history.ts`, `tagged.ts`,

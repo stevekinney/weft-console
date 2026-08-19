@@ -4,7 +4,7 @@
 Weft is a Temporal-style durable-workflow engine; this package covers the design for its operator console: the full console shell (dashboard, workflow list, run detail, schedules, workers, reviews, system health) plus eight new/changed surfaces (live-connection indicator, schedule builder, workflow lineage, notification center, alerts view, linked selection across Timeline/Events/Logs, coordination & saga branch cards, export + conformance) and a shared pattern library.
 
 ## About the design files
-The `.dc.html` files in this bundle are **design references created in HTML** — prototypes showing intended look and behavior, not production code to copy directly. The task is to **recreate these designs in the target codebase's existing environment** using its established patterns and libraries. If no frontend exists yet, the natural choice is **Svelte 5 with the upstream Cinder component library (`@lostgradient/cinder`, v0.16.x — github.com/stevekinney/cinder)**, since every component referenced here exists there. React/Vue are equally viable if the team prefers; the token CSS in `tokens/` is framework-agnostic.
+The `.dc.html` files in this bundle are **design references created in HTML**—prototypes showing intended look and behavior, not production code to copy directly. Recreate these designs in the target codebase's existing environment using its established patterns and libraries. In Weft Console, `package.json` is live Cinder version truth and currently pins `@lostgradient/cinder` v0.24.0. Verify APIs against the installed package's supported public entrypoints and package documentation. The version-specific component inventory below is a historical authoring snapshot, not a current implementation contract. The token CSS in `tokens/` remains framework-agnostic.
 
 Note: the `.dc.html` files reference a runtime (`support.js`) and a bundled component recreation (`_ds/...`) that are not included — open them in the original design project to see them live. Use the files here as **source-of-truth markup and styling reference** (all styles are inline; every value is literal or a `var(--cinder-*)` token defined in `tokens/`).
 
@@ -12,16 +12,19 @@ Note: the `.dc.html` files reference a runtime (`support.js`) and a bundled comp
 **High-fidelity.** Colors, typography, spacing, radii, shadows, copy, and states are final. Recreate pixel-perfectly using Cinder components/tokens. Data shown is representative mock data.
 
 ## Design system — binding rules
-- **Cinder v0.16.x**: indigo (`oklch(50% 0.22 270)` light / `oklch(72% 0.14 270)` dark) on cool blue-grey neutrals (hue 245). 14px base size. No webfonts — platform `system-ui` + `ui-monospace` stacks. Lucide icons at 1.5–1.6px stroke, sized 10–17px inline. Sentence case everywhere; no emoji; `…` for in-progress, `·` for metadata separators.
+- **Cinder visual contract**: preserve the historical v0.16.x handoff's indigo (`oklch(50% 0.22 270)` light / `oklch(72% 0.14 270)` dark) on cool blue-grey neutrals (hue 245). This is a binding visual requirement, not a live API baseline. Use a 14px base size, platform `system-ui` + `ui-monospace` stacks, Lucide icons at 1.5–1.6px stroke sized 10–17px inline, sentence case, no emoji, `…` for in-progress, and `·` for metadata separators.
 - **Theming**: every color is OKLCH in `light-dark()`, keyed off `color-scheme` / `data-theme="light|dark"`. All surfaces shown in both themes in the mocks; implement with the tokens, never hard-coded per-theme values.
 - **Elevation**: `bg → surface → surface-raised → surface-inset` ladder; 1px `--cinder-border` does structural separation; shadows are subtle (`--cinder-shadow-sm/md/lg`).
 - **Status is never color alone** — always icon + text.
 - Full token values: `tokens/colors.css`, `tokens/typography.css`, `tokens/spacing.css`, `tokens/motion.css`.
 
-## Cinder components used (use the library — do not hand-roll)
-- **ConnectionIndicator** (0.10.0) — every live/polling/stale transport pill in all three files. Six states: `connecting | live | reconnecting (attempt slot) | polling | stale | closed`. Polling is deliberately quieter than live (no dot, no motion) so staleness is never mistaken for push.
-- **ScheduleBuilder** (0.10.0) — schedule creation cadence control (Console → Create schedule; New Surfaces §A). Presets/Cron/Interval tablist, lossless mode switching, plain-English summary, injected `computeNextFires(value, count)` preview (consumer supplies real date math — cron parsing/next-fire computation is the implementer's job), timezone label slot. Emits `{ mode: 'cron', expression } | { mode: 'interval', every, unit }`.
-- **RunStepTimeline** (0.10.0–0.12.x) — run detail timeline and New Surfaces §F: `kind:'branch'` groups with won/lost/settled lanes (winner emphasized, losers muted), per-step `rewound: true` (struck-through, inspectable), `compensates: '<forwardStepId>'` (inset beneath forward step with dashed reversal connector), `children` lanes, `waiting_approval`, `attemptCount`, `link`.
+## Historical Cinder component inventory
+
+Use the library rather than hand-rolling these surfaces, but verify current props and exports through public entrypoints before implementation.
+
+- **ConnectionIndicator** (historical 0.10.0 snapshot): every live/polling/stale transport pill in all three files. Six states: `connecting | live | reconnecting (attempt slot) | polling | stale | closed`. Polling is deliberately quieter than live (no dot, no motion) so staleness is never mistaken for push.
+- **ScheduleBuilder** (historical 0.10.0 snapshot): schedule creation cadence control (Console → Create schedule; New Surfaces §A). Presets/Cron/Interval tablist, lossless mode switching, plain-English summary, injected `computeNextFires(value, count)` preview (consumer supplies real date math—the implementer's job), timezone label slot. Emits `{ mode: 'cron', expression } | { mode: 'interval', every, unit }`.
+- **RunStepTimeline** (historical 0.10.0–0.12.x snapshot): run detail timeline and New Surfaces §F: `kind:'branch'` groups with won/lost/settled lanes (winner emphasized, losers muted), per-step `rewound: true` (struck-through, inspectable), `compensates: '<forwardStepId>'` (inset beneath forward step with dashed reversal connector), `children` lanes, `waiting_approval`, `attemptCount`, `link`.
 - Also: Badge, StatusDot, Button, Input/Select/Checkbox/Switch, Alert, Card, Kbd, FacetedFilterBar, EventStreamViewer, PayloadInspector, ApprovalCard, Meter, ActionRow/SelectableRow.
 
 ## Screens (file → surfaces)

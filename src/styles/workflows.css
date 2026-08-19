@@ -1,7 +1,4 @@
-/* workflows — track-owned stylesheet. Add `@lostgradient/cinder/<component>/styles`
- * imports and route-local rules here; never in src/styles/index.css.
- *
- * Never write `:global(...)` in this file. `:global()` is a Svelte
+/* Never write `:global(...)` in this file. `:global()` is a Svelte
  * `<style>`-block construct (escaping per-component scoping); this file is
  * plain CSS reached via a chain of `@import`s from `src/styles/index.css`
  * (main.ts → index.css → this file), never through Svelte's compiler, so
@@ -9,51 +6,7 @@
  * and is silently dropped (confirmed live: `document.styleSheets` had zero
  * rules matching a `:global(...)`-wrapped selector that had been written
  * here). Write the bare selector directly, e.g. `.weft-foo`, not
- * `:global(.weft-foo)`.
- *
- * Every Cinder component this track's `.svelte` files import, alphabetized.
- * Several (badge/button/card/collapsible/connection-indicator/empty-state/
- * input/skeleton) happen to already be imported by `foundation.css` for the
- * shell's own needs — re-imported here anyway so this stylesheet is
- * self-sufficient and doesn't silently depend on another track's shell CSS
- * staying unchanged. A duplicate `@import` of the same stylesheet is a
- * harmless no-op (deduplicated by the bundler / re-applies identical rules),
- * not a correctness issue. */
-@import '@lostgradient/cinder/badge/styles';
-@import '@lostgradient/cinder/bar-chart/styles';
-/* BarChart's opt-in `tooltip` renders through Popover — see system.css. */
-@import '@lostgradient/cinder/popover/styles';
-@import '@lostgradient/cinder/button/styles';
-@import '@lostgradient/cinder/card/styles';
-@import '@lostgradient/cinder/checkbox/styles';
-@import '@lostgradient/cinder/chip/styles';
-@import '@lostgradient/cinder/collapsible/styles';
-@import '@lostgradient/cinder/combobox/styles';
-@import '@lostgradient/cinder/connection-indicator/styles';
-@import '@lostgradient/cinder/copy-button/styles';
-@import '@lostgradient/cinder/description-list/styles';
-@import '@lostgradient/cinder/empty-state/styles';
-@import '@lostgradient/cinder/filter-bar/styles';
-@import '@lostgradient/cinder/input/styles';
-@import '@lostgradient/cinder/json-viewer/styles';
-@import '@lostgradient/cinder/pagination/styles';
-@import '@lostgradient/cinder/payload-inspector/styles';
-@import '@lostgradient/cinder/schema-form/styles';
-@import '@lostgradient/cinder/segmented-control/styles';
-@import '@lostgradient/cinder/select/styles';
-@import '@lostgradient/cinder/skeleton/styles';
-@import '@lostgradient/cinder/statistic/styles';
-@import '@lostgradient/cinder/statistic-group/styles';
-@import '@lostgradient/cinder/steps/styles';
-@import '@lostgradient/cinder/table/styles';
-@import '@lostgradient/cinder/table-body/styles';
-@import '@lostgradient/cinder/table-cell/styles';
-@import '@lostgradient/cinder/table-header/styles';
-@import '@lostgradient/cinder/table-header-cell/styles';
-@import '@lostgradient/cinder/table-row/styles';
-@import '@lostgradient/cinder/tag-input/styles';
-@import '@lostgradient/cinder/textarea/styles';
-@import '@lostgradient/cinder/tooltip/styles';
+ * `:global(.weft-foo)`. */
 
 /*
  * Combobox has no `hideLabel` escape hatch (unlike Input/Textarea) — its
@@ -808,3 +761,6 @@
     flex: 1 1 100%;
   }
 }
+@import '@lostgradient/cinder/popover/styles';
+
+/* Charts render Cinder's internal Popover for tooltips; chart entrypoints do not include this transitive CSS. */

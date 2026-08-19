@@ -42,8 +42,12 @@ describe('RegistryTab', () => {
       },
       { status: 200 },
     );
-    const { findByText } = await renderRegistryTab();
+    scripted.enqueueJsonRpcResult({ registryVersion: 1, workflows: {}, activities: {} });
+    const { findByText, getByRole } = await renderRegistryTab();
     expect(await findByText('Not authorized')).not.toBeNull();
+
+    await fireEvent.click(getByRole('button', { name: 'Retry' }));
+    expect(await findByText('Install the SDK', { exact: false })).not.toBeNull();
   });
 
   test('renders the 3-step onboarding empty state when nothing is registered', async () => {
@@ -60,29 +64,83 @@ describe('RegistryTab', () => {
       workflows: {
         'order-processing': {
           description: 'Processes an order end to end.',
+          tags: ['payments'],
           inputSchema: {
             type: 'object',
             required: ['orderId'],
-            properties: { orderId: { type: 'string' } },
+            properties: {
+              orderId: { type: 'string' },
+              note: { type: 'string' },
+            },
+          },
+        },
+        heartbeat: {},
+      },
+      activities: {
+        chargeCard: {
+          queue: 'default',
+          inputSchema: {
+            type: 'object',
+            required: ['amount'],
+            properties: { amount: { type: 'number' } },
           },
         },
       },
-      activities: { chargeCard: { queue: 'default' } },
     });
 
     const { findByText, findAllByText, getByRole } = await renderRegistryTab();
 
     expect(await findByText('order-processing')).not.toBeNull();
     expect(await findByText('chargeCard')).not.toBeNull();
-    expect(await findByText('1 field')).not.toBeNull();
+    const fieldCountBadge = await findByText('2 fields');
+    expect(fieldCountBadge.getAttribute('data-cinder-variant')).toBe('success');
+    expect(fieldCountBadge.getAttribute('data-cinder-size')).toBe('md');
+
+    const noSchemaBadge = await findByText('none');
+    expect(noSchemaBadge.getAttribute('data-cinder-variant')).toBe('neutral');
+    expect(noSchemaBadge.getAttribute('data-cinder-size')).toBe('md');
+
+    const queueBadge = await findByText('queue: default');
+    expect(queueBadge.getAttribute('data-cinder-variant')).toBe('neutral');
+    expect(queueBadge.getAttribute('data-cinder-size')).toBe('md');
+
+    const activityFieldCountBadge = await findByText('1 field');
+    expect(activityFieldCountBadge.getAttribute('data-cinder-variant')).toBe('success');
+    expect(activityFieldCountBadge.getAttribute('data-cinder-size')).toBe('md');
 
     await fireEvent.click(getByRole('button', { name: /order-processing/ }));
 
     expect(await findByText('Processes an order end to end.')).not.toBeNull();
+    const paymentElements = await findAllByText('payments');
+    const tagBadge = paymentElements.find(
+      (element) => element.getAttribute('data-cinder-variant') !== null,
+    );
+    expect(tagBadge?.getAttribute('data-cinder-variant')).toBe('neutral');
+    expect(tagBadge?.getAttribute('data-cinder-size')).toBe('md');
     const orderIdMatches = await findAllByText('orderId');
     expect(orderIdMatches.length).toBeGreaterThan(0);
 
+    const typeBadges = await findAllByText('string');
+    expect(typeBadges).toHaveLength(2);
+    for (const typeBadge of typeBadges) {
+      expect(typeBadge.getAttribute('data-cinder-monospace')).toBe('');
+      expect(typeBadge.getAttribute('data-cinder-size')).toBe('md');
+    }
+
+    const requiredBadge = await findByText('required');
+    expect(requiredBadge.getAttribute('data-cinder-variant')).toBe('warning');
+    expect(requiredBadge.getAttribute('data-cinder-size')).toBe('md');
+
+    const optionalBadge = await findByText('optional');
+    expect(optionalBadge.getAttribute('data-cinder-variant')).toBe('neutral');
+    expect(optionalBadge.getAttribute('data-cinder-size')).toBe('md');
+
     await fireEvent.click(getByRole('button', { name: 'Workflow definitions' }));
     expect(await findByText('order-processing')).not.toBeNull();
+
+    await fireEvent.click(getByRole('button', { name: /heartbeat/ }));
+    expect(
+      await findByText('No input schema declared — this definition accepts an untyped payload.'),
+    ).not.toBeNull();
   });
 });
