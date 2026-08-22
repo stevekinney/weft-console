@@ -60,7 +60,7 @@ describe('applyRunStepTimelineDivergenceHighlight', () => {
     ).toBe(true);
   });
 
-  test('a path this module did not mint (e.g. an unrecognized nested/lane path) is never marked, even if requested', () => {
+  test('a path outside the top-level step-<n> shape (e.g. a nested/lane path) is never marked, even if requested', () => {
     const container = buildTimelineDom(['%branch/race', 'step-1']);
     applyRunStepTimelineDivergenceHighlight(container, new Set(['%branch/race', 'step-1']));
 

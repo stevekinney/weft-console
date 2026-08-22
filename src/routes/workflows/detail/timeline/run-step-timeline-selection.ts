@@ -19,18 +19,21 @@
  * rail or a branch lane — `flattenSteps(lane.steps, '')` uses the same empty
  * prefix as the main rail) equals the step's own `id`, percent-escaped only
  * if it contains `%` or `/`. `timeline-mapping.ts` mints ids as `step-<n>`
- * (digits and a hyphen only), so escaping never triggers and the path is the
- * id verbatim — decoding is the identity function, not a fragile unescape.
+ * or `step-<n>-branch-<m>` (digits and hyphens only), so escaping never
+ * triggers and the path is the id verbatim — decoding is the identity
+ * function, not a fragile unescape.
  *
  * ## Selector: the public `data-cinder-path` attribute, not the private class
  *
  * Every element Cinder stamps `data-cinder-path` onto is a step/branch row
  * — plain steps, branch-group items, and branch-lane steps alike (verified
- * against `run-step-timeline`'s compiled output). `stepIdFromItem`'s regex
- * already narrows to ids this app minted, so the private
- * `.cinder-run-step-timeline__item` class buys nothing extra here; querying
- * `[data-cinder-path]` alone is sufficient and keeps this module off
- * Cinder's internal class names entirely.
+ * against `run-step-timeline`'s compiled output). Divergence highlighting
+ * only targets top-level steps, so `stepIdFromItem`'s regex deliberately
+ * narrows to the top-level `step-<n>` shape and leaves branch-lane ids
+ * (`step-<n>-branch-<m>`) unmatched, even though those are also app-minted.
+ * The private `.cinder-run-step-timeline__item` class buys nothing extra
+ * here either way; querying `[data-cinder-path]` alone is sufficient and
+ * keeps this module off Cinder's internal class names entirely.
  */
 
 const RUN_STEP_ITEM_SELECTOR = '[data-cinder-path]';
