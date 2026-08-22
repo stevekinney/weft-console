@@ -1,57 +1,17 @@
 /**
- * App-local DOM composition over `RunStepTimeline` for click-to-select and
- * selection tinting (plan design §E, BINDING).
+ * App-local DOM composition over `RunStepTimeline` for the Checkpoints tab's
+ * divergence highlight (plan design §7.3).
  *
- * `attachRunStepTimelineClickSelection` is a MOUSE-ONLY convenience —
- * clicking anywhere on a step row selects it. The keyboard-accessible path
- * (Tab + Enter/Space, with `aria-pressed` state) is a real `<button>`
- * rendered through `RunStepTimeline`'s `children` snippet in
- * `../timeline-tab.svelte` (T9.4 accessibility pass), since neither this
- * module's row tint nor Cinder's `<li>` itself is focusable. Keep both: the
- * button owns correctness (keyboard + ARIA), the row click stays as a
- * bonus for mouse users, matching `workflow-table.svelte`'s identical
- * "real interactive element owns the keyboard path, `onclick` is a mouse
- * bonus" split.
- *
- * ## Must attach with `svelte/events`' `on`, not `addEventListener`
- *
- * Svelte 5 delegates common events (including `click`) to a single
- * application-root listener for its declarative `onclick={...}` handlers.
- * Per Svelte's own docs (`basic-markup.md` "Event delegation"): a listener
- * attached with plain `addEventListener` on an ancestor runs DURING NATIVE
- * BUBBLING — i.e. BEFORE a descendant's declarative `onclick`, which only
- * runs once the (already-bubbled) event reaches the delegated root. That
- * ordering bit the keyboard-select button below: its own `onclick` called
- * `event.stopPropagation()`, but by the time it ran, this module's
- * `addEventListener`-based listener had ALREADY fired — `selectTimelineStep`
- * toggles, so one click called it twice (once from each handler) and
- * silently cancelled out (verified empirically: `aria-pressed` never
- * flipped). Svelte's docs prescribe the fix directly: attach with the `on`
- * helper from `svelte/events` instead — it participates correctly in the
- * delegated order, so a descendant's `stopPropagation()` actually prevents
- * this listener from running.
- *
- * ## Why this reaches into Cinder's rendered DOM instead of using a prop
- *
- * Verified against Cinder v0.16.1 (`run-step-timeline.types.ts`,
- * `run-step-timeline.svelte`): `RunStepTimeline` has no selection API at
- * all — no `selectedStepId`, no `onStepClick`, no per-step `class`/`style`
- * override, and no click handler on the rendered `<li>`. The component
- * exposes exactly two composition seams: the `children` snippet (rendered
- * INSIDE each step's body, after its metadata — not the whole row) and
- * stable `data-cinder-path`/`data-cinder-status` attributes on each `<li>`.
- * Neither lets a consumer make the ENTIRE row clickable or tinted without
- * reaching outside props.
- *
- * This module is the documented, minimal app-local composition the
- * PROJECT-BRIEF calls for in that situation ("ship the console using the
- * component as-is … or a minimal app-local composition") rather than
- * forking or wrapping `RunStepTimeline` to change its visuals. Filed
- * upstream requesting a `selectedStepId`/`onStepSelect` prop; see this
- * track's final report. Everything below is confined to this one file so
- * the Cinder-internals coupling (the `.cinder-run-step-timeline__item`
- * class name, `data-cinder-path`) has exactly one place to update if/when
- * that upstream prop lands or Cinder's markup changes.
+ * Step *selection* used to live here too (plan design §E), as a DOM
+ * workaround: Cinder v0.16.1's `RunStepTimeline` had no selection API at
+ * all — no `selectedStepId`, no click/keyboard handling, no per-step
+ * `class`/`style` override. Cinder 0.24.0 added `selectedStepId` and
+ * `onStepSelect` props (WFC-7), so `../timeline-tab.svelte` now wires
+ * selection straight through those props instead of reaching into Cinder's
+ * rendered DOM. That upstream API has no divergence equivalent — Cinder has
+ * no concept of "diverged" steps, and single-selection `selectedStepId`
+ * can't represent an arbitrary set of rows — so the divergence highlight
+ * below still needs this app-local composition.
  *
  * ## Why decoding `data-cinder-path` back to a step id is safe here
  *
@@ -61,11 +21,19 @@
  * if it contains `%` or `/`. `timeline-mapping.ts` mints ids as `step-<n>`
  * (digits and a hyphen only), so escaping never triggers and the path is the
  * id verbatim — decoding is the identity function, not a fragile unescape.
+ *
+ * ## Selector: the public `data-cinder-path` attribute, not the private class
+ *
+ * Every element Cinder stamps `data-cinder-path` onto is a step/branch row
+ * — plain steps, branch-group items, and branch-lane steps alike (verified
+ * against `run-step-timeline`'s compiled output). `stepIdFromItem`'s regex
+ * already narrows to ids this app minted, so the private
+ * `.cinder-run-step-timeline__item` class buys nothing extra here; querying
+ * `[data-cinder-path]` alone is sufficient and keeps this module off
+ * Cinder's internal class names entirely.
  */
-import { on } from 'svelte/events';
 
-const RUN_STEP_ITEM_SELECTOR = '.cinder-run-step-timeline__item[data-cinder-path]';
-const SELECTED_ATTRIBUTE = 'data-weft-timeline-selected';
+const RUN_STEP_ITEM_SELECTOR = '[data-cinder-path]';
 
 function stepIdFromItem(item: Element): string | null {
   const path = item.getAttribute('data-cinder-path');
@@ -76,34 +44,11 @@ function stepIdFromItem(item: Element): string | null {
 }
 
 /**
- * Delegates clicks anywhere inside `container` to the nearest recognized
- * `RunStepTimeline` row and reports its step id. Returns a cleanup function.
- */
-export function attachRunStepTimelineClickSelection(
-  container: HTMLElement,
-  onSelectStepId: (stepId: string) => void,
-): () => void {
-  function handleClick(event: MouseEvent): void {
-    const target = event.target;
-    if (!(target instanceof Element)) return;
-    const item = target.closest(RUN_STEP_ITEM_SELECTOR);
-    if (item === null) return;
-    const stepId = stepIdFromItem(item);
-    if (stepId === null) return;
-    onSelectStepId(stepId);
-  }
-
-  return on(container, 'click', handleClick);
-}
-
-/**
  * Imperatively syncs a marker attribute onto the rendered rows whose step id
  * is in `matchStepIds`. Idempotent — clears any stale marker before
- * re-applying. Shared low-level primitive behind both selection tinting
- * (single id, click-driven) and the Checkpoints tab's divergence highlight
- * (a whole set, driven by `alignTimelinesForDivergence` — see
- * `checkpoints/divergence.ts`) — both are "mark these rendered rows" over
- * the same Cinder-internals coupling this module exists to isolate.
+ * re-applying. The low-level primitive behind the Checkpoints tab's
+ * divergence highlight (driven by `alignTimelinesForDivergence` — see
+ * `checkpoints/divergence.ts`).
  */
 function markRunStepTimelineItems(
   container: HTMLElement,
@@ -117,23 +62,6 @@ function markRunStepTimelineItems(
     const stepId = stepIdFromItem(item);
     if (stepId !== null && matchStepIds.has(stepId)) item.setAttribute(attribute, '');
   }
-}
-
-/**
- * Imperatively syncs the selection tint attribute onto the rendered rows.
- * Call after every render where `selectedStepId` or the step list may have
- * changed (e.g. from a `$effect`). Idempotent — clears any stale attribute
- * before applying the current selection.
- */
-export function applyRunStepTimelineSelectionHighlight(
-  container: HTMLElement,
-  selectedStepId: string | null,
-): void {
-  markRunStepTimelineItems(
-    container,
-    selectedStepId === null ? new Set() : new Set([selectedStepId]),
-    SELECTED_ATTRIBUTE,
-  );
 }
 
 const DIVERGED_ATTRIBUTE = 'data-weft-timeline-diverged';

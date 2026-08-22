@@ -8,25 +8,19 @@
    * under `./timeline/` and `./async-activity/` for what's real vs.
    * honestly degraded — this component is orchestration only.
    *
-   * ## Keyboard access to step selection (T9.4 accessibility pass)
+   * ## Step selection (WFC-7: adopted Cinder's public selection API)
    *
-   * `attachRunStepTimelineClickSelection` (`./timeline/run-step-timeline-selection.ts`)
-   * only ever wired a `click` listener onto the rendered `<li>` rows, and
-   * Cinder's own `<li>` carries no `tabindex`/`role`/keydown handling (verified
-   * against `run-step-timeline.svelte`) — so selecting a step was mouse-only,
-   * and the "selected" tint (`data-weft-timeline-selected`, a plain DOM
-   * attribute) had no ARIA equivalent for assistive tech either way. The
-   * `children` snippet below is Cinder's one documented seam for adding real
-   * interactive content inside a step's body, so the toggle button there is
-   * the actual accessible control — reachable by Tab, activated by
-   * Enter/Space, state exposed via `aria-pressed`. The whole-row click
-   * delegation stays as a mouse-only convenience (matches
-   * `workflow-table.svelte`'s and `aggregate-view.svelte`'s identical
-   * pattern: a real interactive element carries the keyboard path, a row
-   * `onclick` is a bonus). The button's handler stops propagation so a click
-   * on it doesn't ALSO fire the row-level delegate — `selectTimelineStep`
-   * toggles, so an un-stopped bubble would select-then-immediately-deselect
-   * in the same click.
+   * Cinder 0.24.0 added `selectedStepId`/`onStepSelect` to
+   * `RunStepTimeline` itself, so the click/keyboard/ARIA selection UI is
+   * Cinder's own now — a native, focusable control per row (`Select
+   * <label>`, `aria-pressed`) that Cinder renders and manages, including
+   * ignoring clicks that land on interactive descendants (so it composes
+   * cleanly with the async-activity "Complete…" button rendered in the
+   * `children` snippet below). We just wire `selection.selectedStepId` and
+   * `selectTimelineStep` straight through. See
+   * `./timeline/run-step-timeline-selection.ts`'s module doc for the
+   * DOM-composition workaround this replaced, and for the divergence
+   * highlighting that's unrelated and still needed.
    */
   import Badge from '@lostgradient/cinder/badge';
   import Button from '@lostgradient/cinder/button';
@@ -52,10 +46,6 @@
   } from './async-activity/async-activity-query.ts';
   import AsyncActivityDrawer from './async-activity/async-activity-drawer.svelte';
   import FinalizerStrip from './timeline/finalizer-strip.svelte';
-  import {
-    applyRunStepTimelineSelectionHighlight,
-    attachRunStepTimelineClickSelection,
-  } from './timeline/run-step-timeline-selection.ts';
   import {
     TIMELINE_QUICK_FILTERS,
     filterTimelineEntries,
@@ -131,19 +121,6 @@
   // `state_referenced_locally` compiler warning.
   const selection = timelineSelectionFor(untrack(() => workflow.id));
 
-  let containerEl = $state<HTMLDivElement | undefined>();
-
-  $effect(() => {
-    const el = containerEl;
-    if (!el) return;
-    return attachRunStepTimelineClickSelection(el, selectTimelineStep);
-  });
-
-  $effect(() => {
-    void steps; // re-sync the highlight after every render of the rail
-    if (containerEl) applyRunStepTimelineSelectionHighlight(containerEl, selection.selectedStepId);
-  });
-
   let jumpToStepText = $state('');
 
   function jumpToStep(): void {
@@ -151,18 +128,6 @@
     if (!Number.isSafeInteger(step)) return;
     const target = timelinePageForStep(filteredEntries, step);
     if (target !== null) pageIndex = target;
-  }
-
-  /**
-   * The step-selection toggle's click handler (see the module doc's
-   * "Keyboard access to step selection" section). `stopPropagation` keeps
-   * this single, deliberate toggle from also being seen by
-   * `attachRunStepTimelineClickSelection`'s row-level delegate, which would
-   * otherwise immediately toggle the same step a second time.
-   */
-  function toggleStepSelection(event: MouseEvent, stepId: string): void {
-    event.stopPropagation();
-    selectTimelineStep(stepId);
   }
 
   const attachedPendingActivities = $derived(
@@ -277,41 +242,34 @@
     {#if filteredEntries.length === 0}
       <EmptyState title="No steps match this filter" description="Try a different quick filter." />
     {:else}
-      <div bind:this={containerEl}>
-        <RunStepTimeline {steps} label={`${workflow.type} timeline`}>
-          {#snippet children(step)}
-            {@const stepSelected = step.id === selection.selectedStepId}
-            <button
-              type="button"
-              class="weft-timeline-tab__step-select"
-              aria-pressed={stepSelected}
-              onclick={(event) => toggleStepSelection(event, step.id)}
-            >
-              <Link aria-hidden="true" size={11} />
-              {stepSelected ? 'Selected — filtering events' : 'Select — filter events to this step'}
-            </button>
-            {#if attachedPendingActivities.some((activity) => activity.stepId === step.id)}
-              {@const activity = attachedPendingActivities.find(
-                (candidate) => candidate.stepId === step.id,
-              )}
-              {#if activity}
-                <div class="weft-timeline-tab__step-async">
-                  <Badge variant="warning">
-                    <Clock aria-hidden="true" size={11} />
-                    Awaiting external completion
-                  </Badge>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    label="Complete…"
-                    onclick={() => (openDrawerToken = activity.token)}
-                  />
-                </div>
-              {/if}
+      <RunStepTimeline
+        {steps}
+        label={`${workflow.type} timeline`}
+        selectedStepId={selection.selectedStepId}
+        onStepSelect={selectTimelineStep}
+      >
+        {#snippet children(step)}
+          {#if attachedPendingActivities.some((activity) => activity.stepId === step.id)}
+            {@const activity = attachedPendingActivities.find(
+              (candidate) => candidate.stepId === step.id,
+            )}
+            {#if activity}
+              <div class="weft-timeline-tab__step-async">
+                <Badge variant="warning">
+                  <Clock aria-hidden="true" size={11} />
+                  Awaiting external completion
+                </Badge>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  label="Complete…"
+                  onclick={() => (openDrawerToken = activity.token)}
+                />
+              </div>
             {/if}
-          {/snippet}
-        </RunStepTimeline>
-      </div>
+          {/if}
+        {/snippet}
+      </RunStepTimeline>
     {/if}
   {/if}
 
@@ -425,38 +383,5 @@
     align-items: center;
     gap: 4px;
     min-height: 24px;
-  }
-
-  :global([data-weft-timeline-selected]) {
-    background: color-mix(in oklch, var(--cinder-accent), transparent 90%);
-    border-radius: var(--cinder-radius-md);
-  }
-
-  /* Keyboard-accessible step-selection toggle (module doc's "Keyboard access
-     to step selection") — the real interactive control behind the row tint. */
-  .weft-timeline-tab__step-select {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    border: 1px solid var(--cinder-border);
-    background: var(--cinder-surface);
-    color: var(--cinder-text-subtle);
-    border-radius: var(--cinder-radius-sm);
-    font: inherit;
-    font-size: var(--cinder-text-2xs);
-    padding: 3px 8px;
-    min-height: 24px;
-    cursor: pointer;
-    margin-top: 6px;
-  }
-
-  .weft-timeline-tab__step-select:hover {
-    background: var(--cinder-surface-hover);
-  }
-
-  .weft-timeline-tab__step-select[aria-pressed='true'] {
-    border-color: var(--cinder-accent);
-    background: color-mix(in oklch, var(--cinder-accent), transparent 85%);
-    color: var(--cinder-accent-text);
   }
 </style>
