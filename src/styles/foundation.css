@@ -8,7 +8,7 @@
   padding: var(--cinder-space-4, 1rem);
 }
 
-.weft-console-api-key-entry .cinder-card {
+.weft-console-api-key-entry__card {
   width: 100%;
   max-width: 24rem;
 }
@@ -65,29 +65,35 @@
  * is where an app overrides the background token, not a fork).
  *
  * The 232px width is scoped to the plain expanded-desktop state
- * (`:not(.cinder-sidebar--mobile):not([data-cinder-collapsed])`) rather than
- * applied unconditionally. Cinder's own collapsed-width (`4rem`) and
- * mobile-drawer-width (`100%`) rules live inside `@layer cinder.components`
- * (`sidebar.css`), and every rule in this file is unlayered — unlayered CSS
- * always wins a cascade-layer conflict regardless of selector specificity,
- * so an unconditional `width: 232px` here silently overrode Cinder's own
- * per-state sizing while every OTHER collapsed-mode rule (label
- * hide/reposition, icon-only sizing) kept applying normally, since none of
- * those set `width`/`inline-size` on this element. The visible symptom:
- * toggling the icon rail (or loading at a narrow width that starts
+ * (`:not(.weft-shell-sidebar--mobile):not(.weft-shell-sidebar--collapsed)`)
+ * rather than applied unconditionally. Cinder's own collapsed-width (`4rem`)
+ * and mobile-drawer-width (`100%`) rules live inside `@layer
+ * cinder.components` (`sidebar.css`), and every rule in this file is
+ * unlayered — unlayered CSS always wins a cascade-layer conflict regardless
+ * of selector specificity, so an unconditional `width: 232px` here silently
+ * overrode Cinder's own per-state sizing while every OTHER collapsed-mode
+ * rule (label hide/reposition, icon-only sizing) kept applying normally,
+ * since none of those set `width`/`inline-size` on this element. The visible
+ * symptom: toggling the icon rail (or loading at a narrow width that starts
  * collapsed) rendered a full-width sidebar shell with its nav labels
  * squashed to 0-height and shifted hundreds of pixels off-screen — verified
  * live via the dev harness (confirmed empirically: `getComputedStyle` on
  * the nav-item label reported `position: absolute` with a nonsensical
  * `width`/`x` matching Cinder's collapsed styling, while the `<aside>`
- * itself stayed pinned at this rule's 232px). */
+ * itself stayed pinned at this rule's 232px).
+ *
+ * `weft-shell-sidebar--collapsed`/`--mobile` are app-owned modifier classes
+ * (`src/app/shell/sidebar.svelte`) derived from the app's own `collapsed`
+ * state and a `MediaQuery` on Cinder's public `SIDEBAR_MOBILE_MEDIA_QUERY`
+ * breakpoint export, not read back from Cinder's rendered mobile class or
+ * collapsed-state attribute on the sidebar root. */
 
 .weft-shell-sidebar {
   flex: none;
   background: var(--cinder-surface-inset);
 }
 
-.weft-shell-sidebar:not(.cinder-sidebar--mobile):not([data-cinder-collapsed]) {
+.weft-shell-sidebar:not(.weft-shell-sidebar--mobile):not(.weft-shell-sidebar--collapsed) {
   width: 232px;
 }
 

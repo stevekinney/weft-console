@@ -50,6 +50,7 @@
 
 <div class="weft-console-api-key-entry">
   <Card
+    class="weft-console-api-key-entry__card"
     title="Authentication required"
     description="This server requires an API key. Enter one with access to the operations you need."
   >

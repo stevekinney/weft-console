@@ -61,6 +61,7 @@
     <div class="weft-operations-tab__toolbar">
       <SearchField
         id="operation-search"
+        class="weft-operations-tab__search"
         placeholder="Search operations…"
         value={searchQuery}
         onValueChange={(next) => (searchQuery = next)}
@@ -164,7 +165,7 @@
     flex-wrap: wrap;
   }
 
-  .weft-operations-tab__toolbar :global(.cinder-search-field) {
+  .weft-operations-tab__toolbar :global(.weft-operations-tab__search) {
     flex: 1;
     max-width: 300px;
   }

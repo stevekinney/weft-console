@@ -95,6 +95,7 @@
                 size="sm"
                 ariaLabel={`In-flight tasks for worker ${worker.id}`}
                 ariaValueText={`${worker.inFlight} of ${worker.concurrency}`}
+                class="weft-worker-meter__meter"
               />
             </div>
           </Table.Cell>

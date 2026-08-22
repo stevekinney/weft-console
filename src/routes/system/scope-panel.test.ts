@@ -37,10 +37,11 @@ describe('ScopePanel', () => {
 
   test('a scope granted to the principal never appears in the denied styling', async () => {
     const { container } = await renderScopePanel(['system:read']);
-    const deniedBadges = Array.from(
-      container.querySelectorAll('.weft-scope-panel__list--denied .cinder-badge'),
+    const deniedList = container.querySelector('.weft-scope-panel__list--denied');
+    const deniedScopes = Array.from(
+      deniedList?.querySelectorAll('.weft-scope-panel__badge') ?? [],
     ).map((el) => el.textContent?.trim());
-    expect(deniedBadges).not.toContain('system:read');
-    expect(deniedBadges).toContain('workflows:read');
+    expect(deniedScopes).not.toContain('system:read');
+    expect(deniedScopes).toContain('workflows:read');
   });
 });

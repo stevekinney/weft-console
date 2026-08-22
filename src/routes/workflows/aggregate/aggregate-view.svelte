@@ -157,14 +157,16 @@
           onAttributeNameSubmit();
         }}
       >
-        <Input
-          id="weft-aggregate-attribute-name"
-          label="Attribute name"
-          labelVisible={false}
-          placeholder="or group by attribute…"
-          value={attributeName}
-          oninput={(event) => (attributeName = (event.currentTarget as HTMLInputElement).value)}
-        />
+        <div class="weft-aggregate-view__attribute-form-field">
+          <Input
+            id="weft-aggregate-attribute-name"
+            label="Attribute name"
+            labelVisible={false}
+            placeholder="or group by attribute…"
+            value={attributeName}
+            oninput={(event) => (attributeName = (event.currentTarget as HTMLInputElement).value)}
+          />
+        </div>
       </form>
       {#if total > 0}
         <span class="weft-aggregate-view__total">{total.toLocaleString()} total</span>

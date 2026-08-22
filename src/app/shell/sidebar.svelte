@@ -56,6 +56,18 @@
    */
   const isMobileViewport = new MediaQuery(SIDEBAR_MOBILE_MEDIA_QUERY, false);
 
+  /**
+   * App-owned collapsed/mobile layout hooks for `foundation.css`'s width
+   * rules. Derived from state this component already owns (`collapsed`,
+   * bound straight into `Sidebar`, and `isMobileViewport`, computed from the
+   * same public `SIDEBAR_MOBILE_MEDIA_QUERY` breakpoint Sidebar itself uses)
+   * rather than reading back Cinder's rendered mobile class or
+   * collapsed-state attribute on the sidebar root.
+   */
+  const sidebarStateClass = $derived(
+    `weft-shell-sidebar${collapsed ? ' weft-shell-sidebar--collapsed' : ''}${isMobileViewport.current ? ' weft-shell-sidebar--mobile' : ''}`,
+  );
+
   const STALE_HEARTBEAT_MS = 30_000;
 
   const reviewsQuery = createQuery(
@@ -161,7 +173,7 @@
   };
 </script>
 
-<Sidebar label="Weft Console" bind:collapsed class="weft-shell-sidebar">
+<Sidebar label="Weft Console" bind:collapsed class={sidebarStateClass}>
   {#snippet navigation()}
     <SideNavigation ariaLabel="Domains">
       {#each navEntries as entry (entry.path)}

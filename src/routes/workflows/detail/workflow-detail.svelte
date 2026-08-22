@@ -254,7 +254,7 @@
 
     <div class="weft-workflow-detail__tab-scroll">
       <Tabs bind:value={activeTab}>
-        <Tabs.List label="Workflow detail sections">
+        <Tabs.List label="Workflow detail sections" class="weft-workflow-detail__tab-list">
           <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
           <Tabs.Trigger value="timeline">Timeline</Tabs.Trigger>
           <Tabs.Trigger value="events">Events</Tabs.Trigger>
