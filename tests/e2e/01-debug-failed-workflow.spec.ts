@@ -41,19 +41,27 @@ test('operator finds, reads, and exports a failed workflow', async ({ page, chec
 
   await page.getByRole('tab', { name: 'Timeline' }).click();
   // Scoped to the first step's stable `<li>` (a Cinder `RunStepTimeline`
-  // row, keyed by class/position, not text) rather than re-querying
-  // `getByRole('button', { name: 'Select — filter events to this step' })`
-  // after the click: that button's own accessible name flips to "Selected
-  // — filtering events" on click, so the pre-click locator resolves to
-  // zero elements once toggled.
+  // row, keyed by class/position, not text). Cinder's own
+  // `selection-control` button (WFC-7: adopted from `RunStepTimeline`'s
+  // public selection API) is a `pointer-events: none` overlay that exists
+  // for keyboard/AT interaction only — its `aria-label` stays
+  // `Select <step>` and only its `aria-pressed` flips on click. Real
+  // pointer clicks land on the row's visible content and are delegated to
+  // the same `onStepSelect` handler by a click listener Cinder attaches to
+  // the `<li>` itself (see `run-step-timeline.svelte`'s
+  // `createStepSelectionAttachment`/`isInteractiveDescendant`), so click
+  // the visible label rather than the (intentionally unclickable-by-mouse)
+  // button.
   const firstStep = page.locator('li.cinder-run-step-timeline__item').first();
   const stepToggle = firstStep.getByRole('button', { name: /^Select/ });
   await expect(stepToggle).toBeVisible();
-  await stepToggle.click();
-  await expect(
-    firstStep.getByRole('button', { name: 'Selected — filtering events' }),
-  ).toBeVisible();
-  await checkA11y('workflow detail — timeline (step expanded)');
+  await expect(stepToggle).toHaveAttribute('aria-pressed', 'false');
+  await firstStep.locator('.cinder-run-step-timeline__label').first().click();
+  await expect(stepToggle).toHaveAttribute('aria-pressed', 'true');
+  // The linked-selection chip is rendered by `timeline-tab.svelte` as a
+  // page-level sibling of `RunStepTimeline`, not inside the step `<li>`.
+  await expect(page.getByText('Selected — Events filtered to this step')).toBeVisible();
+  await checkA11y('workflow detail — timeline (step selected)');
 
   await page.getByRole('tab', { name: 'Events' }).click();
   await expect(page.getByText('step: ')).toBeVisible();
