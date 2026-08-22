@@ -329,9 +329,21 @@ describe('stepNumberFromRunStepId', () => {
     expect(stepNumberFromRunStepId('step-42')).toBe(42);
   });
 
+  test('resolves a branch-lane step id to its parent coordination step number', () => {
+    // Minted by `mapCoordinatorEntry` for a `race`/`all`/`speculate` branch —
+    // the engine only checkpoints at the coordination entry's own step, so
+    // selecting a branch row should filter Events to that parent step (WFC-7
+    // follow-up: this used to return `null`, silently no-op-ing the Events
+    // filter while the UI still claimed "filtered to this step").
+    expect(stepNumberFromRunStepId('step-3-branch-0')).toBe(3);
+    expect(stepNumberFromRunStepId('step-3-branch-12')).toBe(3);
+  });
+
   test('returns null for an id this module did not mint', () => {
     expect(stepNumberFromRunStepId('branch-race')).toBeNull();
     expect(stepNumberFromRunStepId('step-')).toBeNull();
     expect(stepNumberFromRunStepId('not-a-step')).toBeNull();
+    expect(stepNumberFromRunStepId('step-3-branch-')).toBeNull();
+    expect(stepNumberFromRunStepId('step-3-branch-x')).toBeNull();
   });
 });
