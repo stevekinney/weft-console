@@ -11,7 +11,7 @@
 import { fireEvent, render } from '@testing-library/svelte';
 import { describe, expect, test } from 'bun:test';
 
-import type { ReviewListEntry } from '@lostgradient/weft';
+import type { PendingReviewEntry, ReviewListEntry } from '@lostgradient/weft';
 import { HttpClientError, type HttpClient } from '@lostgradient/weft/client';
 
 import type { CreateQueryResult } from '@tanstack/svelte-query';
@@ -37,6 +37,21 @@ function fakeQuery(state: FakeQueryState<ReviewListEntry[]>): CreateQueryResult<
 
 function fakeClient(): HttpClient {
   return { baseUrl: 'http://localhost', headers: {} } as unknown as HttpClient;
+}
+
+function pendingEntry(overrides: Partial<PendingReviewEntry> = {}): PendingReviewEntry {
+  return {
+    status: 'pending',
+    reviewId: 'review-1',
+    workflowId: 'wf_4a9f8c31e7b2d05a6f912c10',
+    artifact: {},
+    reviewType: 'Contract approval',
+    reviewers: ['ops@example.com'],
+    allowPartial: false,
+    createdAt: Date.now() - 60_000,
+    timeout: 600_000,
+    ...overrides,
+  } as PendingReviewEntry;
 }
 
 describe('ReviewsInbox', () => {
@@ -113,5 +128,19 @@ describe('ReviewsInbox', () => {
 
     expect(getByText('Something went wrong')).not.toBeNull();
     expect(queryByText('No decisions yet')).toBeNull();
+  });
+
+  test('a pending review is auto-selected, rendering its decision form in the detail pane', async () => {
+    const { getByText, queryByText } = render(ReviewsInboxTestHarness, {
+      props: {
+        client: fakeClient(),
+        pendingQuery: fakeQuery({ data: [pendingEntry()], isPending: false }),
+        completedQuery: fakeQuery({ data: [], isPending: false }),
+      },
+    });
+
+    expect(queryByText('No review selected')).toBeNull();
+    expect(getByText('Approve')).not.toBeNull();
+    expect(getByText('Reject')).not.toBeNull();
   });
 });
