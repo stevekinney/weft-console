@@ -176,9 +176,20 @@ export function timelineStepId(step: number): string {
   return `step-${step}`;
 }
 
-/** Given a mapped step id (`step-N`) back to its timeline step number, or `null` if it isn't one of ours. */
+/**
+ * Given a mapped step id back to its timeline step number, or `null` if it
+ * isn't one of ours. Handles both a top-level step (`step-N`) and a
+ * branch-lane step nested inside a coordination group (`step-N-branch-M`,
+ * minted by `mapCoordinatorEntry`). The engine only ever checkpoints at the
+ * coordination entry's own step number — see this module's doc and
+ * `events-tab.svelte`'s module doc ("the durable per-workflow event log
+ * records ONLY `workflow:checkpoint` entries") — a `race`/`all`/`speculate`
+ * branch has no checkpoint of its own, so selecting a branch-lane row
+ * correctly filters Events to the parent coordination step's checkpoint(s)
+ * rather than failing to filter at all.
+ */
 export function stepNumberFromRunStepId(id: string): number | null {
-  const match = /^step-(\d+)$/.exec(id);
+  const match = /^step-(\d+)(?:-branch-\d+)?$/.exec(id);
   if (match === null) return null;
   const parsed = Number(match[1]);
   return Number.isSafeInteger(parsed) ? parsed : null;

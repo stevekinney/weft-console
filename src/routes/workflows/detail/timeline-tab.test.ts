@@ -154,15 +154,18 @@ describe('TimelineTab', () => {
   });
 
   /**
-   * T9.4 accessibility pass: the per-step "Select" control is the real
-   * keyboard-accessible path (a native `<button>`, reachable by Tab,
-   * activated by Enter/Space via the platform — no manual keydown wiring
-   * needed). This also guards the `stopPropagation` fix in
-   * `toggleStepSelection`: `selectTimelineStep` TOGGLES, so if the click
-   * bubbled to the row-level delegate too, one click would select-then-
-   * immediately-deselect and `aria-pressed` would never flip.
+   * WFC-7: selection's keyboard/ARIA control is Cinder's own now —
+   * `RunStepTimeline`'s `selection-control` button, rendered because
+   * `timeline-tab.svelte` passes `onStepSelect`. It's a native `<button>`
+   * (reachable by Tab, activated by Enter/Space via the platform — no manual
+   * keydown wiring needed), labeled `Select <step label>` and exposing
+   * `aria-pressed`. This also guards against double-handling: Cinder's row
+   * click and its selection-control button share one delegated handler
+   * (verified against `run-step-timeline`'s source), so a single click
+   * toggles exactly once — there is no app-owned row delegate left to fire
+   * a second time.
    */
-  test('the step-selection button toggles aria-pressed and the linked-selection chip on a single click (no double-toggle from the row delegate)', async () => {
+  test('the Cinder selection-control button toggles aria-pressed and the linked-selection chip on a single click', async () => {
     const liveObservations = new WorkflowLiveObservations(
       new InertFleet(),
       inertQueryClient(),
@@ -180,7 +183,7 @@ describe('TimelineTab', () => {
     });
 
     await waitFor(() => expect(getByText('reserveFlight')).not.toBeNull());
-    const selectButton = getByRole('button', { name: 'Select — filter events to this step' });
+    const selectButton = getByRole('button', { name: 'Select reserveFlight' });
     expect(selectButton.getAttribute('aria-pressed')).toBe('false');
 
     await fireEvent.click(selectButton);
@@ -188,20 +191,18 @@ describe('TimelineTab', () => {
     await waitFor(() => {
       expect(getByText('Selected — Events filtered to this step')).not.toBeNull();
     });
-    expect(
-      getByRole('button', { name: 'Selected — filtering events' }).getAttribute('aria-pressed'),
-    ).toBe('true');
+    expect(getByRole('button', { name: 'Select reserveFlight' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
 
-    await fireEvent.click(getByRole('button', { name: 'Selected — filtering events' }));
+    await fireEvent.click(getByRole('button', { name: 'Select reserveFlight' }));
 
     await waitFor(() => {
       expect(queryByText('Selected — Events filtered to this step')).toBeNull();
     });
-    expect(
-      getByRole('button', { name: 'Select — filter events to this step' }).getAttribute(
-        'aria-pressed',
-      ),
-    ).toBe('false');
+    expect(getByRole('button', { name: 'Select reserveFlight' }).getAttribute('aria-pressed')).toBe(
+      'false',
+    );
   });
 
   test('the Failed quick filter narrows the rendered steps', async () => {
