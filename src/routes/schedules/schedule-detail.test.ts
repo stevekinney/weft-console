@@ -137,6 +137,45 @@ describe('ScheduleDetail', () => {
     }
   }, 10000);
 
+  test('a current run renders a "running" Badge on the current-run link', async () => {
+    const server = await startLiveSourceTestServer();
+    // `long-sleeper` parks on a 24h `ctx.sleep()`, so the first occurrence
+    // stays "running" indefinitely and durably occupies
+    // `schedule.currentWorkflowId` — no `overlapPolicy: 'queue'` needed here
+    // since this test only cares about the current-run branch
+    // (`schedule-detail.svelte`'s `{#if schedule.currentWorkflowId}` block),
+    // not the queued-runs branch. Waiting on the server-side
+    // `currentWorkflowId` before mounting (rather than polling the DOM after
+    // mount) keeps this deterministic instead of racing the engine's
+    // scheduler the way an un-instrumented run and a `--coverage` run can
+    // resolve differently.
+    await server.engine.schedule({
+      workflow: 'long-sleeper',
+      id: 'current-run-probe',
+      every: '50ms',
+      input: { label: 'current-run-probe-run' },
+    });
+    const client = new HttpClient({ baseUrl: server.baseUrl, token: server.token });
+
+    await waitForServerState(async () => {
+      const schedule = await client.getSchedule('current-run-probe');
+      return schedule?.currentWorkflowId !== undefined;
+    }, 'current-run-probe has a current run');
+
+    try {
+      const { getByText } = render(ScheduleDetailHarness, {
+        props: { client, id: 'current-run-probe' },
+      });
+
+      const runningBadge = await waitFor(() => getByText('running'), { timeout: 5000 });
+      expect(runningBadge).not.toBeNull();
+      const currentRunLink = runningBadge.closest('a');
+      expect(currentRunLink?.getAttribute('href')).toMatch(/^\/workflows\//);
+    } finally {
+      await server.stop();
+    }
+  }, 10000);
+
   test('recent runs (weft.workflows.list scheduleId filter, weft 0.13+) shows persisted history, not just live fires', async () => {
     const server = await startLiveSourceTestServer();
     // `inventory-sync-sweep` completes near-instantly (one activity call),
