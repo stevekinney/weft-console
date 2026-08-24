@@ -78,7 +78,7 @@
         <span class="weft-registry-list__count">{workflowRows.length} registered</span>
       </div>
 
-      <Table caption="Workflow definitions" scrollable>
+      <Table class="weft-registry-list__table" caption="Workflow definitions" scrollable>
         <Table.Header>
           <Table.Row>
             <Table.HeaderCell>Name</Table.HeaderCell>
@@ -181,9 +181,11 @@
    * the table) but visually hidden — `.weft-registry-list__header` above is
    * the sighted-user label, and rendering both duplicated "Workflow
    * definitions" on screen. Standard clip-based sr-only pattern, matching
-   * Cinder's own `.cinder-sr-only` (no exported class to reuse here since
-   * `Table` renders the `<caption>` itself with no class-passthrough slot). */
-  :global(.weft-registry-list .cinder-table__caption) {
+   * Cinder's own sr-only utility class. Table's public `class` prop is forwarded
+   * to its own `<table>` root (`weft-registry-list__table` above), so this
+   * targets the native `<caption>` element as a descendant of that app-owned
+   * root instead of naming Cinder's private caption class. */
+  :global(.weft-registry-list__table caption) {
     position: absolute;
     width: 1px;
     height: 1px;

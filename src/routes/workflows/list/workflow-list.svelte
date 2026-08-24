@@ -176,6 +176,7 @@
       <Button
         variant="secondary"
         size="sm"
+        class="weft-workflow-list__header-action"
         href={router.href('/workflows?view=aggregate')}
         onclick={onAggregateClick}
       >
@@ -185,6 +186,7 @@
       <Button
         variant="primary"
         size="sm"
+        class="weft-workflow-list__header-action"
         href={router.href('/workflows?view=start')}
         onclick={onStartWorkflowClick}
       >

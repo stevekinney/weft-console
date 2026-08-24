@@ -73,7 +73,7 @@
   background: var(--cinder-surface);
 }
 
-.weft-reviews-inbox__list-pane .cinder-empty-state {
+.weft-reviews-inbox__list-pane .weft-reviews-inbox__empty-state {
   padding: 24px;
 }
 
@@ -98,7 +98,7 @@
   padding: 20px 24px 60px;
 }
 
-.weft-reviews-inbox__detail-pane .cinder-empty-state {
+.weft-reviews-inbox__detail-pane .weft-reviews-inbox__empty-state {
   padding: 24px;
 }
 

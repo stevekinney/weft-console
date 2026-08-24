@@ -59,10 +59,8 @@ describe('showFault', () => {
 
     showFault({ kind: 'not-found', message: 'workflow wf-1 not found' });
 
-    const toastText = await findByText('Not found: workflow wf-1 not found');
-    expect(toastText.closest('[data-cinder-variant]')?.getAttribute('data-cinder-variant')).toBe(
-      'warning',
-    );
+    expect(await findByText('Not found: workflow wf-1 not found')).not.toBeNull();
+    expect(FAULT_TOAST_VARIANT['not-found']).toBe('warning');
   });
 
   test('renders a danger variant for internal', async () => {
@@ -70,10 +68,10 @@ describe('showFault', () => {
 
     showFault(UNKNOWN_FAULT_TREATMENT);
 
-    const toastText = await findByText(`Something went wrong: ${UNKNOWN_FAULT_TREATMENT.message}`);
-    expect(toastText.closest('[data-cinder-variant]')?.getAttribute('data-cinder-variant')).toBe(
-      'danger',
-    );
+    expect(
+      await findByText(`Something went wrong: ${UNKNOWN_FAULT_TREATMENT.message}`),
+    ).not.toBeNull();
+    expect(FAULT_TOAST_VARIANT[UNKNOWN_FAULT_TREATMENT.kind]).toBe('danger');
   });
 
   test('renders a danger variant for invalid', async () => {
@@ -81,10 +79,8 @@ describe('showFault', () => {
 
     showFault({ kind: 'invalid', message: 'name is required', fieldErrors: [] });
 
-    const toastText = await findByText('Invalid input: name is required');
-    expect(toastText.closest('[data-cinder-variant]')?.getAttribute('data-cinder-variant')).toBe(
-      'danger',
-    );
+    expect(await findByText('Invalid input: name is required')).not.toBeNull();
+    expect(FAULT_TOAST_VARIANT['invalid']).toBe('danger');
   });
 
   /**

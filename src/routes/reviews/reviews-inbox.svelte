@@ -206,7 +206,11 @@
               />
             {:else if visibleEntries.length === 0}
               {@const copy = emptyStateCopy(inboxState)}
-              <EmptyState title={copy.title} description={copy.description} />
+              <EmptyState
+                title={copy.title}
+                description={copy.description}
+                class="weft-reviews-inbox__empty-state"
+              />
             {:else}
               <div class="weft-reviews-inbox__count">
                 {visibleEntries.length}
@@ -241,7 +245,11 @@
           </div>
         {:else}
           <div class="weft-reviews-inbox__detail-pane">
-            <EmptyState title="No review selected" description="Choose a review from the list." />
+            <EmptyState
+              title="No review selected"
+              description="Choose a review from the list."
+              class="weft-reviews-inbox__empty-state"
+            />
           </div>
         {/if}
       {/snippet}

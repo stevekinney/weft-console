@@ -131,12 +131,13 @@
   grid-column: 1 / -1;
 }
 
-/* Plain descendant selector, not Svelte's `:global()` — this file is a
- * plain global stylesheet loaded via `@import` from `src/styles/index.css`,
- * never a Svelte component's scoped `<style>` block, so `:global()` is
- * meaningless (and invalid) CSS syntax here; the browser drops the whole
- * rule (same class of bug already caught in `storage.css`). */
-.weft-dashboard-card .cinder-card {
+/* `Card` receives `class="weft-dashboard-card"` directly on its own root
+ * (see `dashboard-card.svelte` in schedules/workers/reviews), so this
+ * targets that class directly rather than as a descendant — a descendant
+ * selector can never match an app-owned class applied to Card's own
+ * root, and reaching for Cinder's private root class here would be an
+ * unreviewable coupling to Cinder's internal DOM structure. */
+.weft-dashboard-card {
   overflow: hidden;
 }
 

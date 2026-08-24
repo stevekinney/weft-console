@@ -8,104 +8,6 @@
  * here). Write the bare selector directly, e.g. `.weft-foo`, not
  * `:global(.weft-foo)`. */
 
-/*
- * Combobox has no `hideLabel` escape hatch (unlike Input/Textarea) — its
- * `label` prop always renders a visible `<label>`. The query builder's
- * condition rows are a dense single-line layout (design
- * `Weft Patterns.dc.html` "Search-attribute query builder"), so the field
- * label is given a real, accessible `label` prop (`query-builder.svelte`)
- * and visually hidden here with Cinder's own `.cinder-sr-only` recipe
- * (`cinder/packages/components/src/styles/utilities.css`, copied verbatim
- * rather than referencing the global class, since Combobox doesn't expose
- * a way to put a class on just the label element) — an app-level layout
- * rule in this track's own stylesheet, not a fork of the component.
- */
-.weft-query-builder .cinder-combobox__label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.weft-query-builder__row {
-  display: flex;
-  align-items: center;
-  gap: var(--cinder-space-2);
-  margin-bottom: var(--cinder-space-2);
-}
-
-.weft-query-builder__row > .cinder-combobox {
-  flex: 1;
-  min-width: 0;
-}
-
-.weft-query-builder__row > .cinder-select-field {
-  width: 90px;
-  flex: none;
-}
-
-.weft-query-builder__row > .cinder-input-field {
-  flex: 1;
-  min-width: 0;
-}
-
-.weft-query-builder__remove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  flex: none;
-  border: 1px solid var(--cinder-border);
-  border-radius: var(--cinder-radius-md);
-  background: transparent;
-  color: var(--cinder-text-subtle);
-  cursor: pointer;
-}
-
-.weft-query-builder__and {
-  display: flex;
-  align-items: center;
-  gap: var(--cinder-space-2);
-  margin: var(--cinder-space-2) 0;
-  font-size: var(--cinder-text-2xs);
-  font-weight: 600;
-  color: var(--cinder-text-disabled);
-}
-
-.weft-query-builder__and::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--cinder-border-muted);
-}
-
-.weft-query-builder__add {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cinder-space-2);
-  border: 1px dashed var(--cinder-border);
-  border-radius: var(--cinder-radius-md);
-  background: transparent;
-  color: var(--cinder-text-subtle);
-  font: inherit;
-  font-size: var(--cinder-text-xs);
-  padding: 7px 10px;
-  width: 100%;
-  cursor: pointer;
-}
-
-.weft-query-builder__hint {
-  margin: var(--cinder-space-2) 0 0;
-  font-size: var(--cinder-text-2xs);
-  color: var(--cinder-text-disabled);
-}
-
 /* ── Workflow list (list/workflow-list.svelte, workflow-table.svelte, workflow-list-filters.svelte, workflow-list-pagination.svelte, bulk-selection-bar.svelte, query-fault-banner.svelte) ── */
 
 .weft-workflow-list {
@@ -223,8 +125,8 @@
 }
 
 /* Table: no page-level horizontal scroll — the table itself scrolls inside
- * its own container (`Table`'s own `scrollable` prop wraps it in
- * `.cinder-table-scroll`, per binding responsive rule). */
+ * its own container (`Table`'s own `scrollable` prop wraps it in Cinder's
+ * generated scroll wrapper, per binding responsive rule). */
 .weft-workflows-table {
   table-layout: fixed;
   width: 100%;
@@ -636,7 +538,7 @@
   font-weight: 600;
 }
 
-.weft-aggregate-view__attribute-form .cinder-input-field {
+.weft-aggregate-view__attribute-form-field {
   width: 200px;
 }
 
@@ -739,7 +641,7 @@
     width: 100%;
   }
 
-  .weft-workflow-list__header-actions .cinder-button {
+  .weft-workflow-list__header-actions .weft-workflow-list__header-action {
     flex: 1;
   }
 
@@ -747,18 +649,8 @@
     grid-template-columns: 1fr;
   }
 
-  .weft-aggregate-view__attribute-form .cinder-input-field {
+  .weft-aggregate-view__attribute-form-field {
     width: 100%;
-  }
-
-  .weft-query-builder__row {
-    flex-wrap: wrap;
-  }
-
-  .weft-query-builder__row > .cinder-combobox,
-  .weft-query-builder__row > .cinder-select-field,
-  .weft-query-builder__row > .cinder-input-field {
-    flex: 1 1 100%;
   }
 }
 @import '@lostgradient/cinder/popover/styles';

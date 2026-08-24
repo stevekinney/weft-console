@@ -213,7 +213,7 @@
   flex: none;
 }
 
-.weft-worker-meter .cinder-meter {
+.weft-worker-meter .weft-worker-meter__meter {
   flex: 1;
   min-width: 40px;
 }

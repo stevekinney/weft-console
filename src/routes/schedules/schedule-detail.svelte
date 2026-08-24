@@ -261,7 +261,9 @@
               <span class="weft-schedule-detail__mono"
                 >{truncateId(schedule.currentWorkflowId)}</span
               >
-              <Badge variant="success">running</Badge>
+              <Badge variant="success" class="weft-schedule-detail__current-run-badge"
+                >running</Badge
+              >
             </a>
           {/if}
           {#if schedule.queuedRuns.length > 0}
@@ -440,7 +442,7 @@
     color: inherit;
   }
 
-  .weft-schedule-detail__current-run :global(.cinder-badge) {
+  .weft-schedule-detail__current-run :global(.weft-schedule-detail__current-run-badge) {
     margin-left: auto;
   }
 
