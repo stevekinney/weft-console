@@ -3,7 +3,7 @@
  * lock-states"): the `storage:admin` scope gate.
  */
 import type { HttpClient } from '@lostgradient/weft/client';
-import { render } from '@testing-library/svelte';
+import { fireEvent, render } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { stubStorageFetch } from './storage-fetch-stub.test-support.ts';
@@ -54,5 +54,38 @@ describe('Storage route', () => {
     const { getByText } = render(StorageRouteHarness, { props: { client: fakeClient() } });
 
     expect(getByText(/used internally by the/)).not.toBeNull();
+  });
+
+  test('switches to the Capabilities tab and renders the conditional-batch probe result', async () => {
+    activeStub = stubStorageFetch(
+      () => new Response(JSON.stringify({ applied: true }), { status: 200 }),
+    );
+
+    const { getByText, findByText } = render(StorageRouteHarness, {
+      props: { client: fakeClient() },
+    });
+
+    await fireEvent.click(getByText('Capabilities'));
+
+    expect(await findByText('Batch operations')).not.toBeNull();
+    expect(await findByText('supported')).not.toBeNull();
+  });
+
+  test('passes an undefined conditional-batch result through while the probe is pending or fails', async () => {
+    activeStub = stubStorageFetch(
+      () =>
+        new Response(JSON.stringify({ error: 'boom' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    );
+
+    const { getByText, findByText } = render(StorageRouteHarness, {
+      props: { client: fakeClient() },
+    });
+
+    await fireEvent.click(getByText('Capabilities'));
+
+    expect(await findByText('checking…')).not.toBeNull();
   });
 });
