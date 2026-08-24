@@ -209,6 +209,69 @@ describe('LineagePanel', () => {
     expect(getByText('No successor')).not.toBeNull();
   });
 
+  test('renders the schedule-provenance row without an occurrence suffix when none was recorded', async () => {
+    const client = baseClient({
+      scheduleProvenance: async () => ({ scheduleId: 'nightly-reconcile' }),
+    });
+
+    const { getByText, queryByText } = render(LineagePanelHarness, {
+      props: { client, workflow: workflow() },
+    });
+
+    await waitFor(() => {
+      expect(getByText('nightly-reconcile')).not.toBeNull();
+    });
+    expect(queryByText(/occurrence/)).toBeNull();
+  });
+
+  test('falls back to the workflow id when the previous run carries no execution token', async () => {
+    const client = baseClient();
+
+    const { getByText, queryByText } = render(LineagePanelHarness, {
+      props: {
+        client,
+        workflow: workflow({
+          restartedFrom: { workflowId: 'wf_current', replacedAt: 500 },
+        }),
+      },
+    });
+
+    await waitFor(() => {
+      expect(getByText('Previous run')).not.toBeNull();
+    });
+    expect(queryByText(/^prior-run-token/)).toBeNull();
+  });
+
+  test('shows a pending skeleton for the forked-from row while the source workflow lookup is in flight', async () => {
+    const pendingGet: { resolve: ((value: WorkflowState | null) => void) | null } = {
+      resolve: null,
+    };
+    const client = baseClient({
+      get: () =>
+        new Promise<WorkflowState | null>((resolve) => {
+          pendingGet.resolve = resolve;
+        }),
+    });
+
+    const { container, getByText } = render(LineagePanelHarness, {
+      props: {
+        client,
+        workflow: workflow({ forkedFrom: { workflowId: 'wf_source_pending', step: 4 } }),
+      },
+    });
+
+    await waitFor(() => {
+      expect(getByText('at step 4')).not.toBeNull();
+    });
+    expect(container.querySelector('.cinder-skeleton')).not.toBeNull();
+
+    pendingGet.resolve?.(workflow({ id: 'wf_source_pending', type: 'reconcile-ledger' }));
+
+    await waitFor(() => {
+      expect(getByText('reconcile-ledger')).not.toBeNull();
+    });
+  });
+
   test('renders no continuation chain when the run was not started via start-new', async () => {
     const client = baseClient();
 

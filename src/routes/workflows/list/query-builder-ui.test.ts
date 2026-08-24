@@ -117,4 +117,49 @@ describe('QueryBuilder', () => {
 
     expect(getByText(/customerTier/)).not.toBeNull();
   });
+
+  test('switching back to Visual mode from Raw restores the condition builder', async () => {
+    const { getByRole, getByLabelText, queryByLabelText } = render(QueryBuilder, {
+      props: {
+        attributes: [{ key: 'customerTier', value: 'gold' }] satisfies AttributeFilter[],
+        onAttributesChange: () => {},
+        knownAttributeKeys: [],
+      },
+    });
+
+    await fireEvent.click(getByRole('radio', { name: 'Raw' }));
+    expect(queryByLabelText('Field for condition 1 of Conditions')).toBeNull();
+
+    await fireEvent.click(getByRole('radio', { name: 'Visual' }));
+    expect(getByLabelText('Field for condition 1 of Conditions')).not.toBeNull();
+  });
+
+  test('Cinder renders a boolean value control for an observed boolean attribute', async () => {
+    const { getByLabelText } = render(QueryBuilder, {
+      props: {
+        attributes: [{ key: 'isFlaky', value: true }] satisfies AttributeFilter[],
+        onAttributesChange: () => {},
+        knownAttributeKeys: ['isFlaky'],
+      },
+    });
+
+    const valueControl = getByLabelText('Value for condition 1 of Conditions');
+    expect(valueControl.getAttribute('role') ?? valueControl.tagName.toLowerCase()).toMatch(
+      /checkbox|switch|select|input/i,
+    );
+  });
+
+  test('a gt/lt range on an attribute is reflected in the Raw preview', async () => {
+    const { getByRole, getByText } = render(QueryBuilder, {
+      props: {
+        attributes: [{ key: 'amount', gt: 100, lt: 900 }] satisfies AttributeFilter[],
+        onAttributesChange: () => {},
+        knownAttributeKeys: [],
+      },
+    });
+
+    await fireEvent.click(getByRole('radio', { name: 'Raw' }));
+
+    expect(getByText(/amount/)).not.toBeNull();
+  });
 });

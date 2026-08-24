@@ -108,4 +108,116 @@ describe('OverviewTab', () => {
 
     expect(added.tag).toBe('urgent');
   });
+
+  test('timed-out workflow shows a neutral no-result message', async () => {
+    const { getByText } = render(OverviewTabHarness, {
+      props: { client: baseClient(), workflow: workflow({ status: 'timed-out' }) },
+    });
+
+    expect(getByText(/timed out/)).not.toBeNull();
+  });
+
+  test('a failed workflow with no failure category shows neither the badge nor the explanation', async () => {
+    const { getByText, queryByText } = render(OverviewTabHarness, {
+      props: {
+        client: baseClient(),
+        workflow: workflow({ status: 'failed', error: 'boom' }),
+      },
+    });
+
+    expect(getByText('Failed')).not.toBeNull();
+    expect(getByText('boom')).not.toBeNull();
+    expect(queryByText(/could not be classified/)).toBeNull();
+  });
+
+  test('a failed workflow with an error stack renders a collapsible trigger for it', async () => {
+    // Cinder's `Collapsible` toggles via a `transition:` directive whose
+    // lifecycle event dispatch happy-dom can't construct cross-realm — no
+    // test in this repo drives a transitioning Cinder trigger via
+    // `fireEvent.click` (see `advanced-options.test.ts`'s identical note).
+    // This only asserts the trigger itself renders (the `errorStack.length >
+    // 0` branch), not the post-expand content.
+    const { getByRole } = render(OverviewTabHarness, {
+      props: {
+        client: baseClient(),
+        workflow: workflow({
+          status: 'failed',
+          error: 'boom',
+          errorStack: 'Error: boom\n    at doThing (file.ts:1:1)',
+        }),
+      },
+    });
+
+    expect(getByRole('button', { name: 'Show full stack trace' })).not.toBeNull();
+  });
+
+  test('removing a tag calls client.removeTags', async () => {
+    const removed: { tag: string | null } = { tag: null };
+    const client = {
+      ...baseClient(),
+      removeTags: async (_id: string, tag: string) => {
+        removed.tag = tag;
+      },
+    };
+
+    const { getByRole } = render(OverviewTabHarness, {
+      props: { client, workflow: workflow({ tags: ['prod'] }) },
+    });
+
+    await fireEvent.click(getByRole('button', { name: 'Remove tag prod' }));
+
+    expect(removed.tag).toBe('prod');
+  });
+
+  test('pressing Enter in the Add tag input submits it, and a blank tag is a no-op', async () => {
+    const added: string[] = [];
+    const client = {
+      ...baseClient(),
+      addTags: async (_id: string, tag: string) => {
+        added.push(tag);
+      },
+    };
+
+    const { getByLabelText } = render(OverviewTabHarness, {
+      props: { client, workflow: workflow() },
+    });
+
+    const input = getByLabelText('Add tag');
+    await fireEvent.input(input, { target: { value: '   ' } });
+    await fireEvent.keyDown(input, { key: 'Enter' });
+    expect(added).toEqual([]);
+
+    await fireEvent.input(input, { target: { value: 'urgent' } });
+    await fireEvent.keyDown(input, { key: 'Enter' });
+    expect(added).toEqual(['urgent']);
+  });
+
+  test('the Definition list includes a Deadline row when the workflow has an execution deadline', async () => {
+    const { getByText } = render(OverviewTabHarness, {
+      props: {
+        client: baseClient(),
+        workflow: workflow({ executionDeadline: Date.UTC(2026, 0, 1) }),
+      },
+    });
+
+    expect(getByText('Deadline')).not.toBeNull();
+  });
+
+  test('the version summary includes agent and tool-version counts when present', async () => {
+    const { getByText } = render(OverviewTabHarness, {
+      props: {
+        client: baseClient(),
+        workflow: workflow({
+          versionTuple: {
+            workflowVersion: '2',
+            agentVersion: 'gpt-5',
+            toolVersions: ['search@1', 'browse@2'],
+          },
+        }),
+      },
+    });
+
+    expect(getByText(/agent gpt-5/)).not.toBeNull();
+    expect(getByText(/tools 2/)).not.toBeNull();
+  });
 });
