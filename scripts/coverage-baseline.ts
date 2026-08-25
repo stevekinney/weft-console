@@ -124,10 +124,14 @@ const DARWIN_BASELINE: CoverageBaseline = {
   // the --parallel bug above) exists between individual runs, isolated to
   // `src/routes/dashboard` and (rarely) `src/routes/workflows` — neither
   // touched by this ticket's domain work. Per area, this baseline uses
-  // whichever of two observed states is the SAFE (lower-percentage) floor,
-  // or the value that reproduced across a majority of 6 consecutive re-runs
-  // of `bun run scripts/run-coverage.ts` where only one state was observed —
-  // the same "safe floor" methodology the Linux baseline note below uses.
+  // whichever observed state is the SAFE (lower-percentage) floor: for
+  // `workflows`/`OVERALL` that means the exact tuple from the one lower-
+  // percentage run out of 6 (workflows 92.61% lines / 93.55% functions vs.
+  // the other 5 runs' 93.15%/93.58%) — an earlier version of this baseline
+  // used the 5-run MAJORITY value instead, which sat above that 6th run's
+  // measurement and would have failed the gate roughly 1 time in 6 for no
+  // real regression; corrected before merge. `dashboard` already used the
+  // lower-percentage-state methodology correctly.
   //
   // Re-measured again 2026-08-25 after the workers (`f327874`), storage
   // (`236aef7`), and system (`1c40222`) domain commits landed on top of the
@@ -136,7 +140,7 @@ const DARWIN_BASELINE: CoverageBaseline = {
   // areas (flagged in PR #14 review). This is the final post-all-domain-work
   // measurement.
   measuredAt: '2026-08-25T00:30:00.000Z',
-  overall: { linesFound: 33861, linesHit: 31823, functionsFound: 6504, functionsHit: 6167 },
+  overall: { linesFound: 33872, linesHit: 31770, functionsFound: 6494, functionsHit: 6157 },
   areas: {
     fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
     scripts: { linesFound: 753, linesHit: 682, functionsFound: 36, functionsHit: 35 },
@@ -180,10 +184,10 @@ const DARWIN_BASELINE: CoverageBaseline = {
       functionsHit: 666,
     },
     'src/routes/workflows': {
-      linesFound: 11581,
-      linesHit: 10788,
-      functionsFound: 2291,
-      functionsHit: 2144,
+      linesFound: 11592,
+      linesHit: 10735,
+      functionsFound: 2281,
+      functionsHit: 2134,
     },
     tests: { linesFound: 145, linesHit: 114, functionsFound: 16, functionsHit: 15 },
   },
@@ -259,8 +263,18 @@ const LINUX_BASELINE: CoverageBaseline = {
   // this is downloaded directly from CI run 32795118494's
   // `coverage-lcov-linux` artifact and parsed with this file's own
   // `parseLcov`/`aggregateByArea` — not reconstructed or estimated.
+  //
+  // `workflows`/`OVERALL` here use the same safe-floor tuple as
+  // `DARWIN_BASELINE`'s matching correction rather than this single CI
+  // run's own (higher) sample: the darwin side measured `workflows` landing
+  // in a lower-percentage state in 1 of 6 consecutive runs (92.61% lines /
+  // 93.55% functions vs. the other 5 runs' 93.15%/93.58%), and this run's
+  // Linux sample matched darwin's higher state exactly (11581/10788/
+  // 2291/2144) — a single sample can't rule out the same variance
+  // recurring here, so the lower-state tuple is used defensively rather
+  // than risk a false Linux CI regression later.
   measuredAt: '2026-08-25T00:44:00.000Z',
-  overall: { linesFound: 33878, linesHit: 31840, functionsFound: 6510, functionsHit: 6173 },
+  overall: { linesFound: 33889, linesHit: 31787, functionsFound: 6500, functionsHit: 6163 },
   areas: {
     fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
     scripts: { linesFound: 753, linesHit: 682, functionsFound: 36, functionsHit: 35 },
@@ -304,10 +318,10 @@ const LINUX_BASELINE: CoverageBaseline = {
       functionsHit: 672,
     },
     'src/routes/workflows': {
-      linesFound: 11581,
-      linesHit: 10788,
-      functionsFound: 2291,
-      functionsHit: 2144,
+      linesFound: 11592,
+      linesHit: 10735,
+      functionsFound: 2281,
+      functionsHit: 2134,
     },
     tests: { linesFound: 145, linesHit: 114, functionsFound: 16, functionsHit: 15 },
   },
