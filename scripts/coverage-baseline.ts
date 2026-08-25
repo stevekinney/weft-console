@@ -121,13 +121,22 @@ const DARWIN_BASELINE: CoverageBaseline = {
   // a regression. Every area rose; none needed a downward correction.
   //
   // A small residual variance (a handful of lines out of ~34k, unrelated to
-  // the --parallel bug above) still exists between individual runs. Rather
-  // than record the first (slightly higher) measurement, this baseline uses
-  // the value that reproduced identically across 4 consecutive re-runs of
-  // `bun run scripts/run-coverage.ts` — the same "safe floor" methodology
-  // the Linux baseline note below uses.
-  measuredAt: '2026-08-24T23:16:04.000Z',
-  overall: { linesFound: 34345, linesHit: 29175, functionsFound: 5918, functionsHit: 5508 },
+  // the --parallel bug above) exists between individual runs, isolated to
+  // `src/routes/dashboard` and (rarely) `src/routes/workflows` — neither
+  // touched by this ticket's domain work. Per area, this baseline uses
+  // whichever of two observed states is the SAFE (lower-percentage) floor,
+  // or the value that reproduced across a majority of 6 consecutive re-runs
+  // of `bun run scripts/run-coverage.ts` where only one state was observed —
+  // the same "safe floor" methodology the Linux baseline note below uses.
+  //
+  // Re-measured again 2026-08-25 after the workers (`f327874`), storage
+  // (`236aef7`), and system (`1c40222`) domain commits landed on top of the
+  // tooling fix above — the previous entry here only reflected the
+  // workflows-domain + tooling-fix state and was stale for those three
+  // areas (flagged in PR #14 review). This is the final post-all-domain-work
+  // measurement.
+  measuredAt: '2026-08-25T00:30:00.000Z',
+  overall: { linesFound: 33861, linesHit: 31823, functionsFound: 6504, functionsHit: 6167 },
   areas: {
     fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
     scripts: { linesFound: 753, linesHit: 682, functionsFound: 36, functionsHit: 35 },
@@ -153,22 +162,22 @@ const DARWIN_BASELINE: CoverageBaseline = {
       functionsHit: 701,
     },
     'src/routes/storage': {
-      linesFound: 2883,
-      linesHit: 1510,
-      functionsFound: 271,
-      functionsHit: 240,
+      linesFound: 2739,
+      linesHit: 2708,
+      functionsFound: 532,
+      functionsHit: 520,
     },
     'src/routes/system': {
-      linesFound: 4879,
-      linesHit: 4673,
-      functionsFound: 960,
-      functionsHit: 925,
+      linesFound: 4866,
+      linesHit: 4846,
+      functionsFound: 1002,
+      functionsHit: 985,
     },
     'src/routes/workers': {
-      linesFound: 3690,
-      linesHit: 1932,
-      functionsFound: 394,
-      functionsHit: 347,
+      linesFound: 3363,
+      linesHit: 3209,
+      functionsFound: 677,
+      functionsHit: 666,
     },
     'src/routes/workflows': {
       linesFound: 11581,

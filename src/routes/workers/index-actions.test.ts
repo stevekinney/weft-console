@@ -431,6 +431,13 @@ describe('Workers route — loading skeletons', () => {
   test('the Task queues tab shows a loading skeleton before the queues query resolves', async () => {
     scripted = new ScriptedFetch();
     routeHappyPaths(scripted);
+    // Registered after routeHappyPaths, so it wins for `weft.task.queues.list`
+    // (ScriptedFetch matches the LAST registered route) and stays pending
+    // through the awaits below — a synchronously-resolved route risks
+    // TanStack Query processing the response during `findByRole`/
+    // `fireEvent.click`'s awaited microtasks, flipping `queuesLoading` to
+    // false before this assertion runs (flagged in WFC-10 PR #14 review).
+    const queuesGate = scripted.deferJsonRpcMethod('weft.task.queues.list');
 
     const { findByRole, getByLabelText } = render(WorkersRouteTestHarness, {
       props: {
@@ -443,11 +450,14 @@ describe('Workers route — loading skeletons', () => {
 
     await fireEvent.click(await findByRole('tab', { name: 'Task queues' }));
     expect(getByLabelText('Loading task queues')).not.toBeNull();
+    queuesGate.resolve({ items: [queue()] });
   });
 
   test('the Diagnostics tab shows a loading skeleton before the diagnostics query resolves', async () => {
     scripted = new ScriptedFetch();
     routeHappyPaths(scripted);
+    // Same deferred-response reasoning as the Task queues test above.
+    const diagnosticsGate = scripted.deferJsonRpcMethod('weft.tasks.diagnostics');
 
     const { findByRole, getByLabelText } = render(WorkersRouteTestHarness, {
       props: {
@@ -460,5 +470,6 @@ describe('Workers route — loading skeletons', () => {
 
     await fireEvent.click(await findByRole('tab', { name: 'Diagnostics' }));
     expect(getByLabelText('Loading diagnostics')).not.toBeNull();
+    diagnosticsGate.resolve({ items: [], summary: EMPTY_DIAGNOSTICS_SUMMARY });
   });
 });
