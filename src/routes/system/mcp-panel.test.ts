@@ -75,4 +75,22 @@ describe('McpPanel', () => {
     expect(await findByText('mcp-session-id: sess_abc12345', { exact: false })).not.toBeNull();
     expect(await findByText('mcp-session-token: tok_secret', { exact: false })).not.toBeNull();
   });
+
+  test('a transport failure during Test MCP session shows the fault banner', async () => {
+    scripted = new ScriptedFetch();
+    scripted.routeUrl('/.well-known/mcp.json', {
+      protocol: 'model-context-protocol',
+      protocolVersion: '2025-03-26',
+    });
+    // Deliberately no route/queued response for `POST /mcp` —
+    // `testMcpSession` only rejects on a genuine transport failure
+    // (`mcp-test-session.ts`'s module doc), and `ScriptedFetch` throws on an
+    // unrouted call, which stands in for exactly that.
+
+    const { findByRole, findByText } = await renderMcpPanel();
+
+    await fireEvent.click(await findByRole('button', { name: 'Test' }));
+
+    expect(await findByText('Something went wrong')).not.toBeNull();
+  });
 });

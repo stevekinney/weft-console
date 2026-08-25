@@ -4,7 +4,7 @@
  * Prometheus text view including its fault path.
  */
 import { fireEvent, render } from '@testing-library/svelte';
-import { afterEach, describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, mock, test } from 'bun:test';
 
 import { createQueryClient } from '../../lib/query.ts';
 import MetricsTab from './metrics-tab.svelte';
@@ -64,4 +64,51 @@ describe('MetricsTab', () => {
 
     expect(await findByText('Something went wrong')).not.toBeNull();
   });
+
+  test('clicking Download in the Raw view saves the Prometheus text as a Blob', async () => {
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const createObjectURL = mock((_blob: Blob) => 'blob:mock-url');
+    const revokeObjectURL = mock((_url: string) => undefined);
+    URL.createObjectURL = createObjectURL as unknown as typeof URL.createObjectURL;
+    URL.revokeObjectURL = revokeObjectURL as unknown as typeof URL.revokeObjectURL;
+
+    const click = mock(() => undefined);
+    const originalClick = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = click;
+
+    try {
+      scripted = new ScriptedFetch();
+      scripted.routeJsonRpcMethod('weft.system.metrics', {});
+      scripted.routeUrlText('/v1/metrics', 'weft_workflow_active 7\n');
+
+      const { findByRole, findByText } = await renderMetricsTab();
+
+      await fireEvent.click(await findByRole('radio', { name: 'Raw' }));
+      // Wait for the raw text to actually land — the Download button stays
+      // `disabled` (`!$rawQuery.data`) until then.
+      expect(await findByText('weft_workflow_active 7')).not.toBeNull();
+      await fireEvent.click(await findByRole('button', { name: 'Download' }));
+
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      const [blob] = createObjectURL.mock.calls[0] ?? [];
+      expect(blob?.type.startsWith('text/plain')).toBe(true);
+      expect(click).toHaveBeenCalledTimes(1);
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+    } finally {
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+      HTMLAnchorElement.prototype.click = originalClick;
+    }
+  });
+
+  // The `pollStatus !== 'polling'` branch (bare `ConnectionIndicator` with no
+  // `label`) is NOT covered here: `PollingSource.status` (`polling-source.
+  // svelte.ts`) starts at `'polling'` and only leaves it after
+  // `MAX_CONSECUTIVE_FAILURES` (5) real consecutive failed polls spaced by
+  // `METRICS_POLL_INTERVAL_MS` (15s, hardcoded in this component) apart —
+  // `polling-source.test.ts` itself only exercises that path with a
+  // deliberately short custom interval. Reaching it here would mean either
+  // ~60+ real seconds of waiting or fake-timer infrastructure this repo
+  // doesn't have; not a meaningful unit test trade either way.
 });
