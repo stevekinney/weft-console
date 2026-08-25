@@ -79,4 +79,35 @@ describe('NotificationBell', () => {
 
     expect(store.items[0]?.read).toBe(true);
   });
+
+  test('regression: item groups render inside a bounded scroll wrapper, header/footer stay outside it', async () => {
+    // Guards the WFC-11 design-fidelity fix: the panel previously had
+    // `overflow: hidden` with no `max-height`, so a large feed rendered as
+    // one unbounded panel with the footer pushed off-screen. The list must
+    // live in its own `.weft-notification-panel__list` wrapper, separate
+    // from the header/footer, so only the list scrolls.
+    const store = new NotificationStore();
+    for (let index = 0; index < 30; index += 1) {
+      store.ingest(
+        fleetFrame('worker:connected', { cursor: `c${index}`, payload: { id: `w-${index}` } }),
+      );
+    }
+
+    const { getByRole, container } = render(NotificationBell, {
+      props: { store, liveStatus: 'live' },
+    });
+    await fireEvent.click(
+      getByRole('button', { name: `Notifications, ${store.unreadCount} unread` }),
+    );
+
+    const list = container.querySelector('.weft-notification-panel__list');
+    const header = container.querySelector('.weft-notification-panel__header');
+    const footer = container.querySelector('.weft-notification-panel__footer');
+
+    expect(list).not.toBeNull();
+    expect(list?.querySelectorAll('.weft-notification-panel__item').length).toBe(30);
+    expect(header?.contains(list as Node)).toBe(false);
+    expect(footer?.contains(list as Node)).toBe(false);
+    expect(list?.contains(footer)).toBe(false);
+  });
 });
