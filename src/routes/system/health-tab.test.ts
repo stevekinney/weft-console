@@ -138,4 +138,57 @@ describe('HealthTab', () => {
     expect(queryByRole('button', { name: 'Run' })).toBeNull();
     unmount();
   });
+
+  test('a failing retention fetch shows the fault banner', async () => {
+    scripted = new ScriptedFetch();
+    scripted.routeJsonRpcMethod('weft.system.registry', {
+      registryVersion: 1,
+      workflows: {},
+      activities: {},
+    });
+    // 403, not 500: `shouldRetryQuery` (`query.ts`) retries a classified
+    // `internal` fault (with backoff, which this test isn't set up to wait
+    // out) but never a classified `unauthorized` one — `retentionQuery`
+    // has no per-query `retry: false` override, so it inherits that shared
+    // default.
+    scripted.routeUrlStatus('/retention', 403, 'Forbidden');
+    const { findByText, unmount } = await renderHealthTab();
+    expect(await findByText('Not authorized')).not.toBeNull();
+    unmount();
+  });
+
+  test('a failing registry fetch shows the fault banner in the codegen preview panel', async () => {
+    scripted = new ScriptedFetch();
+    scripted.routeUrl('/retention', {
+      defaultRetention: null,
+      sweepIntervalMs: 300000,
+      sweepBatchSize: 1000,
+      nextSweepAt: null,
+      workflowTypes: [],
+    });
+    // See the retention test above for why 403, not 500.
+    scripted.routeUrlStatus('/jsonrpc', 403, 'Forbidden');
+    const { findByText, unmount } = await renderHealthTab();
+    expect(await findByText('Not authorized')).not.toBeNull();
+    unmount();
+  });
+
+  test('shows an honest empty state when no registered workflow has an input schema', async () => {
+    scripted = new ScriptedFetch();
+    scripted.routeUrl('/retention', {
+      defaultRetention: null,
+      sweepIntervalMs: 300000,
+      sweepBatchSize: 1000,
+      nextSweepAt: null,
+      workflowTypes: [],
+    });
+    scripted.routeJsonRpcMethod('weft.system.registry', {
+      registryVersion: 1,
+      workflows: { heartbeat: {} },
+      activities: {},
+    });
+    const { findByText, unmount } = await renderHealthTab();
+    expect(await findByText('No workflow with an input schema is registered yet.')).not.toBeNull();
+    unmount();
+  });
 });

@@ -3,15 +3,34 @@
  * authoritative Active alerts section (`weft.alerts.list`, weft#843), its
  * empty state, and rendering ingested fleet frames as session activity rows.
  */
-import { render } from '@testing-library/svelte';
-import { afterEach, describe, expect, test } from 'bun:test';
+import { fireEvent, render } from '@testing-library/svelte';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import type { DetachedWindowAPI } from 'happy-dom';
 
 import { createQueryClient } from '../../lib/query.ts';
+import { router } from '../../lib/router.svelte.ts';
 import AlertsTab from './alerts-tab.svelte';
 import SystemRouteTestHarness from './system-route-test-harness.test-harness.svelte';
 import { realClient, ScriptedFetch } from './system-test-support.test-support.ts';
 
 let scripted: ScriptedFetch | undefined;
+
+function happyDomAPI(): DetachedWindowAPI {
+  return (window as unknown as { happyDOM: DetachedWindowAPI }).happyDOM;
+}
+
+// See `index.test.ts`'s identical helper: happy-dom's default
+// `window.location` has no origin, and `history.pushState` is a silent
+// no-op from `about:blank` — give the window a real origin before any test
+// here drives `router.navigate`.
+function resetLocation(path = '/system?tab=alerts'): void {
+  happyDomAPI().setURL('http://localhost/');
+  router.navigate(path, { replace: true });
+}
+
+beforeEach(() => {
+  resetLocation();
+});
 
 afterEach(() => {
   scripted?.restore();
@@ -50,6 +69,10 @@ describe('AlertsTab — active alerts (weft.alerts.list)', () => {
     // `src/routes/workers/index.svelte` actually reads.
     const diagnosticsLink = await findByRole('link', { name: 'Open Diagnostics' });
     expect(diagnosticsLink.getAttribute('href')).toBe('/workers?tab=diagnostics');
+
+    await fireEvent.click(diagnosticsLink);
+    expect(router.pathname).toBe('/workers');
+    expect(router.search.get('tab')).toBe('diagnostics');
   });
 
   test('renders currently firing alerts from the operation, reload-safe', async () => {
@@ -125,9 +148,38 @@ describe('AlertsTab — session activity log', () => {
       }),
     ]);
 
-    const { findByText } = await renderAlertsTab();
+    const { findByRole, findByText } = await renderAlertsTab();
     expect(await findByText('Alert fired · dlq-backlog')).not.toBeNull();
     expect(await findByText('Firing')).not.toBeNull();
+
+    // No `workflowId` on this frame's payload — `detailsHref` falls back to
+    // `/system` (`alerts-tab.svelte`'s own `detailsHref`).
+    const detailsLink = await findByRole('link', { name: 'Details' });
+    expect(detailsLink.getAttribute('href')).toBe('/system');
+    await fireEvent.click(detailsLink);
+    expect(router.pathname).toBe('/system');
+  });
+
+  test('a Details link for a workflow-scoped activity row navigates to that workflow', async () => {
+    scripted = new ScriptedFetch();
+    scripted.routeJsonRpcMethod('weft.alerts.list', { items: [] });
+    scripted.routeSseStream('/v1/events/sse', [
+      sseFrame({
+        kind: 'constraint:violated',
+        sequence: 1,
+        cursor: 'c1',
+        emittedAtMs: 1000,
+        workflowId: 'wf_1',
+        payload: { constraint: 'max-retries' },
+      }),
+    ]);
+
+    const { findByRole } = await renderAlertsTab();
+
+    const detailsLink = await findByRole('link', { name: 'Details' });
+    expect(detailsLink.getAttribute('href')).toBe('/workflows/wf_1');
+    await fireEvent.click(detailsLink);
+    expect(router.pathname).toBe('/workflows/wf_1');
   });
 
   test('renders an operational warning as a Warning row', async () => {

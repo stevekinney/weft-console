@@ -86,6 +86,38 @@ describe('System route', () => {
     expect(alertsTrigger.getAttribute('aria-selected')).toBe('true');
   });
 
+  test('switching to Metrics, Discovery, Operations, and Health & lease mounts each tab panel', async () => {
+    const { findAllByText, findByRole, findByText } = await renderSystemRoute();
+    scripted?.routeJsonRpcMethod('weft.system.metrics', {});
+    scripted?.routeUrl('/openapi.json', { paths: {} });
+    scripted?.routeUrl('/openrpc.json', { methods: [] });
+    scripted?.routeUrl('/asyncapi.json', { channels: {} });
+    scripted?.routeUrl('/retention', {
+      defaultRetention: null,
+      sweepIntervalMs: 300000,
+      sweepBatchSize: 1000,
+      nextSweepAt: null,
+      workflowTypes: [],
+    });
+
+    await fireEvent.click(await findByRole('tab', { name: 'Metrics' }));
+    const metricsMatches = await findAllByText('Active workflows');
+    expect(metricsMatches.length).toBeGreaterThan(0);
+
+    await fireEvent.click(await findByRole('tab', { name: 'Discovery' }));
+    expect(await findByRole('radio', { name: 'OpenAPI' })).not.toBeNull();
+
+    await fireEvent.click(await findByRole('tab', { name: 'Operations' }));
+    expect(
+      await findByText("Required scope isn't advertised by the discovery documents yet", {
+        exact: false,
+      }),
+    ).not.toBeNull();
+
+    await fireEvent.click(await findByRole('tab', { name: 'Health & lease' }));
+    expect(await findByText('Lease status not available')).not.toBeNull();
+  });
+
   test('an unrecognized ?tab= value falls back to Registry rather than erroring', async () => {
     resetLocation('/system?tab=nonsense');
     const { findByRole } = await renderSystemRoute();

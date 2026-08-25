@@ -98,74 +98,98 @@ export function coverageMeasurementPlatform(): CoverageMeasurementPlatform | nul
 }
 
 const DARWIN_BASELINE: CoverageBaseline = {
-  measuredAt: '2026-08-18T00:00:00.000Z',
-  overall: { linesFound: 35954, linesHit: 23266, functionsFound: 4742, functionsHit: 4086 },
+  // Re-measured 2026-08-24 for WFC-10 after fixing a genuine Bun 1.3.14
+  // coverage-engine bug in `scripts/run-coverage.ts`: `bun test --parallel`
+  // (even at N=1) implies `--isolate`, giving each test file a fresh module
+  // registry. When a Svelte component is both directly unit-tested AND
+  // statically imported by a sibling component also under test (e.g.
+  // `timeline-tab.svelte` tested directly by `timeline-tab.test.ts` AND
+  // imported by `workflow-detail.svelte`, tested by
+  // `workflow-detail.test.ts`), that isolation produces two
+  // differently-instrumented instances of the shared file, and Bun's LCOV
+  // merge does not correctly union their per-line hit counts — one
+  // instance's (lower) numbers clobber the other's. Confirmed by bisection:
+  // reproducible with a fresh `BUN_RUNTIME_TRANSPILER_CACHE_PATH` (rules out
+  // the persistent disk cache), independent of test order (rules out a
+  // WFC-9-style ordering fix), and gone entirely once `--parallel=1` is
+  // dropped (two full-suite runs without it produced near-identical LCOV,
+  // 1290/1290 tests passing both times, one line differing only in a
+  // timing-sensitive hit COUNT rather than hit/not-hit). Filed upstream:
+  // https://github.com/oven-sh/bun/issues/40386. This is the same evidentiary bar WFC-5's Linux fix
+  // (PR #12, commit a7d6603) set for a baseline correction: a directly
+  // measured, reproduced, root-caused re-measurement — not a guess to absorb
+  // a regression. Every area rose; none needed a downward correction.
+  //
+  // A small residual variance (a handful of lines out of ~34k, unrelated to
+  // the --parallel bug above) exists between individual runs, isolated to
+  // `src/routes/dashboard` and (rarely) `src/routes/workflows` — neither
+  // touched by this ticket's domain work. Per area, this baseline uses
+  // whichever observed state is the SAFE (lower-percentage) floor: for
+  // `workflows`/`OVERALL` that means the exact tuple from the one lower-
+  // percentage run out of 6 (workflows 92.61% lines / 93.55% functions vs.
+  // the other 5 runs' 93.15%/93.58%) — an earlier version of this baseline
+  // used the 5-run MAJORITY value instead, which sat above that 6th run's
+  // measurement and would have failed the gate roughly 1 time in 6 for no
+  // real regression; corrected before merge. `dashboard` already used the
+  // lower-percentage-state methodology correctly.
+  //
+  // Re-measured again 2026-08-25 after the workers (`f327874`), storage
+  // (`236aef7`), and system (`1c40222`) domain commits landed on top of the
+  // tooling fix above — the previous entry here only reflected the
+  // workflows-domain + tooling-fix state and was stale for those three
+  // areas (flagged in PR #14 review). This is the final post-all-domain-work
+  // measurement.
+  measuredAt: '2026-08-25T00:30:00.000Z',
+  overall: { linesFound: 33872, linesHit: 31770, functionsFound: 6494, functionsHit: 6157 },
   areas: {
     fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
-    // +10 lines over the 14:05 measurement, all covered: `LINUX_BASELINE` below
-    // is itself instrumented `scripts/` code, so recording it raised this area's
-    // own watermark. Ratcheted rather than left slack.
-    scripts: {
-      linesFound: 393,
-      linesHit: 322,
-      functionsFound: 24,
-      functionsHit: 23,
-    },
+    scripts: { linesFound: 753, linesHit: 682, functionsFound: 36, functionsHit: 35 },
     src: { linesFound: 12, linesHit: 12, functionsFound: 2, functionsHit: 2 },
-    'src/app': { linesFound: 1350, linesHit: 1136, functionsFound: 264, functionsHit: 150 },
-    'src/lib': {
-      linesFound: 1357,
-      linesHit: 823,
-      functionsFound: 174,
-      functionsHit: 103,
-    },
+    'src/app': { linesFound: 1301, linesHit: 1261, functionsFound: 282, functionsHit: 267 },
+    'src/lib': { linesFound: 1195, linesHit: 1186, functionsFound: 192, functionsHit: 188 },
     'src/routes/dashboard': {
-      // The critical-alerts tests now use an injected client rather than
-      // temporarily replacing global fetch. That removes racy test-helper
-      // routing lines from this source bucket; the alert component itself is
-      // fully covered, and its function percentage increased (89.34 -> 89.54).
       linesFound: 1444,
       linesHit: 1185,
       functionsFound: 239,
       functionsHit: 214,
     },
     'src/routes/reviews': {
-      linesFound: 2351,
-      linesHit: 1812,
-      functionsFound: 377,
-      functionsHit: 342,
+      linesFound: 2264,
+      linesHit: 2111,
+      functionsFound: 439,
+      functionsHit: 418,
     },
     'src/routes/schedules': {
-      linesFound: 3507,
-      linesHit: 3393,
+      linesFound: 3500,
+      linesHit: 3402,
       functionsFound: 727,
-      functionsHit: 690,
+      functionsHit: 701,
     },
     'src/routes/storage': {
-      linesFound: 2972,
-      linesHit: 1307,
-      functionsFound: 225,
-      functionsHit: 195,
+      linesFound: 2739,
+      linesHit: 2708,
+      functionsFound: 532,
+      functionsHit: 520,
     },
     'src/routes/system': {
-      linesFound: 4926,
-      linesHit: 4397,
-      functionsFound: 883,
-      functionsHit: 811,
+      linesFound: 4866,
+      linesHit: 4846,
+      functionsFound: 1002,
+      functionsHit: 985,
     },
     'src/routes/workers': {
-      linesFound: 3784,
-      linesHit: 1510,
-      functionsFound: 294,
-      functionsHit: 248,
+      linesFound: 3363,
+      linesHit: 3209,
+      functionsFound: 677,
+      functionsHit: 666,
     },
     'src/routes/workflows': {
-      linesFound: 13015,
-      linesHit: 6940,
-      functionsFound: 1449,
-      functionsHit: 1283,
+      linesFound: 11592,
+      linesHit: 10735,
+      functionsFound: 2281,
+      functionsHit: 2134,
     },
-    tests: { linesFound: 145, linesHit: 110, functionsFound: 15, functionsHit: 13 },
+    tests: { linesFound: 145, linesHit: 114, functionsFound: 16, functionsHit: 15 },
   },
 };
 
@@ -225,59 +249,79 @@ const LINUX_BASELINE: CoverageBaseline = {
   //
   // Approved 2026-08-21 by the repo owner after reviewing this exact
   // evidence chain ("Yes, re-baseline it").
-  measuredAt: '2026-08-24T16:40:00.000Z',
-  overall: { linesFound: 36933, linesHit: 19402, functionsFound: 3937, functionsHit: 3235 },
+  //
+  // Superseded 2026-08-25 for WFC-10 (PR #14): the darwin `--parallel`
+  // coverage-engine fix documented on `DARWIN_BASELINE` above applies
+  // equally to Linux CI (`.github/workflows/ci.yaml`'s `coverage` job runs
+  // on `ubuntu-latest`), so the pre-fix Linux floor recorded here was
+  // stale and no longer functioned as a real ratchet (flagged in review —
+  // Linux CI could pass while losing most of the newly measured coverage,
+  // since actual coverage sat far above this floor). Unlike the
+  // `schedules` fix above, exact integers did not need reconstruction this
+  // time: `.github/workflows/ci.yaml`'s `coverage` job now uploads
+  // `coverage/lcov.info` as a build artifact (added in this same PR), so
+  // this is downloaded directly from CI run 32795118494's
+  // `coverage-lcov-linux` artifact and parsed with this file's own
+  // `parseLcov`/`aggregateByArea` — not reconstructed or estimated.
+  //
+  // `workflows`/`OVERALL` here use the same safe-floor tuple as
+  // `DARWIN_BASELINE`'s matching correction rather than this single CI
+  // run's own (higher) sample: the darwin side measured `workflows` landing
+  // in a lower-percentage state in 1 of 6 consecutive runs (92.61% lines /
+  // 93.55% functions vs. the other 5 runs' 93.15%/93.58%), and this run's
+  // Linux sample matched darwin's higher state exactly (11581/10788/
+  // 2291/2144) — a single sample can't rule out the same variance
+  // recurring here, so the lower-state tuple is used defensively rather
+  // than risk a false Linux CI regression later.
+  measuredAt: '2026-08-25T00:44:00.000Z',
+  overall: { linesFound: 33889, linesHit: 31787, functionsFound: 6500, functionsHit: 6163 },
   areas: {
     fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
-    scripts: { linesFound: 339, linesHit: 268, functionsFound: 24, functionsHit: 23 },
+    scripts: { linesFound: 753, linesHit: 682, functionsFound: 36, functionsHit: 35 },
     src: { linesFound: 12, linesHit: 12, functionsFound: 2, functionsHit: 2 },
-    'src/app': { linesFound: 1350, linesHit: 1136, functionsFound: 264, functionsHit: 150 },
-    'src/lib': { linesFound: 1318, linesHit: 896, functionsFound: 178, functionsHit: 113 },
+    'src/app': { linesFound: 1301, linesHit: 1261, functionsFound: 282, functionsHit: 267 },
+    'src/lib': { linesFound: 1195, linesHit: 1186, functionsFound: 192, functionsHit: 188 },
     'src/routes/dashboard': {
-      // See the matching Darwin note above. CI measured 79.22% lines after
-      // replacing the global-fetch helper with injected clients; retain a
-      // slightly lower 79.16% floor to avoid rounding a passing measurement
-      // into a false regression.
-      linesFound: 1468,
-      linesHit: 1162,
-      functionsFound: 243,
-      functionsHit: 209,
+      linesFound: 1444,
+      linesHit: 1185,
+      functionsFound: 239,
+      functionsHit: 214,
     },
     'src/routes/reviews': {
-      linesFound: 2712,
-      linesHit: 936,
-      functionsFound: 183,
-      functionsHit: 149,
+      linesFound: 2264,
+      linesHit: 2111,
+      functionsFound: 439,
+      functionsHit: 418,
     },
     'src/routes/schedules': {
-      linesFound: 3749,
-      linesHit: 2313,
-      functionsFound: 487,
-      functionsHit: 409,
+      linesFound: 3500,
+      linesHit: 3402,
+      functionsFound: 727,
+      functionsHit: 701,
     },
     'src/routes/storage': {
-      linesFound: 3089,
-      linesHit: 992,
-      functionsFound: 171,
-      functionsHit: 138,
+      linesFound: 2739,
+      linesHit: 2708,
+      functionsFound: 532,
+      functionsHit: 520,
     },
     'src/routes/system': {
-      linesFound: 5778,
-      linesHit: 1520,
-      functionsFound: 274,
-      functionsHit: 219,
+      linesFound: 4866,
+      linesHit: 4846,
+      functionsFound: 1002,
+      functionsHit: 985,
     },
     'src/routes/workers': {
-      linesFound: 3866,
-      linesHit: 1359,
-      functionsFound: 264,
-      functionsHit: 216,
+      linesFound: 3380,
+      linesHit: 3226,
+      functionsFound: 683,
+      functionsHit: 672,
     },
     'src/routes/workflows': {
-      linesFound: 12409,
-      linesHit: 8375,
-      functionsFound: 1762,
-      functionsHit: 1580,
+      linesFound: 11592,
+      linesHit: 10735,
+      functionsFound: 2281,
+      functionsHit: 2134,
     },
     tests: { linesFound: 145, linesHit: 114, functionsFound: 16, functionsHit: 15 },
   },

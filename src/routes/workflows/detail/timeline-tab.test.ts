@@ -314,4 +314,177 @@ describe('TimelineTab', () => {
       expect(getByText(/Couldn't link this to a single timeline step/)).not.toBeNull();
     });
   });
+
+  test('the Coordination and Saga quick filters narrow the rendered steps', async () => {
+    const liveObservations = new WorkflowLiveObservations(
+      new InertFleet(),
+      inertQueryClient(),
+      'wf-1',
+    );
+    // `race` and `parallel` entries render their STRUCTURAL label ("Race" /
+    // "All (parallel)"), not their raw `operationLabel` — see
+    // `timeline-mapping.ts`'s `STRUCTURAL_OPERATION_LABEL`.
+    const entries = [
+      entry({ step: 1, operationType: 'race', operationLabel: 'raceProviders' }),
+      entry({ step: 2, operationType: 'activity', operationLabel: 'compensate:refund' }),
+      entry({ step: 3, operationType: 'activity', operationLabel: 'chargeCard' }),
+    ];
+
+    const { getByText, getByRole, queryByText } = render(TimelineTabHarness, {
+      props: {
+        client: baseClient(entries),
+        workflow: workflow({ id: 'wf-filter-coord' }),
+        liveObservations,
+        finalizerStatus: null,
+      },
+    });
+
+    await waitFor(() => expect(getByText('Race')).not.toBeNull());
+    await fireEvent.click(getByRole('radio', { name: 'Coordination' }));
+    await waitFor(() => {
+      expect(getByText('Race')).not.toBeNull();
+      expect(queryByText('chargeCard')).toBeNull();
+    });
+
+    await fireEvent.click(getByRole('radio', { name: 'Saga' }));
+    await waitFor(() => {
+      expect(getByText('compensate:refund')).not.toBeNull();
+      expect(queryByText('Race')).toBeNull();
+    });
+  });
+
+  test('a cancelled workflow with a failed finalizer shows the cleanup-failed strip', async () => {
+    const liveObservations = new WorkflowLiveObservations(
+      new InertFleet(),
+      inertQueryClient(),
+      'wf-1',
+    );
+
+    const { getByText } = render(TimelineTabHarness, {
+      props: {
+        client: baseClient([]),
+        workflow: workflow({ status: 'cancelled' }),
+        liveObservations,
+        finalizerStatus: { status: 'failed', attempts: 2, failedAt: 1, error: 'boom' },
+      },
+    });
+
+    await waitFor(() => expect(getByText(/cleanup failed/i)).not.toBeNull());
+  });
+
+  test('clicking Complete… on a step with an attached pending activity opens the async-activity drawer, and closing it clears the selection', async () => {
+    const fleet = new InertFleet();
+    const liveObservations = new WorkflowLiveObservations(fleet, inertQueryClient(), 'wf-1');
+    const entries = [
+      entry({
+        step: 1,
+        operationType: 'activity',
+        operationLabel: 'printShippingLabel',
+        status: 'running',
+      }),
+    ];
+
+    const { getByText, getAllByRole, getByRole, queryByText } = render(TimelineTabHarness, {
+      props: {
+        client: baseClient(entries, [
+          {
+            token: 'tok-drawer-1',
+            operationId: 'op-1',
+            activityName: 'printShippingLabel',
+            step: 1,
+            attempt: 1,
+            createdAt: 1,
+          },
+        ]),
+        workflow: workflow({ id: 'wf-drawer-1', status: 'running' }),
+        liveObservations,
+        finalizerStatus: null,
+      },
+    });
+
+    await waitFor(() => expect(getByText('printShippingLabel')).not.toBeNull());
+    const [completeButton] = getAllByRole('button', { name: 'Complete…' });
+    if (!completeButton) throw new Error('expected a Complete… button');
+    await fireEvent.click(completeButton);
+
+    await waitFor(() => {
+      expect(getByText('tok-drawer-1')).not.toBeNull();
+    });
+
+    await fireEvent.click(getByRole('button', { name: 'Close drawer' }));
+
+    await waitFor(() => {
+      expect(queryByText('tok-drawer-1')).toBeNull();
+    });
+  });
+
+  test('paginates the timeline past the step-range threshold, with working Previous/Next and jump-to-step', async () => {
+    const liveObservations = new WorkflowLiveObservations(
+      new InertFleet(),
+      inertQueryClient(),
+      'wf-1',
+    );
+    const entries = Array.from({ length: 501 }, (_, index) =>
+      entry({ step: index + 1, operationLabel: `step-${index + 1}` }),
+    );
+
+    const { getByText, getByRole, queryByText } = render(TimelineTabHarness, {
+      props: {
+        client: baseClient(entries),
+        workflow: workflow({ id: 'wf-paginated' }),
+        liveObservations,
+        finalizerStatus: null,
+      },
+    });
+
+    await waitFor(() => expect(getByText('step-1')).not.toBeNull());
+    expect(getByText('Page 1 of 3')).not.toBeNull();
+    expect(getByRole('button', { name: 'Previous' }).hasAttribute('disabled')).toBe(true);
+
+    await fireEvent.click(getByRole('button', { name: 'Next' }));
+    await waitFor(() => {
+      expect(getByText('Page 2 of 3')).not.toBeNull();
+      expect(queryByText('step-1')).toBeNull();
+      expect(getByText('step-201')).not.toBeNull();
+    });
+
+    await fireEvent.click(getByRole('button', { name: 'Previous' }));
+    await waitFor(() => expect(getByText('step-1')).not.toBeNull());
+
+    const jumpInput = getByRole('textbox', { name: 'Jump to step' });
+    await fireEvent.input(jumpInput, { target: { value: '450' } });
+    await fireEvent.keyDown(jumpInput, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(getByText('Page 3 of 3')).not.toBeNull();
+      expect(getByText('step-450')).not.toBeNull();
+    });
+  });
+
+  test('an invalid jump-to-step value is a no-op', async () => {
+    const liveObservations = new WorkflowLiveObservations(
+      new InertFleet(),
+      inertQueryClient(),
+      'wf-1',
+    );
+    const entries = Array.from({ length: 501 }, (_, index) =>
+      entry({ step: index + 1, operationLabel: `step-${index + 1}` }),
+    );
+
+    const { getByText, getByRole } = render(TimelineTabHarness, {
+      props: {
+        client: baseClient(entries),
+        workflow: workflow({ id: 'wf-paginated-invalid' }),
+        liveObservations,
+        finalizerStatus: null,
+      },
+    });
+
+    await waitFor(() => expect(getByText('step-1')).not.toBeNull());
+    const jumpInput = getByRole('textbox', { name: 'Jump to step' });
+    await fireEvent.input(jumpInput, { target: { value: 'not-a-number' } });
+    await fireEvent.keyDown(jumpInput, { key: 'Enter' });
+
+    expect(getByText('Page 1 of 3')).not.toBeNull();
+  });
 });

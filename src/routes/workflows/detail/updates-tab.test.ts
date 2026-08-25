@@ -104,4 +104,140 @@ describe('UpdatesTab', () => {
     expect(called).toBe(false);
     expect(getByText(/Payload must be valid JSON/)).not.toBeNull();
   });
+
+  test('shows a generic failure message when the client throws a non-Error value', async () => {
+    const client = {
+      submitCoordinatedUpdate: async (): Promise<CoordinatedUpdateResult> => {
+        throw 'boom';
+      },
+    };
+
+    const { getByLabelText, getByRole, getByText } = render(UpdatesTab, {
+      props: { client, workflow: workflow() },
+    });
+
+    await fireEvent.input(getByLabelText('Update name'), { target: { value: 'applyDiscount' } });
+    await fireEvent.click(getByRole('button', { name: 'Send update' }));
+
+    await waitFor(() => {
+      expect(getByText('The update failed.')).not.toBeNull();
+    });
+  });
+
+  test('shows the thrown Error message when the client rejects', async () => {
+    const client = {
+      submitCoordinatedUpdate: async (): Promise<CoordinatedUpdateResult> => {
+        throw new Error('network unreachable');
+      },
+    };
+
+    const { getByLabelText, getByRole, getByText } = render(UpdatesTab, {
+      props: { client, workflow: workflow() },
+    });
+
+    await fireEvent.input(getByLabelText('Update name'), { target: { value: 'applyDiscount' } });
+    await fireEvent.click(getByRole('button', { name: 'Send update' }));
+
+    await waitFor(() => {
+      expect(getByText('network unreachable')).not.toBeNull();
+    });
+  });
+
+  test('passes a trimmed idempotency key and a custom timeout through to the client', async () => {
+    const received: { options: { timeout: number; idempotencyKey?: string } | null } = {
+      options: null,
+    };
+    const client = {
+      submitCoordinatedUpdate: async (
+        _id: string,
+        _name: string,
+        _payload: unknown,
+        options: { timeout: number; idempotencyKey?: string },
+      ): Promise<CoordinatedUpdateResult> => {
+        received.options = options;
+        return { updateId: 'u1' };
+      },
+    };
+
+    const { getByLabelText, getByRole } = render(UpdatesTab, {
+      props: { client, workflow: workflow() },
+    });
+
+    await fireEvent.input(getByLabelText('Update name'), { target: { value: 'applyDiscount' } });
+    await fireEvent.input(getByLabelText('Idempotency key'), { target: { value: '  key-123  ' } });
+    await fireEvent.input(getByLabelText('Timeout (s)'), { target: { value: '5' } });
+    await fireEvent.click(getByRole('button', { name: 'Send update' }));
+
+    await waitFor(() => {
+      expect(received.options).toEqual({ timeout: 5_000, idempotencyKey: 'key-123' });
+    });
+  });
+
+  test('an invalid timeout input is ignored, leaving the default timeout in effect', async () => {
+    const received: { options: { timeout: number } | null } = { options: null };
+    const client = {
+      submitCoordinatedUpdate: async (
+        _id: string,
+        _name: string,
+        _payload: unknown,
+        options: { timeout: number },
+      ): Promise<CoordinatedUpdateResult> => {
+        received.options = options;
+        return { updateId: 'u1' };
+      },
+    };
+
+    const { getByLabelText, getByRole } = render(UpdatesTab, {
+      props: { client, workflow: workflow() },
+    });
+
+    await fireEvent.input(getByLabelText('Update name'), { target: { value: 'applyDiscount' } });
+    await fireEvent.input(getByLabelText('Timeout (s)'), { target: { value: '-5' } });
+    await fireEvent.click(getByRole('button', { name: 'Send update' }));
+
+    await waitFor(() => {
+      expect(received.options).toEqual({ timeout: 30_000 });
+    });
+  });
+
+  test('shows a pending row with a countdown while the update is in flight, and disables Send meanwhile', async () => {
+    const pendingUpdate: { resolve: ((value: CoordinatedUpdateResult) => void) | null } = {
+      resolve: null,
+    };
+    const client = {
+      submitCoordinatedUpdate: () =>
+        new Promise<CoordinatedUpdateResult>((resolve) => {
+          pendingUpdate.resolve = resolve;
+        }),
+    };
+
+    const { getByLabelText, getByRole, getByText } = render(UpdatesTab, {
+      props: { client, workflow: workflow() },
+    });
+
+    await fireEvent.input(getByLabelText('Update name'), { target: { value: 'applyDiscount' } });
+    await fireEvent.click(getByRole('button', { name: 'Send update' }));
+
+    await waitFor(() => {
+      expect(getByRole('button', { name: 'Sending…' }).hasAttribute('disabled')).toBe(true);
+    });
+    expect(getByText(/awaiting result/)).not.toBeNull();
+    expect(getByText('pending')).not.toBeNull();
+
+    pendingUpdate.resolve?.({ updateId: 'u1', result: { ok: true } });
+
+    await waitFor(() => {
+      expect(getByRole('button', { name: 'Send update' })).not.toBeNull();
+    });
+  });
+
+  test('the Send button stays disabled while the update name is blank', () => {
+    const client = {
+      submitCoordinatedUpdate: async (): Promise<CoordinatedUpdateResult> => ({ updateId: 'u1' }),
+    };
+
+    const { getByRole } = render(UpdatesTab, { props: { client, workflow: workflow() } });
+
+    expect(getByRole('button', { name: 'Send update' }).hasAttribute('disabled')).toBe(true);
+  });
 });

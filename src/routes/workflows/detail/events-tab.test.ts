@@ -1,5 +1,5 @@
 import { fireEvent, render, waitFor } from '@testing-library/svelte';
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
 
 import type { WorkflowEvent, WorkflowState, WorkflowTimelineEntry } from '@lostgradient/weft';
 import type { WorkflowEventTail } from '@lostgradient/weft/client';
@@ -135,5 +135,97 @@ describe('EventsTab', () => {
       expect(getByText('Event history · JSON')).not.toBeNull();
     });
     expect(getByText('Events + timeline · JSON')).not.toBeNull();
+  });
+
+  test('renders "No events to display." once loaded with no events', async () => {
+    const { getByText } = render(EventsTabHarness, {
+      props: { client: client([]), workflow: workflow() },
+    });
+
+    await waitFor(() => {
+      expect(getByText('No events to display.')).not.toBeNull();
+    });
+  });
+
+  test('a non-checkpoint event renders its raw type as the summary', async () => {
+    const events: WorkflowEvent[] = [
+      { type: 'workflow:started', timestamp: 1_000, data: { reason: 'kickoff' } },
+    ];
+
+    const { getByText } = render(EventsTabHarness, {
+      props: { client: client(events), workflow: workflow() },
+    });
+
+    await waitFor(() => expect(getByText('workflow:started')).not.toBeNull());
+  });
+
+  test('an event with a data payload renders a Details collapsible trigger', async () => {
+    // Cinder's `Collapsible` toggles via a `transition:` directive whose
+    // lifecycle event dispatch happy-dom can't construct cross-realm — no
+    // test in this repo drives a transitioning Cinder trigger via
+    // `fireEvent.click` (see `advanced-options.test.ts`'s identical note).
+    // This only asserts the trigger itself renders (the `entry.details !==
+    // undefined` branch), not the post-expand content.
+    const events: WorkflowEvent[] = [
+      { type: 'workflow:checkpoint', timestamp: 1_000, data: { step: 1, note: 'first' } },
+    ];
+
+    const { getByRole } = render(EventsTabHarness, {
+      props: { client: client(events), workflow: workflow() },
+    });
+
+    await waitFor(() => expect(getByRole('button', { name: /Details/ })).not.toBeNull());
+  });
+
+  test('clicking "Event history · JSON" downloads the events export', async () => {
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const createObjectURL = mock(() => 'blob:mock-url');
+    URL.createObjectURL = createObjectURL as unknown as typeof URL.createObjectURL;
+    URL.revokeObjectURL = mock(() => {}) as unknown as typeof URL.revokeObjectURL;
+
+    try {
+      const events: WorkflowEvent[] = [
+        { type: 'workflow:checkpoint', timestamp: 1_000, data: { step: 1 } },
+      ];
+      const { getByRole, getByText } = render(EventsTabHarness, {
+        props: { client: client(events), workflow: workflow({ id: 'wf_download_1' }) },
+      });
+
+      await fireEvent.click(getByRole('button', { name: /Download/ }));
+      await waitFor(() => expect(getByText('Event history · JSON')).not.toBeNull());
+      await fireEvent.click(getByText('Event history · JSON'));
+
+      await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1));
+    } finally {
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+    }
+  });
+
+  test('clicking "Events + timeline · JSON" fetches the timeline and downloads the combined export', async () => {
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const createObjectURL = mock(() => 'blob:mock-url');
+    URL.createObjectURL = createObjectURL as unknown as typeof URL.createObjectURL;
+    URL.revokeObjectURL = mock(() => {}) as unknown as typeof URL.revokeObjectURL;
+
+    try {
+      const events: WorkflowEvent[] = [
+        { type: 'workflow:checkpoint', timestamp: 1_000, data: { step: 1 } },
+      ];
+      const { getByRole, getByText } = render(EventsTabHarness, {
+        props: { client: client(events), workflow: workflow({ id: 'wf_download_2' }) },
+      });
+
+      await fireEvent.click(getByRole('button', { name: /Download/ }));
+      await waitFor(() => expect(getByText('Events + timeline · JSON')).not.toBeNull());
+      await fireEvent.click(getByText('Events + timeline · JSON'));
+
+      await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1));
+    } finally {
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+    }
   });
 });

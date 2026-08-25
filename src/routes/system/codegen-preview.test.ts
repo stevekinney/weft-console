@@ -53,6 +53,21 @@ describe('previewInterface', () => {
     expect(output).toBe(['export interface X {', '  note?: unknown | null;', '}'].join('\n'));
   });
 
+  test('renders number and integer fields as the TypeScript number type', () => {
+    const output = previewInterface('OrderInput', {
+      type: 'object',
+      required: ['amount', 'quantity'],
+      properties: {
+        amount: { type: 'number' },
+        quantity: { type: 'integer' },
+      },
+    });
+
+    expect(output).toBe(
+      ['export interface OrderInput {', '  amount: number;', '  quantity: number;', '}'].join('\n'),
+    );
+  });
+
   test('falls back to unknown for an unrecognized fragment type', () => {
     const output = previewInterface('X', {
       type: 'object',

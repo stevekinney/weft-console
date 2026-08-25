@@ -18,7 +18,7 @@ export interface FetchCall {
 
 interface RouteRule {
   readonly matches: (call: FetchCall) => boolean;
-  readonly respond: (call: FetchCall) => Response;
+  readonly respond: (call: FetchCall) => Response | Promise<Response>;
 }
 
 function parsedJsonRpcMethod(call: FetchCall): string | undefined {
@@ -84,6 +84,50 @@ export class ScriptedFetch {
           },
         }),
     });
+  }
+
+  /**
+   * Standing route for a plain (non-JSON-RPC) REST call — needed for
+   * `dead-letter-request.ts`'s `clearDeadLetter()`, which hits
+   * `DELETE /v1/tasks/diagnostics/dead-letter/:operationId` directly rather
+   * than through `client.operations[...]` (see that file's module doc for
+   * why). `match` receives the parsed URL and the request method.
+   */
+  routeRest(match: (url: URL, method: string) => boolean, respond: () => Response): void {
+    this.#routes.push({
+      matches: (call) => match(new URL(call.url), call.init?.method ?? 'GET'),
+      respond,
+    });
+  }
+
+  /**
+   * Standing route whose response stays pending until `resolve` is called —
+   * for asserting a loading state that must survive an `await` (e.g.
+   * `findByRole`/`fireEvent.click`) before the query settles. A plain
+   * `routeJsonRpcMethod` resolves synchronously, so any awaited microtask
+   * between mount and the assertion risks TanStack Query processing the
+   * response first and flipping `loading` to `false` out from under the
+   * test (flagged in WFC-10 PR #14 review).
+   */
+  deferJsonRpcMethod(method: string): { resolve: (result: unknown) => void } {
+    let releaseResponse: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      releaseResponse = resolve;
+    });
+    let pendingResult: unknown;
+    this.#routes.push({
+      matches: (call) => parsedJsonRpcMethod(call) === method,
+      respond: async () => {
+        await gate;
+        return Response.json({ jsonrpc: '2.0', id: 1, result: pendingResult });
+      },
+    });
+    return {
+      resolve: (result: unknown) => {
+        pendingResult = result;
+        releaseResponse?.();
+      },
+    };
   }
 
   restore(): void {

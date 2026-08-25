@@ -16,6 +16,11 @@
  * other fault-rendering call site in this codebase
  * (`fault-boundary.svelte`, `schedules/fault-banner.svelte`,
  * `system/query-fault-banner.svelte`, …).
+ *
+ * See `index-actions.test.ts` for the route root's happy-path tab renders,
+ * worker/queue selection, drain/resume mutations, dead-letter clearing, and
+ * loading-skeleton coverage — split into its own file purely to stay under
+ * this repo's `max-lines` lint budget.
  */
 import { fireEvent, render } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';

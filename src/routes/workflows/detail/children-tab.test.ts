@@ -84,4 +84,58 @@ describe('ChildrenTab', () => {
       expect(getByText(/Showing 1 of 3/)).not.toBeNull();
     });
   });
+
+  test('no "+N more" note when every child fits on the one page', async () => {
+    const client = {
+      list: async () => page([summary({ id: 'wf_child_1' })], 1),
+    };
+
+    const { getByText, queryByText } = render(ChildrenTabHarness, {
+      props: { client, workflow: workflowState() },
+    });
+
+    await waitFor(() => {
+      expect(getByText('validate-shipment')).not.toBeNull();
+    });
+    expect(queryByText(/more —/)).toBeNull();
+  });
+
+  test('shows a skeleton while the children list is loading', async () => {
+    const pendingList: { resolve: ((value: PaginatedResult<WorkflowSummary>) => void) | null } = {
+      resolve: null,
+    };
+    const client = {
+      list: () =>
+        new Promise<PaginatedResult<WorkflowSummary>>((resolve) => {
+          pendingList.resolve = resolve;
+        }),
+    };
+
+    const { container, getByText } = render(ChildrenTabHarness, {
+      props: { client, workflow: workflowState() },
+    });
+
+    expect(container.querySelector('.cinder-skeleton')).not.toBeNull();
+
+    pendingList.resolve?.(page([summary({ id: 'wf_child_1' })]));
+
+    await waitFor(() => {
+      expect(getByText('validate-shipment')).not.toBeNull();
+    });
+  });
+
+  test('a child row displays its truncated id and relative creation time', async () => {
+    const client = {
+      list: async () => page([summary({ id: 'wf_child_abcdef0123456789', createdAt: 1_000 })]),
+    };
+
+    const { getByRole } = render(ChildrenTabHarness, {
+      props: { client, workflow: workflowState() },
+    });
+
+    await waitFor(() => {
+      const link = getByRole('link', { name: /validate-shipment/ });
+      expect(link.textContent).toContain('wf_child');
+    });
+  });
 });

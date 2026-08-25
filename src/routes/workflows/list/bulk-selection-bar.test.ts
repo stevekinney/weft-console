@@ -119,20 +119,23 @@ describe('BulkSelectionBar', () => {
       confirmationTokenVersion: 1,
     });
 
-    const { getByRole, getAllByRole, getByText } = render(BulkSelectionBar, {
-      props: baseProps({ client: realClient() }),
-    });
+    try {
+      const { getByRole, getAllByRole, getByText } = render(BulkSelectionBar, {
+        props: baseProps({ client: realClient() }),
+      });
 
-    await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
-    const cancelButton = getAllByRole('button').find(
-      (button) => button.textContent?.trim() === 'Cancel',
-    ) as HTMLButtonElement;
-    await fireEvent.click(cancelButton);
+      await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+      const cancelButton = getAllByRole('button').find(
+        (button) => button.textContent?.trim() === 'Cancel',
+      ) as HTMLButtonElement;
+      await fireEvent.click(cancelButton);
 
-    await waitFor(() => {
-      expect(getByText('5 matching workflows')).not.toBeNull();
-    });
-    fetch.restore();
+      await waitFor(() => {
+        expect(getByText('5 matching workflows')).not.toBeNull();
+      });
+    } finally {
+      fetch.restore();
+    }
   });
 
   test('clicking Purge (once enabled) opens the purge dialog using the already-known total, no dry run', async () => {
@@ -161,36 +164,194 @@ describe('BulkSelectionBar', () => {
     const fetch = new ScriptedFetch();
     fetch.routeJsonRpcMethod('weft.workflows.purge', { deleted: 47 });
 
-    let completed = 0;
-    const { getByRole, getAllByRole, getByText, getByLabelText } = render(BulkSelectionBar, {
-      props: baseProps({
-        client: realClient(),
-        onActionComplete: () => {
-          completed += 1;
-        },
-      }),
+    try {
+      let completed = 0;
+      const { getByRole, getAllByRole, getByText, getByLabelText } = render(BulkSelectionBar, {
+        props: baseProps({
+          client: realClient(),
+          onActionComplete: () => {
+            completed += 1;
+          },
+        }),
+      });
+
+      await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+      const purgeButton = getAllByRole('button').find(
+        (button) => button.textContent?.trim() === 'Purge',
+      ) as HTMLButtonElement;
+      await fireEvent.click(purgeButton);
+
+      await waitFor(() => {
+        expect(getByLabelText('Type "purge 47 workflows" to confirm')).not.toBeNull();
+      });
+      expect(completed).toBe(0);
+
+      await fireEvent.input(getByLabelText('Type "purge 47 workflows" to confirm'), {
+        target: { value: 'purge 47 workflows' },
+      });
+      await fireEvent.click(getByRole('button', { name: 'Purge 47 workflows' }));
+
+      await waitFor(() => {
+        expect(getByText('Purged 47 workflows')).not.toBeNull();
+      });
+      expect(completed).toBe(1);
+    } finally {
+      fetch.restore();
+    }
+  });
+
+  test('clicking Signal opens the params form, and invalid JSON blocks continuing to the preview', async () => {
+    const { getByRole, getAllByRole, getByLabelText, getByText } = render(BulkSelectionBar, {
+      props: baseProps({ client: realClient() }),
     });
 
     await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
-    const purgeButton = getAllByRole('button').find(
-      (button) => button.textContent?.trim() === 'Purge',
+    const signalButton = getAllByRole('button').find(
+      (button) => button.textContent?.trim() === 'Signal',
     ) as HTMLButtonElement;
-    await fireEvent.click(purgeButton);
+    await fireEvent.click(signalButton);
 
-    await waitFor(() => {
-      expect(getByLabelText('Type "purge 47 workflows" to confirm')).not.toBeNull();
-    });
-    expect(completed).toBe(0);
+    expect(getByLabelText('Signal name')).not.toBeNull();
 
-    await fireEvent.input(getByLabelText('Type "purge 47 workflows" to confirm'), {
-      target: { value: 'purge 47 workflows' },
-    });
-    await fireEvent.click(getByRole('button', { name: 'Purge 47 workflows' }));
+    await fireEvent.input(getByLabelText('Signal name'), { target: { value: 'restart' } });
+    await fireEvent.input(getByLabelText('Payload'), { target: { value: '{not json' } });
 
-    await waitFor(() => {
-      expect(getByText('Purged 47 workflows')).not.toBeNull();
+    expect(getByText(/Payload must be valid JSON/)).not.toBeNull();
+  });
+
+  test('a valid Signal params form runs the dry run with the signal name and parsed payload', async () => {
+    const fetch = new ScriptedFetch();
+    fetch.routeJsonRpcMethod('weft.workflows.bulk.signal', {
+      dryRun: true,
+      action: 'signal',
+      matched: 2,
+      requestId: 'bulk:req-signal',
+      scope: {
+        matched: 2,
+        filter: { status: 'failed' },
+        statuses: ['failed'],
+        workflowTypes: [],
+        sampleWorkflowIds: [],
+        sampleLimit: 20,
+      },
+      sampleWorkflowIds: [],
+      confirmationToken: 'bulk:token-signal',
+      confirmationTokenVersion: 1,
     });
-    expect(completed).toBe(1);
-    fetch.restore();
+
+    try {
+      const { getByRole, getAllByRole, getByLabelText, getByText } = render(BulkSelectionBar, {
+        props: baseProps({ client: realClient() }),
+      });
+
+      await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+      const signalButton = getAllByRole('button').find(
+        (button) => button.textContent?.trim() === 'Signal',
+      ) as HTMLButtonElement;
+      await fireEvent.click(signalButton);
+
+      await fireEvent.input(getByLabelText('Signal name'), { target: { value: 'restart' } });
+      await fireEvent.input(getByLabelText('Payload'), { target: { value: '{"force":true}' } });
+      await fireEvent.click(getByRole('button', { name: 'Continue' }));
+
+      await waitFor(() => {
+        expect(getByText('2 matching workflows')).not.toBeNull();
+      });
+    } finally {
+      fetch.restore();
+    }
+  });
+
+  test('clicking Mutate tags opens the tags params form with an Add/Remove operation select', async () => {
+    const { getByRole, getAllByRole, getByLabelText } = render(BulkSelectionBar, {
+      props: baseProps({ client: realClient() }),
+    });
+
+    await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+    const tagsButton = getAllByRole('button').find(
+      (button) => button.textContent?.trim() === 'Mutate tags',
+    ) as HTMLButtonElement;
+    await fireEvent.click(tagsButton);
+
+    expect(getByLabelText('Operation')).not.toBeNull();
+    expect(getByLabelText('Tags (comma-separated)')).not.toBeNull();
+  });
+
+  test('clicking Retry failed (once enabled) opens the retry dialog and fires its dry run', async () => {
+    const fetch = new ScriptedFetch();
+    fetch.routeJsonRpcMethod('weft.workflows.bulk.retryfailed', {
+      dryRun: true,
+      action: 'retryfailed',
+      matched: 4,
+      requestId: 'bulk:req-retry',
+      scope: {
+        matched: 4,
+        filter: { status: 'failed' },
+        statuses: ['failed'],
+        workflowTypes: [],
+        sampleWorkflowIds: [],
+        sampleLimit: 20,
+      },
+      sampleWorkflowIds: [],
+      confirmationToken: 'bulk:token-retry',
+      confirmationTokenVersion: 1,
+    });
+
+    try {
+      const { getByRole, getAllByRole, getByText } = render(BulkSelectionBar, {
+        props: baseProps({ client: realClient() }),
+      });
+
+      await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+      const retryButton = getAllByRole('button').find(
+        (button) => button.textContent?.trim() === 'Retry failed',
+      ) as HTMLButtonElement;
+      await fireEvent.click(retryButton);
+
+      await waitFor(() => {
+        expect(getByText('4 matching workflows')).not.toBeNull();
+      });
+    } finally {
+      fetch.restore();
+    }
+  });
+
+  test('clicking Delete (once enabled) opens the delete dialog and fires its dry run', async () => {
+    const fetch = new ScriptedFetch();
+    fetch.routeJsonRpcMethod('weft.workflows.bulk.delete', {
+      dryRun: true,
+      action: 'delete',
+      matched: 6,
+      requestId: 'bulk:req-delete',
+      scope: {
+        matched: 6,
+        filter: { status: 'failed' },
+        statuses: ['failed'],
+        workflowTypes: [],
+        sampleWorkflowIds: [],
+        sampleLimit: 20,
+      },
+      sampleWorkflowIds: [],
+      confirmationToken: 'bulk:token-delete',
+      confirmationTokenVersion: 1,
+    });
+
+    try {
+      const { getByRole, getAllByRole, getByText } = render(BulkSelectionBar, {
+        props: baseProps({ client: realClient() }),
+      });
+
+      await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+      const deleteButton = getAllByRole('button').find(
+        (button) => button.textContent?.trim() === 'Delete',
+      ) as HTMLButtonElement;
+      await fireEvent.click(deleteButton);
+
+      await waitFor(() => {
+        expect(getByText('6 matching workflows')).not.toBeNull();
+      });
+    } finally {
+      fetch.restore();
+    }
   });
 });

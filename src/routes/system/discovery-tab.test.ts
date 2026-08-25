@@ -113,4 +113,66 @@ describe('DiscoveryTab', () => {
     const { findByText } = await renderDiscoveryTab();
     expect(await findByText('Something went wrong')).not.toBeNull();
   });
+
+  test('an OpenRPC document fetch failure shows the fault banner on the OpenRPC view', async () => {
+    scripted = new ScriptedFetch();
+    routeBaselineDocuments(scripted);
+    scripted.routeUrlStatus('/openrpc.json', 500, 'Internal Server Error');
+
+    const { findByRole, findByText } = await renderDiscoveryTab();
+    await fireEvent.click(await findByRole('radio', { name: 'OpenRPC' }));
+
+    expect(await findByText('Something went wrong')).not.toBeNull();
+  });
+
+  test('toggling Raw JSON on the OpenRPC view shows the raw document', async () => {
+    scripted = new ScriptedFetch();
+    routeBaselineDocuments(scripted);
+    scripted.routeUrl('/openrpc.json', { openrpc: '1.3.2', methods: [] });
+
+    const { findByLabelText, findByRole, findByText } = await renderDiscoveryTab();
+    await fireEvent.click(await findByRole('radio', { name: 'OpenRPC' }));
+    await fireEvent.click(await findByLabelText('Raw JSON'));
+
+    // Single-token assertion — see the OpenAPI raw-toggle test above for why.
+    expect(await findByText('1.3.2', { exact: false })).not.toBeNull();
+  });
+
+  test('an AsyncAPI document fetch failure shows the fault banner on the AsyncAPI view', async () => {
+    scripted = new ScriptedFetch();
+    routeBaselineDocuments(scripted);
+    scripted.routeUrlStatus('/asyncapi.json', 500, 'Internal Server Error');
+
+    const { findByRole, findByText } = await renderDiscoveryTab();
+    await fireEvent.click(await findByRole('radio', { name: 'AsyncAPI' }));
+
+    expect(await findByText('Something went wrong')).not.toBeNull();
+  });
+
+  test('toggling Raw JSON on the AsyncAPI view shows the raw document', async () => {
+    scripted = new ScriptedFetch();
+    routeBaselineDocuments(scripted);
+    scripted.routeUrl('/asyncapi.json', { asyncapi: '3.0.0', channels: {} });
+
+    const { findByLabelText, findByRole, findByText } = await renderDiscoveryTab();
+    await fireEvent.click(await findByRole('radio', { name: 'AsyncAPI' }));
+    await fireEvent.click(await findByLabelText('Raw JSON'));
+
+    expect(await findByText('3.0.0', { exact: false })).not.toBeNull();
+  });
+
+  test('switching to MCP hides the Raw JSON toggle and renders the MCP sub-view', async () => {
+    scripted = new ScriptedFetch();
+    routeBaselineDocuments(scripted);
+    scripted.routeUrl('/.well-known/mcp.json', {
+      protocol: 'model-context-protocol',
+      protocolVersion: '2025-03-26',
+    });
+
+    const { findByRole, findByText, queryByLabelText } = await renderDiscoveryTab();
+    await fireEvent.click(await findByRole('radio', { name: 'MCP' }));
+
+    expect(await findByText('Test MCP session')).not.toBeNull();
+    expect(queryByLabelText('Raw JSON')).toBeNull();
+  });
 });

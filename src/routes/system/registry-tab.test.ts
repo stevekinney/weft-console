@@ -143,4 +143,53 @@ describe('RegistryTab', () => {
       await findByText('No input schema declared — this definition accepts an untyped payload.'),
     ).not.toBeNull();
   });
+
+  test('shows the honest "no activities" note when the engine has none registered', async () => {
+    scripted = new ScriptedFetch();
+    scripted.enqueueJsonRpcResult({
+      registryVersion: 1,
+      workflows: { heartbeat: {} },
+      activities: {},
+    });
+    const { findByText } = await renderRegistryTab();
+    expect(await findByText('No activities registered for this engine.')).not.toBeNull();
+  });
+
+  test('renders a nested object field as an expandable schema tree branch', async () => {
+    scripted = new ScriptedFetch();
+    scripted.enqueueJsonRpcResult({
+      registryVersion: 1,
+      workflows: {
+        'order-processing': {
+          inputSchema: {
+            type: 'object',
+            required: ['address'],
+            properties: {
+              address: {
+                type: 'object',
+                required: ['city'],
+                properties: { city: { type: 'string' }, zip: { type: 'string' } },
+              },
+            },
+          },
+        },
+      },
+      activities: {},
+    });
+
+    const { findAllByText, findByRole } = await renderRegistryTab();
+
+    await fireEvent.click(await findByRole('button', { name: /order-processing/ }));
+
+    const addressMatches = await findAllByText('address');
+    expect(addressMatches.length).toBeGreaterThan(0);
+    // The nested object's own children render only once its `Tree.Item`
+    // branch is expanded (Cinder's `shouldRenderChildren`).
+    const expandAddress = await findByRole('button', { name: 'Expand address' });
+    await fireEvent.click(expandAddress);
+    const cityMatches = await findAllByText('city');
+    expect(cityMatches.length).toBeGreaterThan(0);
+    const zipMatches = await findAllByText('zip');
+    expect(zipMatches.length).toBeGreaterThan(0);
+  });
 });
