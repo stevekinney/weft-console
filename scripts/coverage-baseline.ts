@@ -245,59 +245,69 @@ const LINUX_BASELINE: CoverageBaseline = {
   //
   // Approved 2026-08-21 by the repo owner after reviewing this exact
   // evidence chain ("Yes, re-baseline it").
-  measuredAt: '2026-08-24T16:40:00.000Z',
-  overall: { linesFound: 36933, linesHit: 19402, functionsFound: 3937, functionsHit: 3235 },
+  //
+  // Superseded 2026-08-25 for WFC-10 (PR #14): the darwin `--parallel`
+  // coverage-engine fix documented on `DARWIN_BASELINE` above applies
+  // equally to Linux CI (`.github/workflows/ci.yaml`'s `coverage` job runs
+  // on `ubuntu-latest`), so the pre-fix Linux floor recorded here was
+  // stale and no longer functioned as a real ratchet (flagged in review —
+  // Linux CI could pass while losing most of the newly measured coverage,
+  // since actual coverage sat far above this floor). Unlike the
+  // `schedules` fix above, exact integers did not need reconstruction this
+  // time: `.github/workflows/ci.yaml`'s `coverage` job now uploads
+  // `coverage/lcov.info` as a build artifact (added in this same PR), so
+  // this is downloaded directly from CI run 32795118494's
+  // `coverage-lcov-linux` artifact and parsed with this file's own
+  // `parseLcov`/`aggregateByArea` — not reconstructed or estimated.
+  measuredAt: '2026-08-25T00:44:00.000Z',
+  overall: { linesFound: 33878, linesHit: 31840, functionsFound: 6510, functionsHit: 6173 },
   areas: {
     fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
-    scripts: { linesFound: 339, linesHit: 268, functionsFound: 24, functionsHit: 23 },
+    scripts: { linesFound: 753, linesHit: 682, functionsFound: 36, functionsHit: 35 },
     src: { linesFound: 12, linesHit: 12, functionsFound: 2, functionsHit: 2 },
-    'src/app': { linesFound: 1350, linesHit: 1136, functionsFound: 264, functionsHit: 150 },
-    'src/lib': { linesFound: 1318, linesHit: 896, functionsFound: 178, functionsHit: 113 },
+    'src/app': { linesFound: 1301, linesHit: 1261, functionsFound: 282, functionsHit: 267 },
+    'src/lib': { linesFound: 1195, linesHit: 1186, functionsFound: 192, functionsHit: 188 },
     'src/routes/dashboard': {
-      // See the matching Darwin note above. CI measured 79.22% lines after
-      // replacing the global-fetch helper with injected clients; retain a
-      // slightly lower 79.16% floor to avoid rounding a passing measurement
-      // into a false regression.
-      linesFound: 1468,
-      linesHit: 1162,
-      functionsFound: 243,
-      functionsHit: 209,
+      linesFound: 1444,
+      linesHit: 1185,
+      functionsFound: 239,
+      functionsHit: 214,
     },
     'src/routes/reviews': {
-      linesFound: 2712,
-      linesHit: 936,
-      functionsFound: 183,
-      functionsHit: 149,
+      linesFound: 2264,
+      linesHit: 2111,
+      functionsFound: 439,
+      functionsHit: 418,
     },
     'src/routes/schedules': {
-      linesFound: 3749,
-      linesHit: 2313,
-      functionsFound: 487,
-      functionsHit: 409,
+      linesFound: 3500,
+      linesHit: 3402,
+      functionsFound: 727,
+      functionsHit: 701,
     },
     'src/routes/storage': {
-      linesFound: 3089,
-      linesHit: 992,
-      functionsFound: 171,
-      functionsHit: 138,
+      linesFound: 2739,
+      linesHit: 2708,
+      functionsFound: 532,
+      functionsHit: 520,
     },
     'src/routes/system': {
-      linesFound: 5778,
-      linesHit: 1520,
-      functionsFound: 274,
-      functionsHit: 219,
+      linesFound: 4866,
+      linesHit: 4846,
+      functionsFound: 1002,
+      functionsHit: 985,
     },
     'src/routes/workers': {
-      linesFound: 3866,
-      linesHit: 1359,
-      functionsFound: 264,
-      functionsHit: 216,
+      linesFound: 3380,
+      linesHit: 3226,
+      functionsFound: 683,
+      functionsHit: 672,
     },
     'src/routes/workflows': {
-      linesFound: 12409,
-      linesHit: 8375,
-      functionsFound: 1762,
-      functionsHit: 1580,
+      linesFound: 11581,
+      linesHit: 10788,
+      functionsFound: 2291,
+      functionsHit: 2144,
     },
     tests: { linesFound: 145, linesHit: 114, functionsFound: 16, functionsHit: 15 },
   },
