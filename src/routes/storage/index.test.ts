@@ -3,7 +3,7 @@
  * lock-states"): the `storage:admin` scope gate.
  */
 import type { HttpClient } from '@lostgradient/weft/client';
-import { fireEvent, render } from '@testing-library/svelte';
+import { fireEvent, render, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { stubStorageFetch } from './storage-fetch-stub.test-support.ts';
@@ -68,7 +68,14 @@ describe('Storage route', () => {
     await fireEvent.click(getByText('Capabilities'));
 
     expect(await findByText('Batch operations')).not.toBeNull();
-    expect(await findByText('supported')).not.toBeNull();
+    // The Batch operations row always renders its own "supported" badge, so
+    // an unscoped `findByText('supported')` would match it regardless of
+    // whether the conditional-batch probe ever resolved — scope to the
+    // Conditional batch row specifically (flagged in WFC-10 PR #14 review).
+    const conditionalBatchTerm = await findByText('Conditional batch');
+    const conditionalBatchRow = conditionalBatchTerm.closest('.cinder-description-list__row');
+    if (!conditionalBatchRow) throw new Error('Conditional batch row not found');
+    expect(await within(conditionalBatchRow as HTMLElement).findByText('supported')).not.toBeNull();
   });
 
   test('passes an undefined conditional-batch result through while the probe is pending or fails', async () => {

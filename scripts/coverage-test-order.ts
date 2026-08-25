@@ -163,6 +163,24 @@ export const LINUX_BASELINE_COVERAGE_TEST_ORDER = [
   'src/routes/workflows/detail/checkpoints/checkpoints-data.test.ts',
   'src/routes/workflows/detail/checkpoints/divergence.test.ts',
   'src/routes/workflows/detail/checkpoints/checkpoints-tab.test.ts',
+  // WFC-10 (PR #14): frozen in the exact lexical order they ran in when the
+  // recorded Linux baseline was measured — see the matching comment at the
+  // end of DARWIN_BASELINE_COVERAGE_TEST_ORDER below for why this matters.
+  'src/routes/storage/batch-panel.test.ts',
+  'src/routes/storage/delete-panel.test.ts',
+  'src/routes/storage/kv-browser.test.ts',
+  'src/routes/storage/scan-panel.test.ts',
+  'src/routes/storage/storage-value-display.test.ts',
+  'src/routes/workers/diagnostics-view.test.ts',
+  'src/routes/workers/index-actions.test.ts',
+  'src/routes/workers/queue-detail-view.test.ts',
+  'src/routes/workers/queue-list-view.test.ts',
+  'src/routes/workers/worker-detail-view.test.ts',
+  // Pre-existing unpinned file (not added by WFC-10) whose lexical position
+  // sorts immediately after worker-detail-view.test.ts — included here so
+  // pinning the 10 files above doesn't push it to the very end of the
+  // whole suite instead of leaving it where it already ran.
+  'src/routes/workers/worker-list-view.test.ts',
 ] as const;
 
 export const DARWIN_BASELINE_COVERAGE_TEST_ORDER = [
@@ -324,4 +342,32 @@ export const DARWIN_BASELINE_COVERAGE_TEST_ORDER = [
   'src/routes/workflows/detail/timeline/finalizer-strip.test.ts',
   'src/routes/workflows/detail/timeline/timeline-step-state.test.ts',
   'src/routes/workflows/detail/timeline/workflow-live-observations.test.ts',
+  // WFC-10 (PR #14): freezes these 10 new test files in the exact lexical
+  // order `discoverCoverageTestFiles`/`selectCoverageTestFiles` already ran
+  // them in when the recorded Darwin/Linux baselines were measured (`bun
+  // run scripts/run-coverage.ts` in one shared process, no --parallel —
+  // see the fix documented on `DARWIN_BASELINE` in coverage-baseline.ts).
+  // Without pinning them here, they sit in the lexical "new files" tail
+  // this module's own doc comment describes: appended after the versioned
+  // order in path-sort order. Adding a later test whose path sorts among
+  // them would silently reorder this already-baselined suite, and since
+  // "Bun runs all files in one process, so module state can change LCOV
+  // attribution" (see the top of this file), that reorder could change
+  // measured coverage without any real regression — flagged in WFC-10 PR
+  // #14 review.
+  'src/routes/storage/batch-panel.test.ts',
+  'src/routes/storage/delete-panel.test.ts',
+  'src/routes/storage/kv-browser.test.ts',
+  'src/routes/storage/scan-panel.test.ts',
+  'src/routes/storage/storage-value-display.test.ts',
+  'src/routes/workers/diagnostics-view.test.ts',
+  'src/routes/workers/index-actions.test.ts',
+  'src/routes/workers/queue-detail-view.test.ts',
+  'src/routes/workers/queue-list-view.test.ts',
+  'src/routes/workers/worker-detail-view.test.ts',
+  // Pre-existing unpinned file (not added by WFC-10) whose lexical position
+  // sorts immediately after worker-detail-view.test.ts — included here so
+  // pinning the 10 files above doesn't push it to the very end of the
+  // whole suite instead of leaving it where it already ran.
+  'src/routes/workers/worker-list-view.test.ts',
 ] as const;
