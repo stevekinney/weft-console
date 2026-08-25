@@ -115,8 +115,7 @@ const DARWIN_BASELINE: CoverageBaseline = {
   // dropped (two full-suite runs without it produced near-identical LCOV,
   // 1290/1290 tests passing both times, one line differing only in a
   // timing-sensitive hit COUNT rather than hit/not-hit). Filed upstream:
-  // https://github.com/oven-sh/bun/issues (see WFC-10 PR description for the
-  // exact issue link). This is the same evidentiary bar WFC-5's Linux fix
+  // https://github.com/oven-sh/bun/issues/40386. This is the same evidentiary bar WFC-5's Linux fix
   // (PR #12, commit a7d6603) set for a baseline correction: a directly
   // measured, reproduced, root-caused re-measurement — not a guess to absorb
   // a regression. Every area rose; none needed a downward correction.

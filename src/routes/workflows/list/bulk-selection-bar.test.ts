@@ -119,20 +119,23 @@ describe('BulkSelectionBar', () => {
       confirmationTokenVersion: 1,
     });
 
-    const { getByRole, getAllByRole, getByText } = render(BulkSelectionBar, {
-      props: baseProps({ client: realClient() }),
-    });
+    try {
+      const { getByRole, getAllByRole, getByText } = render(BulkSelectionBar, {
+        props: baseProps({ client: realClient() }),
+      });
 
-    await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
-    const cancelButton = getAllByRole('button').find(
-      (button) => button.textContent?.trim() === 'Cancel',
-    ) as HTMLButtonElement;
-    await fireEvent.click(cancelButton);
+      await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+      const cancelButton = getAllByRole('button').find(
+        (button) => button.textContent?.trim() === 'Cancel',
+      ) as HTMLButtonElement;
+      await fireEvent.click(cancelButton);
 
-    await waitFor(() => {
-      expect(getByText('5 matching workflows')).not.toBeNull();
-    });
-    fetch.restore();
+      await waitFor(() => {
+        expect(getByText('5 matching workflows')).not.toBeNull();
+      });
+    } finally {
+      fetch.restore();
+    }
   });
 
   test('clicking Purge (once enabled) opens the purge dialog using the already-known total, no dry run', async () => {
@@ -161,37 +164,40 @@ describe('BulkSelectionBar', () => {
     const fetch = new ScriptedFetch();
     fetch.routeJsonRpcMethod('weft.workflows.purge', { deleted: 47 });
 
-    let completed = 0;
-    const { getByRole, getAllByRole, getByText, getByLabelText } = render(BulkSelectionBar, {
-      props: baseProps({
-        client: realClient(),
-        onActionComplete: () => {
-          completed += 1;
-        },
-      }),
-    });
+    try {
+      let completed = 0;
+      const { getByRole, getAllByRole, getByText, getByLabelText } = render(BulkSelectionBar, {
+        props: baseProps({
+          client: realClient(),
+          onActionComplete: () => {
+            completed += 1;
+          },
+        }),
+      });
 
-    await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
-    const purgeButton = getAllByRole('button').find(
-      (button) => button.textContent?.trim() === 'Purge',
-    ) as HTMLButtonElement;
-    await fireEvent.click(purgeButton);
+      await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+      const purgeButton = getAllByRole('button').find(
+        (button) => button.textContent?.trim() === 'Purge',
+      ) as HTMLButtonElement;
+      await fireEvent.click(purgeButton);
 
-    await waitFor(() => {
-      expect(getByLabelText('Type "purge 47 workflows" to confirm')).not.toBeNull();
-    });
-    expect(completed).toBe(0);
+      await waitFor(() => {
+        expect(getByLabelText('Type "purge 47 workflows" to confirm')).not.toBeNull();
+      });
+      expect(completed).toBe(0);
 
-    await fireEvent.input(getByLabelText('Type "purge 47 workflows" to confirm'), {
-      target: { value: 'purge 47 workflows' },
-    });
-    await fireEvent.click(getByRole('button', { name: 'Purge 47 workflows' }));
+      await fireEvent.input(getByLabelText('Type "purge 47 workflows" to confirm'), {
+        target: { value: 'purge 47 workflows' },
+      });
+      await fireEvent.click(getByRole('button', { name: 'Purge 47 workflows' }));
 
-    await waitFor(() => {
-      expect(getByText('Purged 47 workflows')).not.toBeNull();
-    });
-    expect(completed).toBe(1);
-    fetch.restore();
+      await waitFor(() => {
+        expect(getByText('Purged 47 workflows')).not.toBeNull();
+      });
+      expect(completed).toBe(1);
+    } finally {
+      fetch.restore();
+    }
   });
 
   test('clicking Signal opens the params form, and invalid JSON blocks continuing to the preview', async () => {
@@ -233,24 +239,27 @@ describe('BulkSelectionBar', () => {
       confirmationTokenVersion: 1,
     });
 
-    const { getByRole, getAllByRole, getByLabelText, getByText } = render(BulkSelectionBar, {
-      props: baseProps({ client: realClient() }),
-    });
+    try {
+      const { getByRole, getAllByRole, getByLabelText, getByText } = render(BulkSelectionBar, {
+        props: baseProps({ client: realClient() }),
+      });
 
-    await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
-    const signalButton = getAllByRole('button').find(
-      (button) => button.textContent?.trim() === 'Signal',
-    ) as HTMLButtonElement;
-    await fireEvent.click(signalButton);
+      await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+      const signalButton = getAllByRole('button').find(
+        (button) => button.textContent?.trim() === 'Signal',
+      ) as HTMLButtonElement;
+      await fireEvent.click(signalButton);
 
-    await fireEvent.input(getByLabelText('Signal name'), { target: { value: 'restart' } });
-    await fireEvent.input(getByLabelText('Payload'), { target: { value: '{"force":true}' } });
-    await fireEvent.click(getByRole('button', { name: 'Continue' }));
+      await fireEvent.input(getByLabelText('Signal name'), { target: { value: 'restart' } });
+      await fireEvent.input(getByLabelText('Payload'), { target: { value: '{"force":true}' } });
+      await fireEvent.click(getByRole('button', { name: 'Continue' }));
 
-    await waitFor(() => {
-      expect(getByText('2 matching workflows')).not.toBeNull();
-    });
-    fetch.restore();
+      await waitFor(() => {
+        expect(getByText('2 matching workflows')).not.toBeNull();
+      });
+    } finally {
+      fetch.restore();
+    }
   });
 
   test('clicking Mutate tags opens the tags params form with an Add/Remove operation select', async () => {
@@ -288,20 +297,23 @@ describe('BulkSelectionBar', () => {
       confirmationTokenVersion: 1,
     });
 
-    const { getByRole, getAllByRole, getByText } = render(BulkSelectionBar, {
-      props: baseProps({ client: realClient() }),
-    });
+    try {
+      const { getByRole, getAllByRole, getByText } = render(BulkSelectionBar, {
+        props: baseProps({ client: realClient() }),
+      });
 
-    await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
-    const retryButton = getAllByRole('button').find(
-      (button) => button.textContent?.trim() === 'Retry failed',
-    ) as HTMLButtonElement;
-    await fireEvent.click(retryButton);
+      await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+      const retryButton = getAllByRole('button').find(
+        (button) => button.textContent?.trim() === 'Retry failed',
+      ) as HTMLButtonElement;
+      await fireEvent.click(retryButton);
 
-    await waitFor(() => {
-      expect(getByText('4 matching workflows')).not.toBeNull();
-    });
-    fetch.restore();
+      await waitFor(() => {
+        expect(getByText('4 matching workflows')).not.toBeNull();
+      });
+    } finally {
+      fetch.restore();
+    }
   });
 
   test('clicking Delete (once enabled) opens the delete dialog and fires its dry run', async () => {
@@ -324,19 +336,22 @@ describe('BulkSelectionBar', () => {
       confirmationTokenVersion: 1,
     });
 
-    const { getByRole, getAllByRole, getByText } = render(BulkSelectionBar, {
-      props: baseProps({ client: realClient() }),
-    });
+    try {
+      const { getByRole, getAllByRole, getByText } = render(BulkSelectionBar, {
+        props: baseProps({ client: realClient() }),
+      });
 
-    await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
-    const deleteButton = getAllByRole('button').find(
-      (button) => button.textContent?.trim() === 'Delete',
-    ) as HTMLButtonElement;
-    await fireEvent.click(deleteButton);
+      await fireEvent.click(getByRole('checkbox', { name: /Select all 47 matching the filter/ }));
+      const deleteButton = getAllByRole('button').find(
+        (button) => button.textContent?.trim() === 'Delete',
+      ) as HTMLButtonElement;
+      await fireEvent.click(deleteButton);
 
-    await waitFor(() => {
-      expect(getByText('6 matching workflows')).not.toBeNull();
-    });
-    fetch.restore();
+      await waitFor(() => {
+        expect(getByText('6 matching workflows')).not.toBeNull();
+      });
+    } finally {
+      fetch.restore();
+    }
   });
 });
