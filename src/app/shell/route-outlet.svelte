@@ -51,7 +51,7 @@
   });
 </script>
 
-<div class="weft-shell-outlet">
+<main class="weft-shell-outlet">
   <FaultBoundary>
     {#if notFound}
       <EmptyState
@@ -71,4 +71,4 @@
       {/key}
     {/if}
   </FaultBoundary>
-</div>
+</main>
