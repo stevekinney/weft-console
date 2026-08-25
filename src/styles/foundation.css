@@ -327,6 +327,22 @@
   border-bottom: 1px solid var(--cinder-border-muted);
 }
 
+/*
+ * WFC-11 design-fidelity fix: the panel's own `overflow: hidden` (copied
+ * faithfully from `Weft New Surfaces.dc.html`'s §C mockup, which only ever
+ * shows a handful of static sample items) has no paired `max-height`, so a
+ * live feed with dozens of notifications rendered as one unbounded panel —
+ * confirmed live at 50 seeded notifications: a 2842px-tall, unscrollable
+ * dropdown whose footer (the Connection Indicator §0 second instance and
+ * "Open alerts view" link) sat entirely off-screen with no way to reach it.
+ * Capping and scrolling just the item list, not the header/footer, keeps
+ * both always visible regardless of feed size.
+ */
+.weft-notification-panel__list {
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+}
+
 .weft-notification-panel__title {
   font-size: var(--cinder-text-sm);
   font-weight: 600;

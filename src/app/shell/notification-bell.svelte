@@ -141,40 +141,42 @@
         </button>
       </div>
 
-      {#each GROUPS as group (group.label)}
-        {@const items = group.items()}
-        {#if items.length > 0}
-          <div class="weft-notification-panel__group-label" data-tier={group.label.toLowerCase()}>
-            {group.label}
-          </div>
-          {#each items as item (item.id)}
-            {@const Icon = iconFor(item.icon)}
-            <a
-              href={router.href(item.href)}
-              class="weft-notification-panel__item"
-              data-tier={item.tier}
-              data-read={item.read}
-              onclick={(event) => {
-                event.preventDefault();
-                goTo(item);
-              }}
-            >
-              <Icon aria-hidden="true" size={14} class="weft-notification-panel__item-icon" />
-              <span class="weft-notification-panel__item-body">
-                <span class="weft-notification-panel__item-title">{item.title}</span>
-                <span class="weft-notification-panel__item-detail">{item.body}</span>
-              </span>
-              <span class="weft-notification-panel__item-time">
-                {formatRelativeTime(item.emittedAtMs)}
-              </span>
-            </a>
-          {/each}
-        {/if}
-      {/each}
+      <div class="weft-notification-panel__list">
+        {#each GROUPS as group (group.label)}
+          {@const items = group.items()}
+          {#if items.length > 0}
+            <div class="weft-notification-panel__group-label" data-tier={group.label.toLowerCase()}>
+              {group.label}
+            </div>
+            {#each items as item (item.id)}
+              {@const Icon = iconFor(item.icon)}
+              <a
+                href={router.href(item.href)}
+                class="weft-notification-panel__item"
+                data-tier={item.tier}
+                data-read={item.read}
+                onclick={(event) => {
+                  event.preventDefault();
+                  goTo(item);
+                }}
+              >
+                <Icon aria-hidden="true" size={14} class="weft-notification-panel__item-icon" />
+                <span class="weft-notification-panel__item-body">
+                  <span class="weft-notification-panel__item-title">{item.title}</span>
+                  <span class="weft-notification-panel__item-detail">{item.body}</span>
+                </span>
+                <span class="weft-notification-panel__item-time">
+                  {formatRelativeTime(item.emittedAtMs)}
+                </span>
+              </a>
+            {/each}
+          {/if}
+        {/each}
 
-      {#if store.items.length === 0}
-        <p class="weft-notification-panel__empty">No notifications yet.</p>
-      {/if}
+        {#if store.items.length === 0}
+          <p class="weft-notification-panel__empty">No notifications yet.</p>
+        {/if}
+      </div>
 
       <div class="weft-notification-panel__footer">
         <span class="weft-notification-panel__live">
