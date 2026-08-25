@@ -75,6 +75,18 @@ jobs:
           bun-version: 1.3.13
       - run: bun install --frozen-lockfile
       - run: bun run check:coverage
+      # Uploaded unconditionally so a baseline re-measurement (raising the
+      # Linux floor in scripts/coverage-baseline.ts) always has exact
+      # hit/found integers to read, rather than reconstructing them from the
+      # step log's printed percentages (see WFC-10 PR #14 review — this gap
+      # is exactly what previously forced a laborious reconstruction for the
+      # `src/routes/schedules` Linux fix, WFC-5 PR #12 commit a7d6603).
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-lcov-linux
+          path: coverage/lcov.info
+          retention-days: 14
 
   # Wired defensively: `tests/e2e/` is built by a parallel track (plan §11.4).
   # The `test:e2e` script check keeps this job a no-op (not a failure) on any
