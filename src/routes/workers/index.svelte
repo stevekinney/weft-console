@@ -58,11 +58,8 @@
   import type { DrainTarget } from './drain-dialog.svelte';
   import DrainDialog from './drain-dialog.svelte';
   import ClearDeadLetterDialog from './clear-dead-letter-dialog.svelte';
-  import DiagnosticsView from './diagnostics-view.svelte';
   import FleetView from './fleet-view.svelte';
-  import QueueDetailView from './queue-detail-view.svelte';
   import QueueListView from './queue-list-view.svelte';
-  import TaskLedgerDetailView from './task-ledger-detail-view.svelte';
   import WorkerDetailView from './worker-detail-view.svelte';
   import WorkerListView from './worker-list-view.svelte';
   import {
@@ -79,6 +76,28 @@
     loadWorkerRegistrationRejections,
     invalidateWorkerSurfaceQueries,
   } from './workers-data.ts';
+
+  type TaskLedgerDetailModule = typeof import('./task-ledger-detail-view.svelte');
+  type DiagnosticsViewModule = typeof import('./diagnostics-view.svelte');
+  type QueueDetailViewModule = typeof import('./queue-detail-view.svelte');
+  let taskLedgerDetailModule: Promise<TaskLedgerDetailModule> | undefined;
+  let diagnosticsViewModule: Promise<DiagnosticsViewModule> | undefined;
+  let queueDetailViewModule: Promise<QueueDetailViewModule> | undefined;
+
+  function loadTaskLedgerDetailView(): Promise<TaskLedgerDetailModule> {
+    taskLedgerDetailModule ??= import('./task-ledger-detail-view.svelte');
+    return taskLedgerDetailModule;
+  }
+
+  function loadDiagnosticsView(): Promise<DiagnosticsViewModule> {
+    diagnosticsViewModule ??= import('./diagnostics-view.svelte');
+    return diagnosticsViewModule;
+  }
+
+  function loadQueueDetailView(): Promise<QueueDetailViewModule> {
+    queueDetailViewModule ??= import('./queue-detail-view.svelte');
+    return queueDetailViewModule;
+  }
 
   const client = getClient();
   const principalStore = getPrincipalStore();
@@ -406,16 +425,22 @@
             description={faultTreatment(queuesError).message}
           />
         {:else if selectedQueue}
-          <QueueDetailView
-            queue={selectedQueue}
-            routingPolicy={$workersQuery.data?.routingPolicy ?? 'least-loaded'}
-            workersOnQueue={workersOnSelectedQueue}
-            deadLetteredItems={deadLetteredOnSelectedQueue}
-            diagnosticItems={diagnosticsOnSelectedQueue}
-            {adminGate}
-            onClearDeadLetter={openClearDialog}
-            onInspectTask={selectTask}
-          />
+          {#await loadQueueDetailView()}
+            <div role="status" aria-busy="true" aria-label="Loading task queue detail">
+              <Skeleton height="12rem" />
+            </div>
+          {:then { default: QueueDetailView }}
+            <QueueDetailView
+              queue={selectedQueue}
+              routingPolicy={$workersQuery.data?.routingPolicy ?? 'least-loaded'}
+              workersOnQueue={workersOnSelectedQueue}
+              deadLetteredItems={deadLetteredOnSelectedQueue}
+              diagnosticItems={diagnosticsOnSelectedQueue}
+              {adminGate}
+              onClearDeadLetter={openClearDialog}
+              onInspectTask={selectTask}
+            />
+          {/await}
         {:else}
           <QueueListView
             queues={$queuesQuery.data?.items ?? []}
@@ -450,26 +475,38 @@
             description={faultTreatment($taskDetailQuery.error).message}
           />
         {:else if selectedTaskId && $taskDetailQuery.data}
-          <TaskLedgerDetailView
-            task={$taskDetailQuery.data}
-            now={Date.now()}
-            refreshing={$taskDetailQuery.isFetching}
-          />
+          {#await loadTaskLedgerDetailView()}
+            <div role="status" aria-busy="true" aria-label="Loading task ledger view">
+              <Skeleton height="12rem" />
+            </div>
+          {:then { default: TaskLedgerDetailView }}
+            <TaskLedgerDetailView
+              task={$taskDetailQuery.data}
+              now={Date.now()}
+              refreshing={$taskDetailQuery.isFetching}
+            />
+          {/await}
         {:else}
-          <DiagnosticsView
-            items={$diagnosticsQuery.data?.items ?? []}
-            summary={$diagnosticsQuery.data?.summary ?? {
-              stuckQueued: 0,
-              staleInflight: 0,
-              retryStorms: 0,
-              allWorkersAtCapacity: 0,
-              deadLettered: 0,
-              delayed: 0,
-              unadoptedTerminal: 0,
-            }}
-            now={Date.now()}
-            onInspectTask={selectTask}
-          />
+          {#await loadDiagnosticsView()}
+            <div role="status" aria-busy="true" aria-label="Loading diagnostics view">
+              <Skeleton height="12rem" />
+            </div>
+          {:then { default: DiagnosticsView }}
+            <DiagnosticsView
+              items={$diagnosticsQuery.data?.items ?? []}
+              summary={$diagnosticsQuery.data?.summary ?? {
+                stuckQueued: 0,
+                staleInflight: 0,
+                retryStorms: 0,
+                allWorkersAtCapacity: 0,
+                deadLettered: 0,
+                delayed: 0,
+                unadoptedTerminal: 0,
+              }}
+              now={Date.now()}
+              onInspectTask={selectTask}
+            />
+          {/await}
         {/if}
       </TabPanel>
     </Tabs>

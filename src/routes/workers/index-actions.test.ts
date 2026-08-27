@@ -24,7 +24,11 @@ import type {
   WorkerSummary,
 } from './worker-catalog-types.ts';
 import WorkersRouteTestHarness from './workers-route-test-harness.test-harness.svelte';
-import { realClient, ScriptedFetch } from './workers-route-test-support.test-support.ts';
+import {
+  realClient,
+  ScriptedFetch,
+  taskLedgerDetailFixture,
+} from './workers-route-test-support.test-support.ts';
 
 function worker(overrides: Partial<WorkerSummary> = {}): WorkerSummary {
   return {
@@ -349,14 +353,22 @@ describe('Workers route — Task queues tab, queue selection and dead-letter cle
       ],
       diagnosticsSummary: { ...EMPTY_DIAGNOSTICS_SUMMARY, deadLettered: 2 },
     });
+    scripted.routeJsonRpcMethod('weft.tasks.get', {
+      ...taskLedgerDetailFixture(),
+      operationId: 'op_on_queue',
+    });
 
     resetLocation('/workers?tab=queues&queue=payments');
-    const { findByText, queryByText } = await renderWorkersRoute();
+    const { findAllByRole, findByText, queryByText } = await renderWorkersRoute();
 
     expect(await findByText('wkr_on_queue', { exact: false })).not.toBeNull();
     expect(queryByText('wkr_other_queue', { exact: false })).toBeNull();
     expect(await findByText('op_on_queue', { exact: false })).not.toBeNull();
     expect(queryByText('op_other_queue', { exact: false })).toBeNull();
+
+    const inspectButtons = await findAllByRole('button', { name: 'Inspect ledger' });
+    await fireEvent.click(inspectButtons[0]!);
+    expect(await findByText('Authoritative task ledger')).not.toBeNull();
   });
 
   test('clearing a dead-lettered item on the selected queue opens the type-to-confirm dialog and calls the DELETE endpoint on confirm', async () => {
@@ -396,11 +408,17 @@ describe('Workers route — Diagnostics tab', () => {
       diagnosticsItems: [diagnosticItem({ kind: 'retry-storm', queue: 'payments' })],
       diagnosticsSummary: { ...EMPTY_DIAGNOSTICS_SUMMARY, retryStorms: 1 },
     });
+    scripted.routeJsonRpcMethod('weft.tasks.get', {
+      ...taskLedgerDetailFixture(),
+      operationId: 'op_dead_1',
+    });
 
     const { findByRole, findByText } = await renderWorkersRoute();
 
     await fireEvent.click(await findByRole('tab', { name: 'Diagnostics' }));
     expect(await findByText('Retry storm')).not.toBeNull();
+    await fireEvent.click(await findByRole('button', { name: 'Inspect ledger' }));
+    expect(await findByText('Authoritative task ledger')).not.toBeNull();
   });
 
   test('a zeroed summary renders the "No diagnostics" empty state', async () => {

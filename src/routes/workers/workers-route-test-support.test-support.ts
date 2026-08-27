@@ -16,6 +16,27 @@ export interface FetchCall {
   readonly init: RequestInit | undefined;
 }
 
+export function taskLedgerDetailFixture() {
+  return {
+    state: 'queued',
+    operationId: 'op_ledger_route',
+    workflowId: 'wf_route',
+    workflowExecutionToken: 'token_route',
+    workflowType: 'orders',
+    activityName: 'chargeCard',
+    queue: 'payments',
+    priority: 7,
+    headerKeys: ['traceparent'],
+    visibilityTimeoutMilliseconds: 30_000,
+    retryPolicy: { maxAttempts: 3 },
+    createdAt: 1_700_000_000_000,
+    availableAt: 1_700_000_030_000,
+    attempt: 2,
+    retryCount: 1,
+    requeueCount: 1,
+  } as const;
+}
+
 interface RouteRule {
   readonly matches: (call: FetchCall) => boolean;
   readonly respond: (call: FetchCall) => Response | Promise<Response>;

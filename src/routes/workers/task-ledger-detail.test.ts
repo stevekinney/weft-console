@@ -105,4 +105,48 @@ describe('TaskLedgerDetailView', () => {
     expect(getByText('operator requested cancellation')).not.toBeNull();
     expect(getAllByText('terminal result could not be persisted')).toHaveLength(2);
   });
+
+  test('renders active lease, heartbeat, deadline, and exhausted retry evidence', () => {
+    const task = parseTaskLedgerDetail({
+      ...queuedTask(),
+      state: 'leased',
+      attempt: 5,
+      availableAt: undefined,
+      leaseDeadline: NOW + 20_000,
+      lastHeartbeatAt: NOW - 2_000,
+      scheduleToCloseDeadline: NOW + 120_000,
+      fairShareKey: 'tenant-42',
+      stickyWorkflowId: 'wf_sticky',
+      lastRequeueReason: 'lease expired',
+    });
+    const { getByText } = render(TaskLedgerDetailView, { props: { task, now: NOW } });
+
+    expect(getByText('leased')).not.toBeNull();
+    expect(getByText('Already dispatched')).not.toBeNull();
+    expect(getByText('Exhausted · attempt 5 of 5')).not.toBeNull();
+    expect(getByText('tenant-42')).not.toBeNull();
+    expect(getByText('wf_sticky')).not.toBeNull();
+    expect(getByText('lease expired')).not.toBeNull();
+  });
+
+  test('renders adopted terminal evidence and optional envelope defaults', () => {
+    const task = parseTaskLedgerDetail({
+      ...queuedTask(),
+      state: 'terminal',
+      priority: undefined,
+      headerKeys: [],
+      retryPolicy: undefined,
+      executionRequirement: undefined,
+      adopted: true,
+      adoptedAt: NOW - 1_000,
+      terminalAt: NOW - 2_000,
+      disposition: 'resolved',
+    });
+    const { getByText } = render(TaskLedgerDetailView, { props: { task, now: NOW } });
+
+    expect(getByText('Default')).not.toBeNull();
+    expect(getByText('No retry policy')).not.toBeNull();
+    expect(getByText(/Adopted/)).not.toBeNull();
+    expect(getByText('No constrained capacity')).not.toBeNull();
+  });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { render } from '@testing-library/svelte';
+import { fireEvent, render } from '@testing-library/svelte';
 
 import DiagnosticsView from './diagnostics-view.svelte';
 import type { StandardTaskDiagnosticItem, TaskDiagnosticsSummary } from './worker-catalog-types.ts';
@@ -48,8 +48,8 @@ describe('DiagnosticsView — empty state', () => {
 });
 
 describe('DiagnosticsView — grouped kinds', () => {
-  test('renders a card per non-empty kind, using guidance title/copy and affected count', () => {
-    const { getByText, queryByText } = render(DiagnosticsView, {
+  test('renders a card per non-empty kind, using guidance title/copy and affected count', async () => {
+    const { getAllByRole, getByText, queryByText } = render(DiagnosticsView, {
       props: {
         items: [
           item({ kind: 'stuck-queued', queue: 'default', operationId: 'op_a' }),
@@ -64,6 +64,7 @@ describe('DiagnosticsView — grouped kinds', () => {
     expect(getByText('2 affected')).not.toBeNull();
     expect(getByText(/Tasks are queued but no worker has picked them up\./)).not.toBeNull();
     expect(queryByText('Dead lettered')).toBeNull();
+    await fireEvent.click(getAllByRole('button', { name: 'Inspect ledger' })[0]!);
   });
 
   test('renders every kind at once when the summary reports all five as present', () => {

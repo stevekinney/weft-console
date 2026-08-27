@@ -97,8 +97,8 @@ describe('QueueDetailView — dead letter panel', () => {
     expect(queryByText('0 diagnostics')).toBeNull();
   });
 
-  test('dead-lettered items render a row per item with the header count badge', () => {
-    const { getByText, getAllByText } = render(QueueDetailView, {
+  test('dead-lettered items render a row per item with the header count badge', async () => {
+    const { getByText, getAllByRole, getAllByText } = render(QueueDetailView, {
       props: {
         queue: queue(),
         routingPolicy: 'least-loaded',
@@ -117,6 +117,7 @@ describe('QueueDetailView — dead letter panel', () => {
     expect(getByText('ChargeCard')).not.toBeNull();
     expect(getByText('SendEmail')).not.toBeNull();
     expect(getAllByText('Clear').length).toBe(2);
+    await fireEvent.click(getAllByRole('button', { name: 'Inspect ledger' })[0]!);
   });
 
   test('distinguishes delayed and failed-adoption recovery diagnostics', () => {
