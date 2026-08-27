@@ -52,16 +52,16 @@ describe('dryRunBulkCancel / commitBulkCancel', () => {
   test('commit sends the confirmation token and parses the committed result', async () => {
     const fetch = new ScriptedFetch();
     fetch.routeJsonRpcMethod('weft.workflows.bulk.cancel', {
-      cancelled: 3,
-      failed: 0,
-      errors: [],
+      cancelled: 2,
+      failed: 1,
+      errors: [{ id: 'wf-3', error: 'already completed' }],
     });
     const client = realClient();
 
     const result = await commitBulkCancel(client, { status: 'failed' }, 'bulk:token-abc');
 
-    expect(result.cancelled).toBe(3);
-    expect(result.errors).toEqual([]);
+    expect(result.cancelled).toBe(2);
+    expect(result.errors).toEqual([{ id: 'wf-3', error: 'already completed' }]);
     const [call] = fetch.calls;
     const body = JSON.parse(String(call?.init?.body)) as { params: { confirmationToken: string } };
     expect(body.params.confirmationToken).toBe('bulk:token-abc');

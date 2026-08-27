@@ -213,7 +213,7 @@ describe('asDisplayString', () => {
 });
 
 describe('formatDeploymentIdentity / formatDeploymentName', () => {
-  test('joins build and runtime with the metadata separator', () => {
+  test('joins build/runtime with the metadata separator', () => {
     expect(formatDeploymentIdentity(deployment())).toBe('#4821 · node 20');
   });
 

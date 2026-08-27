@@ -159,7 +159,7 @@ export function asDisplayString(value: unknown, fallback = '—'): string {
   return typeof value === 'string' && value.length > 0 ? value : fallback;
 }
 
-/** Deployment identity display, e.g. `#4821 · a3f9c21 · node 20`. */
+/** Deployment identity display, e.g. `#4821 · node 20`. */
 export function formatDeploymentIdentity(deployment: WorkerDeploymentSummary): string {
   return [asDisplayString(deployment.buildId), asDisplayString(deployment.runtimeVersion)].join(
     ' · ',

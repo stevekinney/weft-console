@@ -51,6 +51,9 @@ export const queryKeys = {
   },
   workers: {
     list: () => ['workers', 'list'] as const,
+    manifests: (workerIds: readonly string[]) => ['workers', 'manifests', workerIds] as const,
+    manifest: (workerId: string) => ['workers', 'manifest', workerId] as const,
+    rejections: () => ['workers', 'rejections'] as const,
   },
   queues: {
     list: () => ['queues', 'list'] as const,

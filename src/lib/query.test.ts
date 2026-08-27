@@ -54,6 +54,19 @@ describe('queryKeys — plan §4 list, verbatim', () => {
     expect(queryKeys.workers.list()).toEqual(['workers', 'list']);
   });
 
+  test('workers.manifests', () => {
+    const workerIds = ['worker-a', 'worker-b'];
+    expect(queryKeys.workers.manifests(workerIds)).toEqual(['workers', 'manifests', workerIds]);
+  });
+
+  test('workers.manifest', () => {
+    expect(queryKeys.workers.manifest('worker-a')).toEqual(['workers', 'manifest', 'worker-a']);
+  });
+
+  test('workers.rejections', () => {
+    expect(queryKeys.workers.rejections()).toEqual(['workers', 'rejections']);
+  });
+
   test('queues.list', () => {
     expect(queryKeys.queues.list()).toEqual(['queues', 'list']);
   });

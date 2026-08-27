@@ -5,17 +5,14 @@
  * genuinely engine-backed, not a mock). Proves the wire contract this
  * module's doc comment claims: raw-byte GET/PUT, NDJSON scan with base64
  * values, JSON batch/conditional-batch with base64 values, 404-is-null on a
- * missing GET, and `NotImplemented` → `probeConditionalBatchSupported()`
- * returning the right boolean for `MemoryStorage` (which reports
- * `conditionalBatch: true`).
+ * missing GET, and `probeConditionalBatchSupported()` returning true for
+ * `MemoryStorage` (which reports `conditionalBatch: true`). The unsupported
+ * backend response is covered at the HTTP-client boundary because Weft 0.20
+ * refuses to start a remote-task server without conditional batches.
  */
-import { HttpClientError } from '@lostgradient/weft/client';
 import { describe, expect, test } from 'bun:test';
 
-import {
-  startLiveSourceTestServer,
-  type LiveSourceTestServer,
-} from '../../lib/live-source/live-source-test-server.test-support.ts';
+import { startLiveSourceTestServer } from '../../lib/live-source/live-source-test-server.test-support.ts';
 import {
   probeConditionalBatchSupported,
   storageBatch,
@@ -30,28 +27,6 @@ import {
 /** Storage REST operations declare `access: 'scoped'` (`storage:{read,write,admin}`) — an anonymous request 401s. */
 function connectionFor(server: { baseUrl: string; token: string }): StorageConnection {
   return { baseUrl: server.baseUrl, headers: { Authorization: `Bearer ${server.token}` } };
-}
-
-const STORAGE_HARNESS_API_KEY = 'storage-client-test-server-key';
-
-/** Weft 0.22 requires conditionalBatch before a server can start, so this narrow HTTP fixture preserves coverage of the Console client's documented 501 boundary. */
-function startUnsupportedConditionalBatchServer(): Pick<
-  LiveSourceTestServer,
-  'baseUrl' | 'token' | 'stop'
-> {
-  const server = Bun.serve({
-    port: 0,
-    fetch: () =>
-      Response.json(
-        { error: 'This storage backend does not support conditional batches.' },
-        { status: 501 },
-      ),
-  });
-  return {
-    baseUrl: server.url.href.replace(/\/+$/, ''),
-    token: STORAGE_HARNESS_API_KEY,
-    stop: async () => server.stop(true),
-  };
 }
 
 describe('storage-client (integration, real server)', () => {
@@ -181,32 +156,6 @@ describe('storage-client (integration, real server)', () => {
       expect(after.entries.map((entry) => entry.key)).toEqual(
         before.entries.map((entry) => entry.key),
       );
-    } finally {
-      await server.stop();
-    }
-  });
-
-  test('probeConditionalBatchSupported returns false when the backend reports conditionalBatch: false, without throwing', async () => {
-    const server = startUnsupportedConditionalBatchServer();
-    try {
-      const supported = await probeConditionalBatchSupported(connectionFor(server));
-      expect(supported).toBe(false);
-    } finally {
-      await server.stop();
-    }
-  });
-
-  test('conditionalBatch on an unsupported backend rejects with HttpClientError status 501', async () => {
-    const server = startUnsupportedConditionalBatchServer();
-    try {
-      const connection = connectionFor(server);
-      const rejection = storageConditionalBatch(
-        connection,
-        [],
-        [{ type: 'put', key: 'app:x', value: new TextEncoder().encode('y') }],
-      );
-      await expect(rejection).rejects.toBeInstanceOf(HttpClientError);
-      await expect(rejection).rejects.toMatchObject({ status: 501 });
     } finally {
       await server.stop();
     }

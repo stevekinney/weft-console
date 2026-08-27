@@ -11,6 +11,8 @@
   import { formatDuration, truncateId } from '../../lib/format/index.ts';
   import type { ScopeGate } from '../../lib/scopes.svelte.ts';
   import type { WorkerSummary } from './worker-catalog-types.ts';
+  import WorkerManifestPanel from './worker-manifest-panel.svelte';
+  import type { WorkerManifestDiagnostics } from './worker-manifest-diagnostics.ts';
   import { workerHealthPresentation } from './worker-presentation.ts';
 
   interface WorkerDetailViewProps {
@@ -18,9 +20,22 @@
     readonly adminGate: ScopeGate;
     readonly onDrain: () => void;
     readonly onResume: () => void;
+    readonly manifestDiagnostics?: WorkerManifestDiagnostics | null | undefined;
+    readonly manifestLoading?: boolean;
+    readonly manifestRefreshing?: boolean;
+    readonly manifestError?: unknown;
   }
 
-  let { worker, adminGate, onDrain, onResume }: WorkerDetailViewProps = $props();
+  let {
+    worker,
+    adminGate,
+    onDrain,
+    onResume,
+    manifestDiagnostics = undefined,
+    manifestLoading = false,
+    manifestRefreshing = false,
+    manifestError = null,
+  }: WorkerDetailViewProps = $props();
 
   const presentation = $derived(workerHealthPresentation(worker));
 
@@ -78,4 +93,12 @@
       </div>
     </div>
   </div>
+
+  <WorkerManifestPanel
+    diagnostics={manifestDiagnostics}
+    loading={manifestLoading}
+    refreshing={manifestRefreshing}
+    error={manifestError}
+    capabilities={worker.capabilities}
+  />
 </div>

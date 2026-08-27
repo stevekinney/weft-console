@@ -29,6 +29,7 @@ import {
   createQuery,
   type CreateMutationResult,
   type CreateQueryResult,
+  type QueryClient,
 } from '@tanstack/svelte-query';
 import { toStore } from 'svelte/store';
 
@@ -39,6 +40,12 @@ import {
   type TaskLedgerDetail,
   type WorkersListOutput,
 } from './worker-catalog-types.ts';
+import {
+  parseWorkerDiagnosticsResponse,
+  parseWorkerRegistrationRejections,
+  type WorkerManifestDiagnostics,
+  type WorkerRegistrationRejection,
+} from './worker-manifest-diagnostics.ts';
 
 const REFETCH_INTERVAL_MS = 30_000;
 
@@ -140,6 +147,46 @@ export function taskDiagnosticsQuery(
     queryFn: () => client.operations['weft.tasks.diagnostics'](DEFAULT_TASK_DIAGNOSTICS_INPUT),
     refetchInterval: REFETCH_INTERVAL_MS,
   });
+}
+
+/** Runtime-validated canonical manifest detail for one connected worker. */
+export async function loadWorkerManifestDiagnostics(
+  client: WorkersOperations,
+  workerId: string,
+): Promise<WorkerManifestDiagnostics | null> {
+  const response = await client.operations['weft.workers.diagnostics']({ workerId });
+  return parseWorkerDiagnosticsResponse(response);
+}
+
+/** Canonical manifest detail for the current connected fleet, ordered by worker id. */
+export async function loadFleetManifestDiagnostics(
+  client: WorkersOperations,
+  workerIds: readonly string[],
+): Promise<readonly WorkerManifestDiagnostics[]> {
+  const diagnostics = await Promise.all(
+    workerIds.toSorted().map((workerId) => loadWorkerManifestDiagnostics(client, workerId)),
+  );
+  return diagnostics.filter((entry): entry is WorkerManifestDiagnostics => entry !== null);
+}
+
+/** Bounded, server-owned evidence for recently rejected registration attempts. */
+export async function loadWorkerRegistrationRejections(
+  client: WorkersOperations,
+  limit = 25,
+): Promise<readonly WorkerRegistrationRejection[]> {
+  const response = await client.operations['weft.workers.rejections']({ limit });
+  return parseWorkerRegistrationRejections(response);
+}
+
+/** Invalidate every worker surface affected by fleet events or administrative mutations. */
+export function invalidateWorkerSurfaceQueries(
+  queryClient: Pick<QueryClient, 'invalidateQueries'>,
+): void {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.workers.list() });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.queues.list() });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.diagnostics() });
+  void queryClient.invalidateQueries({ queryKey: ['workers', 'manifests'] });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.workers.rejections() });
 }
 
 export interface DrainWorkerVariables {

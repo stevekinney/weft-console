@@ -18,7 +18,25 @@ afterEach(() => {
   scripted = undefined;
 });
 
-async function renderRegistryTab() {
+async function renderRegistryTab(
+  manifestFixtures: {
+    workers?: readonly Record<string, unknown>[];
+    diagnostics?: unknown;
+    rejections?: readonly Record<string, unknown>[];
+  } = {},
+) {
+  scripted?.routeJsonRpcMethod('weft.workers.list', {
+    items: manifestFixtures.workers ?? [],
+    deployments: [],
+    routingPolicy: 'least-loaded',
+  });
+  scripted?.routeJsonRpcMethod('weft.workers.rejections', {
+    items: manifestFixtures.rejections ?? [],
+    limit: 25,
+  });
+  if (manifestFixtures.diagnostics !== undefined) {
+    scripted?.routeJsonRpcMethod('weft.workers.diagnostics', manifestFixtures.diagnostics);
+  }
   return render(SystemRouteTestHarness, {
     props: { client: realClient(), queryClient: createQueryClient(), component: RegistryTab },
   });
@@ -55,6 +73,44 @@ describe('RegistryTab', () => {
     scripted.enqueueJsonRpcResult({ registryVersion: 1, workflows: {}, activities: {} });
     const { findByText } = await renderRegistryTab();
     expect(await findByText('Install the SDK', { exact: false })).not.toBeNull();
+  });
+
+  test('adds accepted worker-manifest and admission diagnostics to the registry surface', async () => {
+    scripted = new ScriptedFetch();
+    scripted.enqueueJsonRpcResult({ registryVersion: 1, workflows: {}, activities: {} });
+    const { findByText } = await renderRegistryTab({
+      workers: [{ id: 'worker-a' }],
+      diagnostics: {
+        worker: {
+          instance: {
+            workerId: 'worker-a',
+            queue: 'default',
+            health: 'active',
+            connectedAt: 1,
+            startedAt: 1,
+            lastHeartbeatAt: 1,
+            heartbeatAgeMs: 1,
+          },
+          deploymentVersion: {
+            deploymentName: 'payments',
+            buildId: 'build-7',
+            artifactDigest: 'sha256:artifact',
+            runtimeName: 'bun',
+            runtimeVersion: '1.4.0',
+            sdkVersion: '0.20.0',
+            manifestVersion: 1,
+            protocolVersion: 3,
+            manifestDigest: 'sha256:manifest',
+            workflows: {},
+          },
+        },
+      },
+      rejections: [{ code: 'registration_rejected', rejectedAt: 9, workerId: 'worker-b' }],
+    });
+
+    expect(await findByText('Worker registry admission diagnostics')).not.toBeNull();
+    expect(await findByText(/accepted and routing-eligible/)).not.toBeNull();
+    expect(await findByText('Admission policy rejected')).not.toBeNull();
   });
 
   test('lists workflow definitions and activities, then drills into a definition detail', async () => {
