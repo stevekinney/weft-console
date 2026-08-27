@@ -154,18 +154,16 @@ export function presentationStatusDotStatus(
   return variant === 'success' ? 'online' : variant;
 }
 
-/** Narrows a generated-client `unknown` field (weft's catalog generator does not reflect Zod `.nullable()` as `T | null`, only `.optional()` as `?:` — `WorkerDeploymentSummary`'s `buildId`/`gitSha`/`runtimeVersion`/`deploymentName` land as `unknown`) to a display string. */
+/** Narrows a generated-client `unknown` field (weft's catalog generator does not reflect Zod `.nullable()` as `T | null`, only `.optional()` as `?:` — `WorkerDeploymentSummary`'s `buildId`/`runtimeVersion`/`deploymentName` land as `unknown`) to a display string. */
 export function asDisplayString(value: unknown, fallback = '—'): string {
   return typeof value === 'string' && value.length > 0 ? value : fallback;
 }
 
-/** Deployment identity display, e.g. `#4821 · a3f9c21 · node 20`. */
+/** Deployment identity display, e.g. `#4821 · node 20`. */
 export function formatDeploymentIdentity(deployment: WorkerDeploymentSummary): string {
-  return [
-    asDisplayString(deployment.buildId),
-    asDisplayString(deployment.gitSha),
-    asDisplayString(deployment.runtimeVersion),
-  ].join(' · ');
+  return [asDisplayString(deployment.buildId), asDisplayString(deployment.runtimeVersion)].join(
+    ' · ',
+  );
 }
 
 /** Grouping/display name for a deployment rollup — `deploymentName` is `unknown` per the generated-client gap above; workers with no deployment metadata roll up under this label. */

@@ -42,7 +42,6 @@ function deployment(overrides: Partial<WorkerDeploymentSummary> = {}): WorkerDep
     deploymentName: 'api-prod',
     drainedWorkers: 0,
     drainingWorkers: 0,
-    gitSha: 'a3f9c21',
     health: 'active',
     inFlight: 1,
     oldestStartedAt: null,
@@ -214,14 +213,14 @@ describe('asDisplayString', () => {
 });
 
 describe('formatDeploymentIdentity / formatDeploymentName', () => {
-  test('joins build/sha/runtime with the metadata separator', () => {
-    expect(formatDeploymentIdentity(deployment())).toBe('#4821 · a3f9c21 · node 20');
+  test('joins build/runtime with the metadata separator', () => {
+    expect(formatDeploymentIdentity(deployment())).toBe('#4821 · node 20');
   });
 
   test('missing fields fall back to an em dash', () => {
-    expect(
-      formatDeploymentIdentity(deployment({ buildId: null, gitSha: null, runtimeVersion: null })),
-    ).toBe('— · — · —');
+    expect(formatDeploymentIdentity(deployment({ buildId: null, runtimeVersion: null }))).toBe(
+      '— · —',
+    );
   });
 
   test('deployment name falls back to a labeled placeholder, not an em dash', () => {

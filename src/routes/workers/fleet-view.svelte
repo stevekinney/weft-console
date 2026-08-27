@@ -11,6 +11,11 @@
 
   import type { ScopeGate } from '../../lib/scopes.svelte.ts';
   import type { WorkerDeploymentSummary, WorkerSummary } from './worker-catalog-types.ts';
+  import ManifestDiagnosticsView from './manifest-diagnostics-view.svelte';
+  import type {
+    WorkerManifestDiagnostics,
+    WorkerRegistrationRejection,
+  } from './worker-manifest-diagnostics.ts';
   import {
     deploymentHealthPresentation,
     formatDeploymentIdentity,
@@ -25,10 +30,25 @@
     readonly adminGate: ScopeGate;
     readonly onDrainDeployment: (name: string) => void;
     readonly onResumeDeployment: (name: string) => void;
+    readonly manifestDiagnostics?: readonly WorkerManifestDiagnostics[];
+    readonly registrationRejections?: readonly WorkerRegistrationRejection[];
+    readonly manifestRefreshing?: boolean;
+    readonly manifestLoading?: boolean;
+    readonly manifestError?: unknown;
   }
 
-  let { workers, deployments, adminGate, onDrainDeployment, onResumeDeployment }: FleetViewProps =
-    $props();
+  let {
+    workers,
+    deployments,
+    adminGate,
+    onDrainDeployment,
+    onResumeDeployment,
+    manifestDiagnostics = [],
+    registrationRejections = [],
+    manifestRefreshing = false,
+    manifestLoading = false,
+    manifestError = null,
+  }: FleetViewProps = $props();
 
   const totals = $derived(summarizeFleet(workers));
 </script>
@@ -122,4 +142,12 @@
       {/each}
     </ul>
   {/if}
+
+  <ManifestDiagnosticsView
+    diagnostics={manifestDiagnostics}
+    rejections={registrationRejections}
+    refreshing={manifestRefreshing}
+    loading={manifestLoading}
+    error={manifestError}
+  />
 </div>

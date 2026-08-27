@@ -50,7 +50,6 @@ function deployment(overrides: Partial<WorkerDeploymentSummary> = {}): WorkerDep
     deploymentName: 'api-prod',
     drainedWorkers: 0,
     drainingWorkers: 0,
-    gitSha: 'a3f9c21',
     health: 'active',
     inFlight: 1,
     oldestStartedAt: null,
@@ -120,6 +119,8 @@ function routeHappyPaths(
     items: overrides.diagnosticsItems ?? [],
     summary: overrides.diagnosticsSummary ?? EMPTY_DIAGNOSTICS_SUMMARY,
   });
+  scripted.routeJsonRpcMethod('weft.workers.diagnostics', { worker: null });
+  scripted.routeJsonRpcMethod('weft.workers.rejections', { items: [], limit: 25 });
 }
 
 let scripted: ScriptedFetch | undefined;

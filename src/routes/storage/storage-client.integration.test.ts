@@ -5,20 +5,14 @@
  * genuinely engine-backed, not a mock). Proves the wire contract this
  * module's doc comment claims: raw-byte GET/PUT, NDJSON scan with base64
  * values, JSON batch/conditional-batch with base64 values, 404-is-null on a
- * missing GET, and `NotImplemented` → `probeConditionalBatchSupported()`
- * returning the right boolean for `MemoryStorage` (which reports
- * `conditionalBatch: true`).
+ * missing GET, and `probeConditionalBatchSupported()` returning true for
+ * `MemoryStorage` (which reports `conditionalBatch: true`). The unsupported
+ * backend response is covered at the HTTP-client boundary because Weft 0.20
+ * refuses to start a remote-task server without conditional batches.
  */
-import { Engine, MemoryStorage, type Storage } from '@lostgradient/weft';
-import { HttpClientError } from '@lostgradient/weft/client';
-import { serve } from '@lostgradient/weft/server';
 import { describe, expect, test } from 'bun:test';
 
-import {
-  startLiveSourceTestServer,
-  type LiveSourceTestServer,
-} from '../../lib/live-source/live-source-test-server.test-support.ts';
-import { AUTHORIZATION_SCOPES } from '../../lib/scopes.svelte.ts';
+import { startLiveSourceTestServer } from '../../lib/live-source/live-source-test-server.test-support.ts';
 import {
   probeConditionalBatchSupported,
   storageBatch,
@@ -33,47 +27,6 @@ import {
 /** Storage REST operations declare `access: 'scoped'` (`storage:{read,write,admin}`) — an anonymous request 401s. */
 function connectionFor(server: { baseUrl: string; token: string }): StorageConnection {
   return { baseUrl: server.baseUrl, headers: { Authorization: `Bearer ${server.token}` } };
-}
-
-/**
- * A `Storage` that behaves exactly like `MemoryStorage` except it honestly
- * reports no `conditionalBatch` support — mirrors the technique weft's own
- * `storage.test.ts` uses ("A backend that has the bound conditionalBatch
- * method but honestly reports no support — proves the operation gates on
- * capabilities(), not method presence"). Needed to exercise the real 501
- * `probeConditionalBatchSupported()` must detect by HTTP status (see that
- * function's doc comment: `shapeRestFault` never puts a fault code on the
- * wire for storage responses).
- */
-function storageWithoutConditionalBatch(): Storage {
-  const inner = new MemoryStorage();
-  return {
-    capabilities: () => ({ ...inner.capabilities(), conditionalBatch: false }),
-    get: inner.get.bind(inner),
-    put: inner.put.bind(inner),
-    delete: inner.delete.bind(inner),
-    scan: inner.scan.bind(inner),
-    batch: inner.batch.bind(inner),
-  } as Storage;
-}
-
-const STORAGE_HARNESS_API_KEY = 'storage-client-test-server-key';
-
-/** A minimal `serve()`-backed server over a caller-supplied `Storage`, with the same full-scope static API key posture as `startLiveSourceTestServer` (mirrors its auth setup, scoped down to just what these tests need). */
-function startServerOverStorage(
-  storage: Storage,
-): Pick<LiveSourceTestServer, 'baseUrl' | 'token' | 'stop'> {
-  const engine = new Engine({ storage });
-  const server = serve({
-    engine,
-    port: 0,
-    auth: { apiKeys: [STORAGE_HARNESS_API_KEY], defaultApiKeyScopes: AUTHORIZATION_SCOPES },
-  });
-  return {
-    baseUrl: server.url.replace(/\/+$/, ''),
-    token: STORAGE_HARNESS_API_KEY,
-    stop: () => server.stop(),
-  };
 }
 
 describe('storage-client (integration, real server)', () => {
@@ -203,32 +156,6 @@ describe('storage-client (integration, real server)', () => {
       expect(after.entries.map((entry) => entry.key)).toEqual(
         before.entries.map((entry) => entry.key),
       );
-    } finally {
-      await server.stop();
-    }
-  });
-
-  test('probeConditionalBatchSupported returns false when the backend reports conditionalBatch: false, without throwing', async () => {
-    const server = startServerOverStorage(storageWithoutConditionalBatch());
-    try {
-      const supported = await probeConditionalBatchSupported(connectionFor(server));
-      expect(supported).toBe(false);
-    } finally {
-      await server.stop();
-    }
-  });
-
-  test('conditionalBatch on an unsupported backend rejects with HttpClientError status 501', async () => {
-    const server = startServerOverStorage(storageWithoutConditionalBatch());
-    try {
-      const connection = connectionFor(server);
-      const rejection = storageConditionalBatch(
-        connection,
-        [],
-        [{ type: 'put', key: 'app:x', value: new TextEncoder().encode('y') }],
-      );
-      await expect(rejection).rejects.toBeInstanceOf(HttpClientError);
-      await expect(rejection).rejects.toMatchObject({ status: 501 });
     } finally {
       await server.stop();
     }

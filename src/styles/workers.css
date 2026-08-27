@@ -254,6 +254,142 @@
   flex-wrap: wrap;
 }
 
+.weft-worker-manifest-panel,
+.weft-manifest-diagnostics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cinder-space-3, 12px);
+  min-width: 0;
+}
+
+.weft-worker-manifest-panel__heading-row,
+.weft-manifest-diagnostics__heading-row {
+  display: flex;
+  align-items: center;
+  gap: var(--cinder-space-2, 8px);
+  flex-wrap: wrap;
+}
+
+.weft-worker-manifest-panel__heading-row h2,
+.weft-manifest-diagnostics__heading-row h2,
+.weft-manifest-diagnostics h3 {
+  margin: 0;
+  font-size: var(--cinder-text-sm);
+  font-weight: 600;
+}
+
+.weft-worker-manifest-panel__identity,
+.weft-worker-manifest-panel__note {
+  padding: 12px 15px;
+}
+
+.weft-worker-manifest-panel__note {
+  margin: 0;
+  color: var(--cinder-text-subtle);
+  font-size: var(--cinder-text-xs);
+}
+
+.weft-worker-manifest-panel__capabilities {
+  margin: 0;
+  padding: 0 15px 12px;
+}
+
+.weft-worker-manifest-panel__capabilities > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) minmax(0, 2fr);
+  gap: 12px;
+  padding-block: 6px;
+}
+
+.weft-worker-manifest-panel__capabilities dt {
+  font-weight: 600;
+}
+
+.weft-worker-manifest-panel__capabilities dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.weft-manifest-diagnostics__summary {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: var(--cinder-text-sm);
+  color: var(--cinder-text-subtle);
+}
+
+.weft-manifest-diagnostics__note {
+  margin: 0;
+  font-size: var(--cinder-text-sm);
+  color: var(--cinder-text-subtle);
+}
+
+.weft-manifest-comparison-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.weft-manifest-comparison-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  border: 1px solid var(--cinder-border);
+  border-radius: var(--cinder-radius-lg);
+  padding: 12px 15px;
+  background: var(--cinder-surface-raised);
+}
+
+.weft-manifest-comparison-row__title,
+.weft-manifest-comparison-row__workers {
+  display: block;
+}
+
+.weft-manifest-comparison-row__title {
+  font-family: var(--cinder-font-mono);
+  font-size: var(--cinder-text-sm);
+  font-weight: 600;
+}
+
+.weft-manifest-comparison-row__workers {
+  color: var(--cinder-text-subtle);
+  font-size: var(--cinder-text-xs);
+}
+
+.weft-manifest-diagnostics__accepted summary {
+  cursor: pointer;
+  font-size: var(--cinder-text-sm);
+  font-weight: 600;
+}
+
+.weft-manifest-diagnostics__accepted ul {
+  padding-inline-start: 1.25rem;
+}
+
+.weft-manifest-diagnostics__accepted li {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) minmax(0, 1fr);
+  gap: 12px;
+  padding-block: 4px;
+}
+
+.weft-manifest-diagnostics__accepted code {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .weft-worker-manifest-panel__capabilities > div,
+  .weft-manifest-diagnostics__accepted li {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
+
 /* ---------------------------------------------------------------------- */
 /* Task queues (T5.3)                                                     */
 /* ---------------------------------------------------------------------- */
