@@ -143,7 +143,10 @@ describe('EventsTab', () => {
     });
 
     await waitFor(() => {
-      expect(getByText('No events to display.')).not.toBeNull();
+      const emptyState = getByText('No events to display.');
+      expect(emptyState.getAttribute('role')).toBe('status');
+      expect(emptyState.parentElement?.tagName).toBe('LI');
+      expect(emptyState.parentElement?.parentElement?.tagName).toBe('OL');
     });
   });
 

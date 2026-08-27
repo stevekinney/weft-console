@@ -140,7 +140,7 @@ const DARWIN_BASELINE: CoverageBaseline = {
   // areas (flagged in PR #14 review). This is the final post-all-domain-work
   // measurement.
   measuredAt: '2026-08-25T00:30:00.000Z',
-  overall: { linesFound: 33872, linesHit: 31770, functionsFound: 6494, functionsHit: 6157 },
+  overall: { linesFound: 33847, linesHit: 31753, functionsFound: 6492, functionsHit: 6155 },
   areas: {
     fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
     scripts: { linesFound: 753, linesHit: 682, functionsFound: 36, functionsHit: 35 },
@@ -189,7 +189,12 @@ const DARWIN_BASELINE: CoverageBaseline = {
       functionsFound: 2281,
       functionsHit: 2134,
     },
-    tests: { linesFound: 145, linesHit: 114, functionsFound: 16, functionsHit: 15 },
+    // Bun 1.4 / happy-dom 20.11.0 no longer needs the 25-line
+    // `Element.prototype.remove()` workaround in `tests/setup.ts`. Removing
+    // its two covered functions leaves the same one uncovered test helper;
+    // the lower function percentage (13/14 vs. 15/16) is a denominator-only
+    // source-shape change, while line coverage improves (97/120 vs. 114/145).
+    tests: { linesFound: 120, linesHit: 97, functionsFound: 14, functionsHit: 13 },
   },
 };
 
@@ -274,7 +279,7 @@ const LINUX_BASELINE: CoverageBaseline = {
   // recurring here, so the lower-state tuple is used defensively rather
   // than risk a false Linux CI regression later.
   measuredAt: '2026-08-25T00:44:00.000Z',
-  overall: { linesFound: 33889, linesHit: 31787, functionsFound: 6500, functionsHit: 6163 },
+  overall: { linesFound: 33864, linesHit: 31770, functionsFound: 6498, functionsHit: 6160 },
   areas: {
     fixtures: { linesFound: 698, linesHit: 319, functionsFound: 69, functionsHit: 12 },
     scripts: { linesFound: 753, linesHit: 682, functionsFound: 36, functionsHit: 35 },
@@ -321,9 +326,19 @@ const LINUX_BASELINE: CoverageBaseline = {
       linesFound: 11592,
       linesHit: 10735,
       functionsFound: 2281,
-      functionsHit: 2134,
+      // Bun 1.4.0 changed Linux-only Svelte coverage attribution for
+      // `timeline-tab.svelte`: the exact pre-upgrade main artifact reported
+      // 531/511 lines and 118/114 functions, while the Bun 1.4 artifact
+      // reports 542/458 and 108/103. The aggregate baseline already carried
+      // the new line vocabulary; this one-function correction records the
+      // measured 1.4 function tuple. All 1,395 tests still pass, and Darwin
+      // remains gated against its independently measured floor above.
+      functionsHit: 2133,
     },
-    tests: { linesFound: 145, linesHit: 114, functionsFound: 16, functionsHit: 15 },
+    // Same source-shape correction as the Darwin baseline above. The setup
+    // module is platform-independent; Linux CI measures the same test helper
+    // vocabulary even though application LCOV attribution differs by platform.
+    tests: { linesFound: 120, linesHit: 97, functionsFound: 14, functionsHit: 13 },
   },
 };
 
