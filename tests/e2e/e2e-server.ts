@@ -37,7 +37,12 @@ import { Engine, RemoteWorker } from '@lostgradient/weft';
 import { AUTHORIZATION_SCOPES, serve } from '@lostgradient/weft/server';
 
 import { seed, workflows } from '../../fixtures/workflows.ts';
-import { E2E_API_KEY, E2E_DEPLOYMENT_NAME, E2E_SERVER_PORT } from './e2e-constants.ts';
+import {
+  E2E_API_KEY,
+  E2E_DEPLOYMENT_NAME,
+  E2E_SERVER_PORT,
+  E2E_TASK_OPERATION_ID,
+} from './e2e-constants.ts';
 
 // `AUTHORIZATION_SCOPES` became a public export of
 // `@lostgradient/weft/server` in weft 0.18.0, so this file no longer keeps a
@@ -71,6 +76,9 @@ const fleetWorker = new RemoteWorker({
       name: 'order-processing',
       activities: {
         chargeCard: async () => ({ chargeId: 'unused-e2e-fixture-worker' }),
+        reserveInventory: async () => {
+          throw new Error('seeded inventory outage');
+        },
       },
     },
   },
@@ -78,6 +86,30 @@ const fleetWorker = new RemoteWorker({
 });
 
 await fleetWorker.connect();
+
+await server.dispatchTask({
+  operationId: E2E_TASK_OPERATION_ID,
+  workflowId: 'e2e-ledger-workflow',
+  workflowExecutionToken: 'e2e-ledger-token',
+  workflowType: 'order-processing',
+  activityName: 'reserveInventory',
+  input: { orderId: 'e2e-ledger-order' },
+  queue: 'default',
+  priority: 9,
+  headers: { traceparent: '00-e2e-ledger-trace-e2e-span-01' },
+  retryPolicy: {
+    maxAttempts: 3,
+    initialBackoff: '5m',
+    backoffMultiplier: 2,
+    maxBackoff: '10m',
+  },
+});
+
+for (let attempt = 0; attempt < 5; attempt += 1) {
+  const result = await server.getTaskResult(E2E_TASK_OPERATION_ID);
+  if (result?.status === 'pending' && result.state === 'queued') break;
+  await new Promise((resolve) => setTimeout(resolve, 20));
+}
 
 console.log(`weft E2E server listening on ${server.url}`);
 console.log(`Registered E2E fleet worker under deployment "${E2E_DEPLOYMENT_NAME}"`);

@@ -57,6 +57,14 @@ describe('TaskLedgerDetailView', () => {
     expect(getByText(/deploymentName: payments-v2/)).not.toBeNull();
   });
 
+  test('labels cached ledger evidence while an authoritative refresh is pending', () => {
+    const { getByRole } = render(TaskLedgerDetailView, {
+      props: { task: parseTaskLedgerDetail(queuedTask()), now: NOW, refreshing: true },
+    });
+
+    expect(getByRole('status').textContent).toContain('Cached ledger evidence remains visible');
+  });
+
   test('makes failed adoption and retained terminal evidence explicit', () => {
     const task = parseTaskLedgerDetail({
       ...queuedTask(),
@@ -72,5 +80,29 @@ describe('TaskLedgerDetailView', () => {
     expect(getByText(/has not been adopted/)).not.toBeNull();
     expect(getByText('Awaiting workflow adoption')).not.toBeNull();
     expect(getByText(/Terminal record retained/)).not.toBeNull();
+    expect(getByText('resolved')).not.toBeNull();
+    expect(getByText('completed')).not.toBeNull();
+    expect(getByText('sha256:abc')).not.toBeNull();
+  });
+
+  test('renders cancellation and dead-letter evidence without reconstructing state', () => {
+    const task = parseTaskLedgerDetail({
+      ...queuedTask(),
+      state: 'deadLettered',
+      pendingStatus: 'failed',
+      resultDigest: 'sha256:failed',
+      error: 'card processor unavailable',
+      deadLetteredAt: NOW - 5_000,
+      persistenceFailureReason: 'terminal result could not be persisted',
+      cancellationReason: 'operator requested cancellation',
+      cancellationRequestedAt: NOW - 15_000,
+    });
+    const { getAllByText, getByText } = render(TaskLedgerDetailView, { props: { task, now: NOW } });
+
+    expect(getByText('Dead lettered')).not.toBeNull();
+    expect(getByText('sha256:failed')).not.toBeNull();
+    expect(getByText('card processor unavailable')).not.toBeNull();
+    expect(getByText('operator requested cancellation')).not.toBeNull();
+    expect(getAllByText('terminal result could not be persisted')).toHaveLength(2);
   });
 });

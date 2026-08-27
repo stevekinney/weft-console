@@ -51,6 +51,7 @@ export type TaskLedgerDetail = Readonly<{
   priority?: number;
   headerKeys: readonly string[];
   visibilityTimeoutMilliseconds: number;
+  scheduleToCloseDeadline?: number;
   retryPolicy?: Readonly<{
     maxAttempts: number;
     initialBackoff: number | string;

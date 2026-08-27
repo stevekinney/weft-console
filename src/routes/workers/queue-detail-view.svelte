@@ -16,6 +16,7 @@
 
   import { truncateId } from '../../lib/format/index.ts';
   import type { ScopeGate } from '../../lib/scopes.svelte.ts';
+  import { DIAGNOSTIC_GUIDANCE } from './diagnostics-guidance.ts';
   import type { RoutingPolicy } from '@lostgradient/weft';
   import type {
     TaskDiagnosticItem,
@@ -29,6 +30,7 @@
     readonly routingPolicy: RoutingPolicy;
     readonly workersOnQueue: readonly WorkerSummary[];
     readonly deadLetteredItems: readonly TaskDiagnosticItem[];
+    readonly diagnosticItems?: readonly TaskDiagnosticItem[];
     readonly adminGate: ScopeGate;
     readonly onClearDeadLetter: (operationId: string) => void;
     readonly onInspectTask?: (operationId: string) => void;
@@ -39,6 +41,7 @@
     routingPolicy,
     workersOnQueue,
     deadLetteredItems,
+    diagnosticItems = deadLetteredItems,
     adminGate,
     onClearDeadLetter,
     onInspectTask = () => {},
@@ -53,8 +56,8 @@
 <div class="weft-queue-detail">
   <div class="weft-queue-detail__header">
     <span class="weft-workers-mono weft-queue-detail__name">{queue.queue}</span>
-    {#if deadLetteredItems.length > 0}
-      <Badge variant="warning">{deadLetteredItems.length} diagnostics</Badge>
+    {#if diagnosticItems.length > 0}
+      <Badge variant="warning">{diagnosticItems.length} diagnostics</Badge>
     {/if}
   </div>
 
@@ -107,6 +110,31 @@
         </ul>
       {/if}
     </div>
+  </div>
+
+  <div class="weft-workers-panel">
+    <div class="weft-workers-panel__header">Recovery diagnostics</div>
+    {#if diagnosticItems.length === 0}
+      <p class="weft-queue-detail__no-workers">No recovery diagnostics on this queue.</p>
+    {:else}
+      <ul class="weft-dead-letter-panel__list">
+        {#each diagnosticItems as item (item.kind + (item.operationId ?? item.queue))}
+          {@const guidance = DIAGNOSTIC_GUIDANCE[item.kind]}
+          <li class="weft-dead-letter-panel__item">
+            <Badge variant={guidance.variant} size="sm">{guidance.title}</Badge>
+            <span>{item.evidence[0]}</span>
+            {#if item.operationId}
+              <Button
+                variant="ghost"
+                size="sm"
+                label="Inspect ledger"
+                onclick={() => onInspectTask(item.operationId ?? '')}
+              />
+            {/if}
+          </li>
+        {/each}
+      </ul>
+    {/if}
   </div>
 
   <div class="weft-workers-panel">

@@ -94,7 +94,7 @@ describe('QueueDetailView — dead letter panel', () => {
     });
 
     expect(getByText('No dead-lettered tasks on this queue.')).not.toBeNull();
-    expect(queryByText(/diagnostics$/)).toBeNull();
+    expect(queryByText('0 diagnostics')).toBeNull();
   });
 
   test('dead-lettered items render a row per item with the header count badge', () => {
@@ -117,6 +117,45 @@ describe('QueueDetailView — dead letter panel', () => {
     expect(getByText('ChargeCard')).not.toBeNull();
     expect(getByText('SendEmail')).not.toBeNull();
     expect(getAllByText('Clear').length).toBe(2);
+  });
+
+  test('distinguishes delayed and failed-adoption recovery diagnostics', () => {
+    const { getByText } = render(QueueDetailView, {
+      props: {
+        queue: queue(),
+        routingPolicy: 'least-loaded',
+        workersOnQueue: [],
+        deadLetteredItems: [],
+        diagnosticItems: [
+          {
+            kind: 'delayed',
+            state: 'queued',
+            operationId: 'op_delayed',
+            queue: 'default',
+            availableAt: 1_700_000_100_000,
+            retryCount: 0,
+            requeueCount: 0,
+            evidence: ['available in 100 seconds'],
+          },
+          {
+            kind: 'unadopted-terminal',
+            state: 'resolved',
+            operationId: 'op_unadopted',
+            workflowId: 'wf_unadopted',
+            queue: 'default',
+            terminalAt: 1_700_000_000_000,
+            adopted: false,
+            evidence: ['terminal result is awaiting workflow adoption'],
+          },
+        ],
+        adminGate: OPEN_GATE,
+        onClearDeadLetter: () => {},
+      },
+    });
+
+    expect(getByText('Delayed')).not.toBeNull();
+    expect(getByText('Unadopted terminal')).not.toBeNull();
+    expect(getByText('2 diagnostics')).not.toBeNull();
   });
 
   test('clicking Clear invokes onClearDeadLetter with the item operationId when the admin gate is open', async () => {

@@ -272,6 +272,11 @@
         )
       : [],
   );
+  const diagnosticsOnSelectedQueue = $derived(
+    selectedQueueName
+      ? ($diagnosticsQuery.data?.items ?? []).filter((item) => item.queue === selectedQueueName)
+      : [],
+  );
 
   // Each tab gates on its OWN query, not a blanket loading/error state for
   // the whole route — a failure fetching, say, task queues must not hide an
@@ -406,6 +411,7 @@
             routingPolicy={$workersQuery.data?.routingPolicy ?? 'least-loaded'}
             workersOnQueue={workersOnSelectedQueue}
             deadLetteredItems={deadLetteredOnSelectedQueue}
+            diagnosticItems={diagnosticsOnSelectedQueue}
             {adminGate}
             onClearDeadLetter={openClearDialog}
             onInspectTask={selectTask}
@@ -444,7 +450,11 @@
             description={faultTreatment($taskDetailQuery.error).message}
           />
         {:else if selectedTaskId && $taskDetailQuery.data}
-          <TaskLedgerDetailView task={$taskDetailQuery.data} now={Date.now()} />
+          <TaskLedgerDetailView
+            task={$taskDetailQuery.data}
+            now={Date.now()}
+            refreshing={$taskDetailQuery.isFetching}
+          />
         {:else}
           <DiagnosticsView
             items={$diagnosticsQuery.data?.items ?? []}

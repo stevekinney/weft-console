@@ -9,9 +9,10 @@
   interface TaskLedgerDetailViewProps {
     readonly task: TaskLedgerDetail;
     readonly now: number;
+    readonly refreshing?: boolean;
   }
 
-  let { task, now }: TaskLedgerDetailViewProps = $props();
+  let { task, now, refreshing = false }: TaskLedgerDetailViewProps = $props();
 
   const isDelayed = $derived(task.state === 'queued' && (task.availableAt ?? 0) > now);
   const retryAvailable = $derived(
@@ -60,6 +61,14 @@
     },
     { term: 'Visibility timeout', definition: formatDuration(task.visibilityTimeoutMilliseconds) },
     {
+      term: 'Schedule-to-close',
+      definition: task.scheduleToCloseDeadline
+        ? formatRelativeTime(task.scheduleToCloseDeadline, now)
+        : 'No deadline',
+    },
+    { term: 'Fair-share key', definition: task.fairShareKey ?? 'None' },
+    { term: 'Sticky workflow', definition: task.stickyWorkflowId ?? 'None' },
+    {
       term: 'Capacity reservation',
       definition: task.executionRequirement
         ? Object.entries(task.executionRequirement)
@@ -78,12 +87,19 @@
           : `Expires ${formatRelativeTime(task.leaseDeadline, now)}`,
     },
     {
+      term: 'Last heartbeat',
+      definition: task.lastHeartbeatAt
+        ? formatRelativeTime(task.lastHeartbeatAt, now)
+        : 'No heartbeat recorded',
+    },
+    {
       term: 'Retry availability',
       definition: task.retryPolicy
         ? `${retryAvailable ? 'Available' : 'Exhausted'} · attempt ${task.attempt} of ${task.retryPolicy.maxAttempts}`
         : 'No retry policy',
     },
     { term: 'Requeues', definition: String(task.requeueCount ?? 0) },
+    { term: 'Last requeue reason', definition: task.lastRequeueReason ?? 'None' },
     { term: 'Adoption', definition: adoptionLabel },
     {
       term: 'Retention evidence',
@@ -92,6 +108,24 @@
         : task.terminalAt
           ? `Terminal record retained since ${formatRelativeTime(task.terminalAt, now)}`
           : `Ledger record created ${formatRelativeTime(task.createdAt, now)}`,
+    },
+  ]);
+  const outcomeItems = $derived([
+    { term: 'Disposition', definition: task.disposition ?? 'Not terminal' },
+    { term: 'Pending result', definition: task.pendingStatus ?? 'None' },
+    { term: 'Result status', definition: task.resultStatus ?? 'None' },
+    { term: 'Result digest', definition: task.resultDigest ?? 'None' },
+    { term: 'Error', definition: task.error ?? 'None' },
+    { term: 'Cancellation reason', definition: task.cancellationReason ?? 'None' },
+    {
+      term: 'Cancellation requested',
+      definition: task.cancellationRequestedAt
+        ? formatRelativeTime(task.cancellationRequestedAt, now)
+        : 'Not requested',
+    },
+    {
+      term: 'Dead-letter reason',
+      definition: task.persistenceFailureReason ?? 'Not dead-lettered',
     },
   ]);
 </script>
@@ -113,6 +147,10 @@
     >
   {/if}
 
+  {#if refreshing}
+    <p role="status">Refreshing authoritative state. Cached ledger evidence remains visible.</p>
+  {/if}
+
   <div class="weft-task-ledger-detail__grid">
     <section class="weft-workers-panel">
       <h3 class="weft-workers-panel__header">Identity</h3>
@@ -125,6 +163,10 @@
     <section class="weft-workers-panel">
       <h3 class="weft-workers-panel__header">Recovery readiness</h3>
       <DescriptionList items={recoveryItems} />
+    </section>
+    <section class="weft-workers-panel">
+      <h3 class="weft-workers-panel__header">Completion and cancellation</h3>
+      <DescriptionList items={outcomeItems} />
     </section>
   </div>
 </article>
