@@ -16,6 +16,27 @@ export interface FetchCall {
   readonly init: RequestInit | undefined;
 }
 
+export function taskLedgerDetailFixture() {
+  return {
+    state: 'queued',
+    operationId: 'op_ledger_route',
+    workflowId: 'wf_route',
+    workflowExecutionToken: 'token_route',
+    workflowType: 'orders',
+    activityName: 'chargeCard',
+    queue: 'payments',
+    priority: 7,
+    headerKeys: ['traceparent'],
+    visibilityTimeoutMilliseconds: 30_000,
+    retryPolicy: { maxAttempts: 3 },
+    createdAt: 1_700_000_000_000,
+    availableAt: 1_700_000_030_000,
+    attempt: 2,
+    retryCount: 1,
+    requeueCount: 1,
+  } as const;
+}
+
 interface RouteRule {
   readonly matches: (call: FetchCall) => boolean;
   readonly respond: (call: FetchCall) => Response | Promise<Response>;
@@ -87,11 +108,7 @@ export class ScriptedFetch {
   }
 
   /**
-   * Standing route for a plain (non-JSON-RPC) REST call — needed for
-   * `dead-letter-request.ts`'s `clearDeadLetter()`, which hits
-   * `DELETE /v1/tasks/diagnostics/dead-letter/:operationId` directly rather
-   * than through `client.operations[...]` (see that file's module doc for
-   * why). `match` receives the parsed URL and the request method.
+   * Standing route for a plain (non-JSON-RPC) REST call.
    */
   routeRest(match: (url: URL, method: string) => boolean, respond: () => Response): void {
     this.#routes.push({

@@ -15,6 +15,8 @@ const ZERO_SUMMARY: TaskDiagnosticsSummary = {
   retryStorms: 0,
   allWorkersAtCapacity: 0,
   deadLettered: 0,
+  delayed: 0,
+  unadoptedTerminal: 0,
 };
 
 function review(overrides: Partial<PendingReviewEntry> = {}): PendingReviewEntry {
@@ -65,8 +67,17 @@ describe('buildDiagnosticChips', () => {
   });
 
   test('pluralizes the label for a count of exactly one', () => {
-    const chips = buildDiagnosticChips({ ...ZERO_SUMMARY, deadLettered: 1 });
-    expect(chips[0]?.label).toBe('1 dead-lettered task');
+    const chips = buildDiagnosticChips({
+      ...ZERO_SUMMARY,
+      deadLettered: 1,
+      delayed: 1,
+      unadoptedTerminal: 1,
+    });
+    expect(chips.map((chip) => chip.label)).toEqual([
+      '1 dead-lettered task',
+      '1 delayed task',
+      '1 unadopted terminal result',
+    ]);
   });
 
   test('each chip deep-links to /workers with a diagnostic query hint', () => {

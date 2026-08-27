@@ -15,9 +15,7 @@
  * for THIS card specifically — it exercises deterministic aggregate shapes
  * and error bodies a real registry can't be coaxed into producing on
  * demand — but a real-server variant is now a viable follow-up, unlike
- * before. `dead-letter-request.integration.test.ts` covers the one Workers
- * data path that already round-trips through the real-server harness
- * (plain REST, no JSON-RPC).
+ * before.
  */
 import { HttpClient, HttpClientError } from '@lostgradient/weft/client';
 import { render } from '@testing-library/svelte';
@@ -61,6 +59,8 @@ const EMPTY_DIAGNOSTICS = {
     retryStorms: 0,
     allWorkersAtCapacity: 0,
     deadLettered: 0,
+    delayed: 0,
+    unadoptedTerminal: 0,
   },
   limit: 50,
 };

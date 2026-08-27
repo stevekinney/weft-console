@@ -31,12 +31,13 @@ import {
   type CreateQueryResult,
   type QueryClient,
 } from '@tanstack/svelte-query';
+import { toStore } from 'svelte/store';
 
 import { queryKeys } from '../../lib/query.ts';
-import { clearDeadLetter } from './dead-letter-request.ts';
 import {
   DEFAULT_TASK_DIAGNOSTICS_INPUT,
   type TaskDiagnosticsOutput,
+  type TaskLedgerDetail,
   type WorkersListOutput,
 } from './worker-catalog-types.ts';
 import {
@@ -49,6 +50,75 @@ import {
 const REFETCH_INTERVAL_MS = 30_000;
 
 type WorkersOperations = Pick<HttpClient, 'operations'>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+const TASK_LEDGER_STATES = new Set([
+  'queued',
+  'leased',
+  'completing',
+  'cancelling',
+  'terminal',
+  'deadLettered',
+]);
+
+const REQUIRED_TASK_LEDGER_STRING_FIELDS = [
+  'operationId',
+  'workflowType',
+  'activityName',
+  'queue',
+] as const;
+
+function hasRequiredTaskLedgerStrings(value: Record<string, unknown>): boolean {
+  return REQUIRED_TASK_LEDGER_STRING_FIELDS.every((field) => typeof value[field] === 'string');
+}
+
+function hasRequiredTaskLedgerNumbers(value: Record<string, unknown>): boolean {
+  return ['visibilityTimeoutMilliseconds', 'createdAt', 'attempt'].every(
+    (field) => typeof value[field] === 'number',
+  );
+}
+
+function hasValidTaskLedgerHeaderKeys(value: Record<string, unknown>): boolean {
+  return (
+    Array.isArray(value['headerKeys']) &&
+    value['headerKeys'].every((key) => typeof key === 'string')
+  );
+}
+
+/** Validates the generated operation's currently-unknown output at the Console trust boundary. */
+export function parseTaskLedgerDetail(value: unknown): TaskLedgerDetail {
+  if (
+    !isRecord(value) ||
+    typeof value['state'] !== 'string' ||
+    !TASK_LEDGER_STATES.has(value['state']) ||
+    !hasRequiredTaskLedgerStrings(value) ||
+    !hasRequiredTaskLedgerNumbers(value) ||
+    !hasValidTaskLedgerHeaderKeys(value)
+  ) {
+    throw new Error('Weft returned a malformed task ledger response.');
+  }
+  return value as TaskLedgerDetail;
+}
+
+/** Reads exactly one authoritative durable ledger record. */
+export function taskLedgerDetailQuery(client: WorkersOperations, operationId: () => string) {
+  return createQuery(
+    toStore(() => ({
+      queryKey: queryKeys.tasks.detail(operationId()),
+      queryFn: async () => {
+        const selectedOperationId = operationId();
+        return parseTaskLedgerDetail(
+          await client.operations['weft.tasks.get']({ operationId: selectedOperationId }),
+        );
+      },
+      enabled: operationId().length > 0,
+      refetchInterval: REFETCH_INTERVAL_MS,
+    })),
+  );
+}
 
 /** `GET /v1/workers` (`system:read`) — fleet + deployment rollup + routing policy. */
 export function workersListQuery(client: WorkersOperations): CreateQueryResult<WorkersListOutput> {
@@ -177,15 +247,14 @@ export function resumeDeploymentMutation(
   });
 }
 
-type DeadLetterClient = Parameters<typeof clearDeadLetter>[0];
-
-/** `DELETE /v1/tasks/diagnostics/dead-letter/:operationId` (`system:admin`) — see `dead-letter-request.ts` for why this isn't a `client.operations[...]` call. */
+/** Generated `DELETE /v1/tasks/diagnostics/dead-letter/:operationId` (`system:admin`). */
 export function clearDeadLetterMutation(
-  client: DeadLetterClient,
+  client: WorkersOperations,
   onSettled: () => void,
-): CreateMutationResult<void, Error, { operationId: string }> {
+): CreateMutationResult<unknown, Error, { operationId: string }> {
   return createMutation({
-    mutationFn: ({ operationId }: { operationId: string }) => clearDeadLetter(client, operationId),
+    mutationFn: ({ operationId }: { operationId: string }) =>
+      client.operations['weft.tasks.diagnostics.deadletters.clear']({ operationId }),
     onSettled,
   });
 }

@@ -551,6 +551,32 @@
   padding: 14px 16px;
 }
 
+.weft-task-ledger-detail {
+  max-width: 72rem;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.weft-task-ledger-detail__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.weft-task-ledger-detail__header h2,
+.weft-task-ledger-detail__grid h3 {
+  margin: 0;
+}
+
+.weft-task-ledger-detail__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
 /* ---------------------------------------------------------------------- */
 /* Drain dialog                                                           */
 /* ---------------------------------------------------------------------- */

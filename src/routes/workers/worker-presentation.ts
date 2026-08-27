@@ -154,7 +154,7 @@ export function presentationStatusDotStatus(
   return variant === 'success' ? 'online' : variant;
 }
 
-/** Narrows a generated-client `unknown` field (weft's catalog generator does not reflect Zod `.nullable()` as `T | null`, only `.optional()` as `?:` — `WorkerDeploymentSummary`'s `buildId`/`runtimeVersion`/`deploymentName` land as `unknown`) to a display string. */
+/** Narrows generated-client nullable metadata fields to display strings. */
 export function asDisplayString(value: unknown, fallback = '—'): string {
   return typeof value === 'string' && value.length > 0 ? value : fallback;
 }

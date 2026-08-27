@@ -41,3 +41,6 @@ export const E2E_API_KEY = 'weft-console-e2e-fixture-key';
 
 /** `deploymentName` the E2E `RemoteWorker` registers under (flow (e), drain-a-deployment). */
 export const E2E_DEPLOYMENT_NAME = 'checkout-worker-fleet';
+
+/** Durable operation seeded through the real remote-worker protocol for the WFC-18 ledger flow. */
+export const E2E_TASK_OPERATION_ID = 'e2e-ledger-delayed-charge';

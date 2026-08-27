@@ -28,6 +28,8 @@ export interface TaskDiagnosticsSummary {
   readonly retryStorms: number;
   readonly allWorkersAtCapacity: number;
   readonly deadLettered: number;
+  readonly delayed: number;
+  readonly unadoptedTerminal: number;
 }
 
 export type AlertChipTone = 'danger' | 'warning';
@@ -77,6 +79,16 @@ const DIAGNOSTIC_KIND_META = {
     tone: 'warning',
     label: (n) => `${n} ${pluralize(n, 'queue', 'queues')} at capacity`,
   },
+  delayed: {
+    icon: 'clock',
+    tone: 'warning',
+    label: (n) => `${n} delayed ${pluralize(n, 'task', 'tasks')}`,
+  },
+  unadoptedTerminal: {
+    icon: 'unlink',
+    tone: 'danger',
+    label: (n) => `${n} unadopted terminal ${pluralize(n, 'result', 'results')}`,
+  },
 } as const satisfies Record<keyof TaskDiagnosticsSummary, DiagnosticKindMeta>;
 
 /**
@@ -89,6 +101,8 @@ const DIAGNOSTIC_KIND_ORDER: readonly (keyof TaskDiagnosticsSummary)[] = [
   'staleInflight',
   'retryStorms',
   'allWorkersAtCapacity',
+  'delayed',
+  'unadoptedTerminal',
 ];
 
 /**

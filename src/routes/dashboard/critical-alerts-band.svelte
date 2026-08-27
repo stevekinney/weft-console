@@ -48,6 +48,8 @@
     staleQueuedAfterMs: 60_000,
     staleHeartbeatAfterMs: 60_000,
     retryStormMinimumAttempts: 3,
+    includeExpectedDelayed: true,
+    unadoptedAfterMs: 60_000,
     limit: 50,
   } as const;
 

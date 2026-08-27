@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import { fireEvent, render } from '@testing-library/svelte';
 
 import QueueListView from './queue-list-view.svelte';
-import type { TaskDiagnosticItem, TaskQueueHealth } from './worker-catalog-types.ts';
+import type { StandardTaskDiagnosticItem, TaskQueueHealth } from './worker-catalog-types.ts';
 
 function queue(overrides: Partial<TaskQueueHealth> = {}): TaskQueueHealth {
   return {
@@ -19,7 +19,9 @@ function queue(overrides: Partial<TaskQueueHealth> = {}): TaskQueueHealth {
   };
 }
 
-function diagnosticItem(overrides: Partial<TaskDiagnosticItem> = {}): TaskDiagnosticItem {
+function diagnosticItem(
+  overrides: Partial<StandardTaskDiagnosticItem> = {},
+): StandardTaskDiagnosticItem {
   return {
     kind: 'stuck-queued',
     state: 'queued',

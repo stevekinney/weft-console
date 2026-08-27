@@ -12,11 +12,13 @@
    * same distinction).
    */
   import ConfirmDialog from '@lostgradient/cinder/confirm-dialog';
+  import type { TaskLedgerDetail } from './worker-catalog-types.ts';
 
   interface ClearDeadLetterDialogProps {
     readonly open: boolean;
     readonly operationId: string;
     readonly submitting: boolean;
+    readonly task?: TaskLedgerDetail | undefined;
     readonly onConfirm: () => void;
     readonly onCancel: () => void;
   }
@@ -25,15 +27,22 @@
     open = $bindable(),
     operationId,
     submitting,
+    task,
     onConfirm,
     onCancel,
   }: ClearDeadLetterDialogProps = $props();
+
+  const preview = $derived(
+    task
+      ? `Preview: ${task.state} attempt ${task.attempt} on queue ${task.queue}. Clearing removes the retained dead-letter record—it does not retry the task.`
+      : 'Loading the authoritative attempt preview. Clearing removes the retained dead-letter record—it does not retry the task.',
+  );
 </script>
 
 <ConfirmDialog
   bind:open
   title="Clear dead letter"
-  description="This task exhausted its retry policy and will not be redriven. Clearing removes the diagnostic entry — it does not retry the task. This cannot be undone."
+  description={`${preview} This cannot be undone.`}
   confirmLabel={submitting ? 'Clearing…' : 'Clear dead letter'}
   destructive
   typeToConfirm={operationId}

@@ -4,6 +4,7 @@
    * guidance copy retained verbatim (`diagnostics-guidance.ts`).
    */
   import Badge from '@lostgradient/cinder/badge';
+  import Button from '@lostgradient/cinder/button';
   import EmptyState from '@lostgradient/cinder/empty-state';
 
   import { formatRelativeTime, truncateId } from '../../lib/format/index.ts';
@@ -14,9 +15,10 @@
     readonly items: readonly TaskDiagnosticItem[];
     readonly summary: TaskDiagnosticsSummary;
     readonly now: number;
+    readonly onInspectTask?: (operationId: string) => void;
   }
 
-  let { items, summary, now }: DiagnosticsViewProps = $props();
+  let { items, summary, now, onInspectTask = () => {} }: DiagnosticsViewProps = $props();
 
   interface DiagnosticGroup {
     readonly kind: TaskDiagnosticItem['kind'];
@@ -31,6 +33,8 @@
         'stale-inflight',
         'retry-storm',
         'all-workers-at-capacity',
+        'delayed',
+        'unadopted-terminal',
       ] as const
     )
       .map((kind): DiagnosticGroup => ({ kind, items: items.filter((item) => item.kind === kind) }))
@@ -42,14 +46,16 @@
       summary.staleInflight +
       summary.retryStorms +
       summary.allWorkersAtCapacity +
-      summary.deadLettered,
+      summary.deadLettered +
+      summary.delayed +
+      summary.unadoptedTerminal,
   );
 </script>
 
 {#if totalDiagnostics === 0}
   <EmptyState
     title="No diagnostics"
-    description="Nothing stuck, stale, retrying, at capacity, or dead-lettered right now."
+    description="Nothing delayed, stuck, stale, retrying, at capacity, unadopted, or dead-lettered right now."
   />
 {:else}
   <div class="weft-diagnostics-view">
@@ -61,7 +67,7 @@
           <Badge variant={guidance.variant}>{group.items.length} affected</Badge>
           <span class="weft-diagnostic-card__meta">
             {#if group.items[0]?.queue}queue: {group.items[0].queue}{/if}
-            {#if group.kind === 'dead-lettered' && group.items[0]?.deadLetteredAt}
+            {#if group.kind === 'dead-lettered' && group.items[0] && 'deadLetteredAt' in group.items[0] && group.items[0].deadLetteredAt}
               · last {formatRelativeTime(group.items[0].deadLetteredAt, now)}
             {/if}
           </span>
@@ -79,6 +85,14 @@
                 <span class="weft-workers-id">{truncateId(item.operationId)}</span>
               {/if}
               {item.evidence[0]}
+              {#if item.operationId}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  label="Inspect ledger"
+                  onclick={() => onInspectTask(item.operationId ?? '')}
+                />
+              {/if}
             </li>
           {/each}
         </ul>
