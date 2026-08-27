@@ -12,8 +12,8 @@ if (testFiles.length === 0) {
   process.exit(1);
 }
 
-// Deliberately NOT `--parallel=1`. `bun test --parallel` (even at N=1)
-// implies `--isolate`, giving each test file a fresh module registry. When a
+// Deliberately NOT `--parallel`. `bun test --parallel` implies `--isolate`,
+// giving each test file a fresh module registry. When a
 // Svelte component is both directly unit-tested AND statically imported by a
 // sibling component also under test, that isolation makes Bun's coverage
 // engine produce two differently-instrumented instances of the shared file;
@@ -27,7 +27,11 @@ if (testFiles.length === 0) {
 // isolation) sidesteps it: two full-suite runs produced near-identical LCOV
 // (1290/1290 tests passing both times) and coverage rose from a measured
 // 64.71% to 84.95% overall lines with zero new tests — pure measurement
-// error, not a real gap. This is also ~9x faster (~25s vs ~230s).
+// error, not a real gap. Bun 1.4.0 was re-trialed with its native parallel
+// test workers on 2026-08-26: the run finished in 44.7s, but two real-server
+// workflow-tail tests failed, and isolated LCOV still cannot be trusted until
+// oven-sh/bun#40386 is fixed. The shared-process run remains both the correct
+// measurement mode and the stable integration-test mode.
 console.log(`Running ${testFiles.length} coverage test files in the versioned baseline order.`);
 const run =
   await $`TZ=UTC bun test --conditions browser --conditions svelte --coverage --coverage-reporter=lcov ${testArguments}`

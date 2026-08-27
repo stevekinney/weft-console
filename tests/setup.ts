@@ -42,45 +42,6 @@ type Global = typeof globalThis & Record<string, unknown>;
 let happyDomInstalled = false;
 
 /**
- * Align happy-dom's `Element.prototype.remove()` with the DOM spec (a no-op
- * when the node was already removed from its parent). happy-dom routes the
- * call through `parentNode.removeChild(this)` with a stale `parentNode`
- * pointer, which throws when the parent's child-array no longer contains the
- * node — Svelte 5's `flushSync` effect-teardown trips this during fixture
- * unmount and the throw escapes as an "unhandled error between tests".
- */
-function alignElementRemoveWithChildNodeSpec(happyWindow: Window): void {
-  const elementCtor = Reflect.get(happyWindow, 'Element') as unknown;
-  if (typeof elementCtor !== 'function') return;
-  const proto = Reflect.get(elementCtor, 'prototype') as Record<string, unknown> | undefined;
-  if (!proto) return;
-  const original = proto['remove'];
-  if (typeof original !== 'function') return;
-  type ElementRemove = (this: Element) => void;
-  const originalFn = original as ElementRemove;
-  proto['remove'] = function patchedRemove(this: Element): void {
-    const parent = this.parentNode;
-    if (parent === null) return;
-    if (typeof parent.contains === 'function' && !parent.contains(this)) {
-      return;
-    }
-    try {
-      originalFn.call(this);
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('not a child of this node')) {
-        try {
-          document.createDocumentFragment().appendChild(this);
-        } catch {
-          // Nothing more to do; a pre-existing happy-dom limitation.
-        }
-        return;
-      }
-      throw error;
-    }
-  };
-}
-
-/**
  * happy-dom does not implement the Web Animations API. Svelte 5's JS-driven
  * transitions (`slide`, `fade`, `fly`, …) call `Element.prototype.animate`
  * to coordinate enter/exit; without a stub, mounting any component that
@@ -137,7 +98,6 @@ function setupHappyDom(): void {
   }
   Object.defineProperty(target, 'window', { value: happyWindow, configurable: true });
 
-  alignElementRemoveWithChildNodeSpec(happyWindow);
   stubWebAnimationsApi(happyWindow);
 
   happyDomInstalled = true;

@@ -61,11 +61,12 @@ describe('WorkflowTailSource (integration, real server)', () => {
     const server = await startLiveSourceTestServer();
     try {
       const workflowId = 'wts-integration-catchup-live';
-      await startSignalStepped(server, workflowId, 2);
+      await startSignalStepped(server, workflowId, 3);
 
-      // Give the first step's checkpoints a moment to land BEFORE
-      // subscribing, so this genuinely exercises catch-up.
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      // Commit one step before subscribing so catch-up has a deterministic
+      // persisted frame. Waiting for wall-clock time does not prove that the
+      // workflow has reached its signal boundary or committed anything.
+      await server.engine.signal(workflowId, 'advance');
 
       const client = sseClient(server);
       const source = new WorkflowTailSource(client, workflowId);
@@ -139,6 +140,7 @@ describe('WorkflowTailSource (integration, real server)', () => {
     try {
       const workflowId = 'wts-integration-close';
       await startSignalStepped(server, workflowId, 2);
+      await server.engine.signal(workflowId, 'advance');
 
       const client = sseClient(server);
       const source = new WorkflowTailSource(client, workflowId);

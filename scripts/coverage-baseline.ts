@@ -189,7 +189,12 @@ const DARWIN_BASELINE: CoverageBaseline = {
       functionsFound: 2281,
       functionsHit: 2134,
     },
-    tests: { linesFound: 145, linesHit: 114, functionsFound: 16, functionsHit: 15 },
+    // Bun 1.4 / happy-dom 20.11.0 no longer needs the 25-line
+    // `Element.prototype.remove()` workaround in `tests/setup.ts`. Removing
+    // its two covered functions leaves the same one uncovered test helper;
+    // the lower function percentage (13/14 vs. 15/16) is a denominator-only
+    // source-shape change, while line coverage improves (97/120 vs. 114/145).
+    tests: { linesFound: 120, linesHit: 97, functionsFound: 14, functionsHit: 13 },
   },
 };
 
@@ -323,7 +328,10 @@ const LINUX_BASELINE: CoverageBaseline = {
       functionsFound: 2281,
       functionsHit: 2134,
     },
-    tests: { linesFound: 145, linesHit: 114, functionsFound: 16, functionsHit: 15 },
+    // Same source-shape correction as the Darwin baseline above. The setup
+    // module is platform-independent; Linux CI measures the same test helper
+    // vocabulary even though application LCOV attribution differs by platform.
+    tests: { linesFound: 120, linesHit: 97, functionsFound: 14, functionsHit: 13 },
   },
 };
 

@@ -292,7 +292,7 @@
     </Feed.Event>
   {/each}
   {#if !$eventsQuery.isPending && streamEvents.length === 0}
-    <p role="status" class="weft-events-tab__empty">No events to display.</p>
+    <li class="weft-events-tab__empty"><span role="status">No events to display.</span></li>
   {/if}
 {/snippet}
 
@@ -317,6 +317,7 @@
   }
 
   .weft-events-tab__empty {
+    list-style: none;
     color: var(--cinder-text-muted);
     font-size: var(--cinder-font-size-sm);
     padding: var(--cinder-space-4);
