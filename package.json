@@ -54,13 +54,13 @@
     "test:e2e": "playwright test"
   },
   "peerDependencies": {
-    "@lostgradient/weft": "^0.18.0"
+    "@lostgradient/weft": "^0.22.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
     "@lostgradient/cinder": "0.24.0",
     "@lostgradient/markdown": "0.2.0",
-    "@lostgradient/weft": "0.18.0",
+    "@lostgradient/weft": "0.22.0",
     "@playwright/test": "^1.61.1",
     "@shikijs/langs": "^3.21.0",
     "@shikijs/themes": "^3.21.0",

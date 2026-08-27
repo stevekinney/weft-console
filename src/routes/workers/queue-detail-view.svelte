@@ -31,6 +31,7 @@
     readonly deadLetteredItems: readonly TaskDiagnosticItem[];
     readonly adminGate: ScopeGate;
     readonly onClearDeadLetter: (operationId: string) => void;
+    readonly onInspectTask?: (operationId: string) => void;
   }
 
   let {
@@ -40,6 +41,7 @@
     deadLetteredItems,
     adminGate,
     onClearDeadLetter,
+    onInspectTask = () => {},
   }: QueueDetailViewProps = $props();
 
   const strategyItems = $derived([
@@ -79,8 +81,15 @@
               <span class="weft-workers-id" title={item.operationId}
                 >{truncateId(item.operationId ?? '')}</span
               >
-              <span class="weft-dead-letter-panel__activity">{item.activityName ?? 'activity'}</span
+              <span class="weft-dead-letter-panel__activity"
+                >{'activityName' in item ? (item.activityName ?? 'activity') : 'activity'}</span
               >
+              <Button
+                variant="ghost"
+                size="sm"
+                label="Inspect ledger"
+                onclick={() => item.operationId && onInspectTask(item.operationId)}
+              />
               {#if adminGate.disabled}
                 <Tooltip text={adminGate.title ?? ''}>
                   <Button variant="secondary" size="sm" disabled label="Clear" />

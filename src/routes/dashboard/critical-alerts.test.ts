@@ -15,6 +15,8 @@ const ZERO_SUMMARY: TaskDiagnosticsSummary = {
   retryStorms: 0,
   allWorkersAtCapacity: 0,
   deadLettered: 0,
+  delayed: 0,
+  unadoptedTerminal: 0,
 };
 
 function review(overrides: Partial<PendingReviewEntry> = {}): PendingReviewEntry {

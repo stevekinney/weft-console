@@ -4,7 +4,11 @@ import { fireEvent, render } from '@testing-library/svelte';
 
 import type { ScopeGate } from '../../lib/scopes.svelte.ts';
 import QueueDetailView from './queue-detail-view.svelte';
-import type { TaskDiagnosticItem, TaskQueueHealth, WorkerSummary } from './worker-catalog-types.ts';
+import type {
+  StandardTaskDiagnosticItem,
+  TaskQueueHealth,
+  WorkerSummary,
+} from './worker-catalog-types.ts';
 
 function queue(overrides: Partial<TaskQueueHealth> = {}): TaskQueueHealth {
   return {
@@ -38,7 +42,9 @@ function worker(overrides: Partial<WorkerSummary> = {}): WorkerSummary {
   };
 }
 
-function deadLetterItem(overrides: Partial<TaskDiagnosticItem> = {}): TaskDiagnosticItem {
+function deadLetterItem(
+  overrides: Partial<StandardTaskDiagnosticItem> = {},
+): StandardTaskDiagnosticItem {
   return {
     kind: 'dead-lettered',
     state: 'dead-lettered',

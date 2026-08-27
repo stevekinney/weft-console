@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import { render } from '@testing-library/svelte';
 
 import DiagnosticsView from './diagnostics-view.svelte';
-import type { TaskDiagnosticItem, TaskDiagnosticsSummary } from './worker-catalog-types.ts';
+import type { StandardTaskDiagnosticItem, TaskDiagnosticsSummary } from './worker-catalog-types.ts';
 
 const EMPTY_SUMMARY: TaskDiagnosticsSummary = {
   stuckQueued: 0,
@@ -11,9 +11,11 @@ const EMPTY_SUMMARY: TaskDiagnosticsSummary = {
   retryStorms: 0,
   allWorkersAtCapacity: 0,
   deadLettered: 0,
+  delayed: 0,
+  unadoptedTerminal: 0,
 };
 
-function item(overrides: Partial<TaskDiagnosticItem> = {}): TaskDiagnosticItem {
+function item(overrides: Partial<StandardTaskDiagnosticItem> = {}): StandardTaskDiagnosticItem {
   return {
     kind: 'stuck-queued',
     state: 'queued',
@@ -38,7 +40,9 @@ describe('DiagnosticsView — empty state', () => {
 
     expect(getByText('No diagnostics')).not.toBeNull();
     expect(
-      getByText('Nothing stuck, stale, retrying, at capacity, or dead-lettered right now.'),
+      getByText(
+        'Nothing delayed, stuck, stale, retrying, at capacity, unadopted, or dead-lettered right now.',
+      ),
     ).not.toBeNull();
   });
 });
@@ -78,6 +82,8 @@ describe('DiagnosticsView — grouped kinds', () => {
           retryStorms: 1,
           allWorkersAtCapacity: 1,
           deadLettered: 1,
+          delayed: 0,
+          unadoptedTerminal: 0,
         },
         now: NOW,
       },

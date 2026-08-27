@@ -56,6 +56,9 @@ export const queryKeys = {
     list: () => ['queues', 'list'] as const,
   },
   diagnostics: () => ['diagnostics'] as const,
+  tasks: {
+    detail: (operationId: string) => ['tasks', 'detail', operationId] as const,
+  },
   reviews: {
     list: (filter: ReviewListFilter) => ['reviews', 'list', filter] as const,
   },

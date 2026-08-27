@@ -53,6 +53,20 @@ export const DIAGNOSTIC_GUIDANCE: Readonly<Record<TaskDiagnosticKind, Diagnostic
     guidance:
       'Every worker on this queue is at maximum concurrency. New work will wait. Scale out the deployment or raise per-worker concurrency if the hosts have headroom.',
   },
+  delayed: {
+    icon: 'clock',
+    variant: 'warning',
+    title: 'Delayed',
+    guidance:
+      'These tasks are durably queued for future availability. Inspect the ledger to confirm the delay and retry policy are expected before intervening.',
+  },
+  'unadopted-terminal': {
+    icon: 'unlink',
+    variant: 'danger',
+    title: 'Unadopted terminal',
+    guidance:
+      'A durable terminal result has not been adopted by its workflow after the configured threshold. Inspect workflow recovery readiness and the retained result before retrying work.',
+  },
 };
 
 export const DIAGNOSTIC_KINDS: readonly TaskDiagnosticKind[] = [
@@ -61,4 +75,6 @@ export const DIAGNOSTIC_KINDS: readonly TaskDiagnosticKind[] = [
   'stale-inflight',
   'retry-storm',
   'all-workers-at-capacity',
+  'delayed',
+  'unadopted-terminal',
 ];

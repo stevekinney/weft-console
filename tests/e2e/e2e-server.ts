@@ -65,6 +65,7 @@ const fleetWorker = new RemoteWorker({
   serverUrl: `ws://localhost:${E2E_SERVER_PORT}/v1/tasks/default/stream`,
   workerId: 'e2e-fleet-worker-1',
   deploymentName: E2E_DEPLOYMENT_NAME,
+  buildId: 'weft-console-e2e',
   workflows: {
     'order-processing': {
       name: 'order-processing',

@@ -61,6 +61,7 @@
   import FleetView from './fleet-view.svelte';
   import QueueDetailView from './queue-detail-view.svelte';
   import QueueListView from './queue-list-view.svelte';
+  import TaskLedgerDetailView from './task-ledger-detail-view.svelte';
   import WorkerDetailView from './worker-detail-view.svelte';
   import WorkerListView from './worker-list-view.svelte';
   import {
@@ -70,6 +71,7 @@
     resumeDeploymentMutation,
     resumeWorkerMutation,
     taskDiagnosticsQuery,
+    taskLedgerDetailQuery,
     taskQueuesListQuery,
     workersListQuery,
   } from './workers-data.ts';
@@ -84,6 +86,8 @@
   const workersQuery = workersListQuery(client);
   const queuesQuery = taskQueuesListQuery(client);
   const diagnosticsQuery = taskDiagnosticsQuery(client);
+  const selectedTaskId = $derived(router.search.get('task') ?? '');
+  const taskDetailQuery = taskLedgerDetailQuery(client, () => selectedTaskId);
 
   $effect(() => {
     if (
@@ -120,6 +124,13 @@
     router.navigate(`/workers?${params.toString()}`);
   }
 
+  function selectTask(operationId: string): void {
+    const params = new URLSearchParams();
+    params.set('tab', 'diagnostics');
+    params.set('task', operationId);
+    router.navigate(`/workers?${params.toString()}`);
+  }
+
   // ---------------------------------------------------------------------
   // Live toggle — subscribes to the shell's shared FleetEventSource
   // (module doc above); never constructs or closes a connection of its own.
@@ -148,6 +159,9 @@
     void queryClient.invalidateQueries({ queryKey: queryKeys.workers.list() });
     void queryClient.invalidateQueries({ queryKey: queryKeys.queues.list() });
     void queryClient.invalidateQueries({ queryKey: queryKeys.diagnostics() });
+    if (selectedTaskId) {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(selectedTaskId) });
+    }
   }
 
   const drainWorker = drainWorkerMutation(client, refetchAll);
@@ -193,6 +207,7 @@
 
   function openClearDialog(operationId: string): void {
     clearOperationId = operationId;
+    selectTask(operationId);
     clearDialogOpen = true;
   }
 
@@ -357,6 +372,7 @@
             deadLetteredItems={deadLetteredOnSelectedQueue}
             {adminGate}
             onClearDeadLetter={openClearDialog}
+            onInspectTask={selectTask}
           />
         {:else}
           <QueueListView
@@ -382,6 +398,17 @@
             title={FAULT_TREATMENT_TITLE[faultTreatment(diagnosticsErrorValue).kind]}
             description={faultTreatment(diagnosticsErrorValue).message}
           />
+        {:else if selectedTaskId && $taskDetailQuery.isPending}
+          <div role="status" aria-busy="true" aria-label="Loading task ledger">
+            <Skeleton height="12rem" />
+          </div>
+        {:else if selectedTaskId && $taskDetailQuery.error}
+          <EmptyState
+            title={FAULT_TREATMENT_TITLE[faultTreatment($taskDetailQuery.error).kind]}
+            description={faultTreatment($taskDetailQuery.error).message}
+          />
+        {:else if selectedTaskId && $taskDetailQuery.data}
+          <TaskLedgerDetailView task={$taskDetailQuery.data} now={Date.now()} />
         {:else}
           <DiagnosticsView
             items={$diagnosticsQuery.data?.items ?? []}
@@ -391,8 +418,11 @@
               retryStorms: 0,
               allWorkersAtCapacity: 0,
               deadLettered: 0,
+              delayed: 0,
+              unadoptedTerminal: 0,
             }}
             now={Date.now()}
+            onInspectTask={selectTask}
           />
         {/if}
       </TabPanel>
@@ -415,6 +445,7 @@
     bind:open={clearDialogOpen}
     operationId={clearOperationId}
     submitting={$clearDeadLetterAction.isPending}
+    task={$taskDetailQuery.data}
     onConfirm={handleClearConfirm}
     onCancel={() => (clearDialogOpen = false)}
   />

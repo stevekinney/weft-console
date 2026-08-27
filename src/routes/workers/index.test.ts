@@ -82,6 +82,8 @@ describe('Workers route — fault title mapping', () => {
         retryStorms: 0,
         allWorkersAtCapacity: 0,
         deadLettered: 0,
+        delayed: 0,
+        unadoptedTerminal: 0,
       },
     });
 
@@ -112,6 +114,8 @@ describe('Workers route — fault title mapping', () => {
         retryStorms: 0,
         allWorkersAtCapacity: 0,
         deadLettered: 0,
+        delayed: 0,
+        unadoptedTerminal: 0,
       },
     });
 

@@ -29,7 +29,7 @@
     { term: 'Connected', definition: formatDuration(Date.now() - worker.connectedAt) + ' ago' },
     {
       term: 'Build',
-      definition: [worker.buildId ?? '—', worker.gitSha ?? '—'].join(' · '),
+      definition: worker.buildId ?? '—',
     },
     { term: 'Concurrency', definition: `${worker.inFlight} / ${worker.concurrency}` },
   ]);

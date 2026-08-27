@@ -16,6 +16,7 @@ import { createQueryClient } from '../../lib/query.ts';
 import { router } from '../../lib/router.svelte.ts';
 import WorkersRoute from './index.svelte';
 import type {
+  StandardTaskDiagnosticItem,
   TaskDiagnosticItem,
   TaskDiagnosticsSummary,
   TaskQueueHealth,
@@ -50,7 +51,6 @@ function deployment(overrides: Partial<WorkerDeploymentSummary> = {}): WorkerDep
     deploymentName: 'api-prod',
     drainedWorkers: 0,
     drainingWorkers: 0,
-    gitSha: 'a3f9c21',
     health: 'active',
     inFlight: 1,
     oldestStartedAt: null,
@@ -74,7 +74,9 @@ function queue(overrides: Partial<TaskQueueHealth> = {}): TaskQueueHealth {
   };
 }
 
-function diagnosticItem(overrides: Partial<TaskDiagnosticItem> = {}): TaskDiagnosticItem {
+function diagnosticItem(
+  overrides: Partial<StandardTaskDiagnosticItem> = {},
+): StandardTaskDiagnosticItem {
   return {
     kind: 'dead-lettered',
     state: 'dead-lettered',
@@ -95,6 +97,8 @@ const EMPTY_DIAGNOSTICS_SUMMARY: TaskDiagnosticsSummary = {
   retryStorms: 0,
   allWorkersAtCapacity: 0,
   deadLettered: 0,
+  delayed: 0,
+  unadoptedTerminal: 0,
 };
 
 /** Scripts every standing successful route the route root needs, with overridable fixtures. */

@@ -87,11 +87,7 @@ export class ScriptedFetch {
   }
 
   /**
-   * Standing route for a plain (non-JSON-RPC) REST call — needed for
-   * `dead-letter-request.ts`'s `clearDeadLetter()`, which hits
-   * `DELETE /v1/tasks/diagnostics/dead-letter/:operationId` directly rather
-   * than through `client.operations[...]` (see that file's module doc for
-   * why). `match` receives the parsed URL and the request method.
+   * Standing route for a plain (non-JSON-RPC) REST call.
    */
   routeRest(match: (url: URL, method: string) => boolean, respond: () => Response): void {
     this.#routes.push({
