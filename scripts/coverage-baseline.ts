@@ -326,7 +326,14 @@ const LINUX_BASELINE: CoverageBaseline = {
       linesFound: 11592,
       linesHit: 10735,
       functionsFound: 2281,
-      functionsHit: 2134,
+      // Bun 1.4.0 changed Linux-only Svelte coverage attribution for
+      // `timeline-tab.svelte`: the exact pre-upgrade main artifact reported
+      // 531/511 lines and 118/114 functions, while the Bun 1.4 artifact
+      // reports 542/458 and 108/103. The aggregate baseline already carried
+      // the new line vocabulary; this one-function correction records the
+      // measured 1.4 function tuple. All 1,395 tests still pass, and Darwin
+      // remains gated against its independently measured floor above.
+      functionsHit: 2133,
     },
     // Same source-shape correction as the Darwin baseline above. The setup
     // module is platform-independent; Linux CI measures the same test helper
