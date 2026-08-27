@@ -17,8 +17,15 @@
   import Skeleton from '@lostgradient/cinder/skeleton';
   import { GitBranch, Zap } from 'lucide-svelte';
   import { createQuery } from '@tanstack/svelte-query';
+  import { toStore } from 'svelte/store';
 
   import { getClient } from '../../lib/client.ts';
+  import { queryKeys } from '../../lib/query.ts';
+  import ManifestDiagnosticsView from '../workers/manifest-diagnostics-view.svelte';
+  import {
+    loadFleetManifestDiagnostics,
+    loadWorkerRegistrationRejections,
+  } from '../workers/workers-data.ts';
   import QueryFaultBanner from './query-fault-banner.svelte';
   import RegistryDetail from './registry-detail.svelte';
   import {
@@ -31,9 +38,31 @@
   const client = getClient();
 
   const query = createQuery({
-    queryKey: ['system', 'registry'],
+    queryKey: queryKeys.registry(),
     queryFn: (): Promise<RegistrySnapshotSource> =>
       client.operations['weft.system.registry']({}) as Promise<RegistrySnapshotSource>,
+  });
+
+  const workersQuery = createQuery({
+    queryKey: queryKeys.workers.list(),
+    queryFn: () => client.operations['weft.workers.list']({}),
+    refetchInterval: 30_000,
+  });
+  const workerIds = $derived(
+    ($workersQuery.data?.items ?? []).map((worker) => worker.id).toSorted(),
+  );
+  const manifestsQuery = createQuery(
+    toStore(() => ({
+      queryKey: queryKeys.workers.manifests(workerIds),
+      queryFn: () => loadFleetManifestDiagnostics(client, workerIds),
+      enabled: !$workersQuery.isPending,
+      refetchInterval: 30_000,
+    })),
+  );
+  const rejectionsQuery = createQuery({
+    queryKey: queryKeys.workers.rejections(),
+    queryFn: () => loadWorkerRegistrationRejections(client),
+    refetchInterval: 30_000,
   });
 
   let selectedType = $state<string | null>(null);
@@ -150,6 +179,16 @@
     </div>
   {/if}
 {/if}
+
+<ManifestDiagnosticsView
+  heading="Worker registry admission diagnostics"
+  diagnostics={$manifestsQuery.data ?? []}
+  rejections={$rejectionsQuery.data ?? []}
+  loading={$workersQuery.isPending || $manifestsQuery.isPending || $rejectionsQuery.isPending}
+  refreshing={($manifestsQuery.isFetching && $manifestsQuery.data !== undefined) ||
+    ($rejectionsQuery.isFetching && $rejectionsQuery.data !== undefined)}
+  error={$workersQuery.error ?? $manifestsQuery.error ?? $rejectionsQuery.error ?? null}
+/>
 
 <style>
   .weft-registry-skeleton {

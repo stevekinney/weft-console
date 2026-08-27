@@ -173,13 +173,12 @@ describe('WorkerDetailView — drain/resume action', () => {
 });
 
 describe('WorkerDetailView — connection and activities panels', () => {
-  test('renders queue, build/git identity, and concurrency in the connection panel', () => {
+  test('renders queue, build identity, and concurrency in the connection panel', () => {
     const { getByText } = render(WorkerDetailView, {
       props: {
         worker: worker({
           queue: 'payments',
           buildId: '#123',
-          gitSha: 'deadbee',
           inFlight: 2,
           concurrency: 8,
         }),
@@ -190,15 +189,15 @@ describe('WorkerDetailView — connection and activities panels', () => {
     });
 
     expect(getByText('payments')).not.toBeNull();
-    expect(getByText('#123 · deadbee')).not.toBeNull();
+    expect(getByText('#123')).not.toBeNull();
     expect(getByText('2 / 8')).not.toBeNull();
   });
 
-  test('missing build/git identity falls back to the em dash placeholder', () => {
+  test('missing build identity falls back to the em dash placeholder', () => {
     const { getByText } = render(WorkerDetailView, {
       props: {
-        // `worker()`'s defaults already omit `buildId`/`gitSha` — both are
-        // optional fields, so this exercises the `?? '—'` fallback directly.
+        // `worker()`'s defaults already omit optional `buildId`, so this
+        // exercises the `?? '—'` fallback directly.
         worker: worker(),
         adminGate: OPEN_GATE,
         onDrain: () => {},
@@ -206,7 +205,7 @@ describe('WorkerDetailView — connection and activities panels', () => {
       },
     });
 
-    expect(getByText('— · —')).not.toBeNull();
+    expect(getByText('—')).not.toBeNull();
   });
 
   test('renders one badge per reported activity', () => {

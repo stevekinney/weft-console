@@ -8,7 +8,13 @@
 import { HttpClientError } from '@lostgradient/weft/client';
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { storageDelete, storageGet, storagePut, type StorageConnection } from './storage-client.ts';
+import {
+  probeConditionalBatchSupported,
+  storageDelete,
+  storageGet,
+  storagePut,
+  type StorageConnection,
+} from './storage-client.ts';
 
 interface FetchCall {
   readonly url: string;
@@ -145,6 +151,23 @@ describe('storageGet', () => {
 
     const rejection = storageGet(connection, 'k');
     await expect(rejection).rejects.toMatchObject({ status: 500, message: 'Server Error' });
+  });
+});
+
+describe('probeConditionalBatchSupported', () => {
+  test('returns false when the server reports that conditional batches are not implemented', async () => {
+    scripted = new ScriptedFetch();
+    scripted.respondWith(
+      new Response(JSON.stringify({ error: 'Conditional batch is not supported.' }), {
+        status: 501,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await expect(probeConditionalBatchSupported(connection)).resolves.toBe(false);
+    expect(scripted.calls).toHaveLength(1);
+    expect(scripted.calls[0]?.url).toBe(`${connection.baseUrl}/v1/storage/-/conditional-batch`);
+    expect(scripted.calls[0]?.method).toBe('POST');
   });
 });
 

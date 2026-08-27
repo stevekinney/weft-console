@@ -54,6 +54,7 @@ afterEach(() => {
 });
 
 async function renderWorkersRoute() {
+  scripted?.routeJsonRpcMethod('weft.workers.rejections', { items: [], limit: 25 });
   return render(WorkersRouteTestHarness, {
     props: {
       client: realClient(),

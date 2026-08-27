@@ -41,7 +41,8 @@
   import Tooltip from '@lostgradient/cinder/tooltip';
   import Lock from 'lucide-svelte/icons/lock';
 
-  import { useQueryClient } from '@tanstack/svelte-query';
+  import { createQuery, useQueryClient } from '@tanstack/svelte-query';
+  import { toStore } from 'svelte/store';
 
   import { getFleetEventSource } from '../../app/engine-status.svelte.ts';
   import { getClient } from '../../lib/client.ts';
@@ -72,6 +73,9 @@
     taskDiagnosticsQuery,
     taskQueuesListQuery,
     workersListQuery,
+    loadFleetManifestDiagnostics,
+    loadWorkerRegistrationRejections,
+    invalidateWorkerSurfaceQueries,
   } from './workers-data.ts';
 
   const client = getClient();
@@ -84,12 +88,33 @@
   const workersQuery = workersListQuery(client);
   const queuesQuery = taskQueuesListQuery(client);
   const diagnosticsQuery = taskDiagnosticsQuery(client);
+  const workerIds = $derived(
+    ($workersQuery.data?.items ?? []).map((worker) => worker.id).toSorted(),
+  );
+  const manifestQuery = createQuery(
+    toStore(() => ({
+      queryKey: queryKeys.workers.manifests(workerIds),
+      queryFn: () => loadFleetManifestDiagnostics(client, workerIds),
+      enabled: !locked && !$workersQuery.isPending,
+      refetchInterval: 30_000,
+    })),
+  );
+  const rejectionsQuery = createQuery(
+    toStore(() => ({
+      queryKey: queryKeys.workers.rejections(),
+      queryFn: () => loadWorkerRegistrationRejections(client),
+      enabled: !locked,
+      refetchInterval: 30_000,
+    })),
+  );
 
   $effect(() => {
     if (
       isForbidden($workersQuery.error) ||
       isForbidden($queuesQuery.error) ||
-      isForbidden($diagnosticsQuery.error)
+      isForbidden($diagnosticsQuery.error) ||
+      isForbidden($manifestQuery.error) ||
+      isForbidden($rejectionsQuery.error)
     ) {
       principalStore.denyScope('system:read');
     }
@@ -135,9 +160,7 @@
 
     return fleetSource.subscribe((frame) => {
       if (!WORKER_LIVENESS_KINDS.has(frame.kind)) return;
-      void queryClient.invalidateQueries({ queryKey: queryKeys.workers.list() });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.queues.list() });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.diagnostics() });
+      invalidateWorkerSurfaceQueries(queryClient);
     });
   });
 
@@ -145,9 +168,7 @@
   // Mutations + dialogs
   // ---------------------------------------------------------------------
   function refetchAll(): void {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.workers.list() });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.queues.list() });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.diagnostics() });
+    invalidateWorkerSurfaceQueries(queryClient);
   }
 
   const drainWorker = drainWorkerMutation(client, refetchAll);
@@ -209,6 +230,11 @@
     selectedWorkerId
       ? (($workersQuery.data?.items ?? []).find((worker) => worker.id === selectedWorkerId) ?? null)
       : null,
+  );
+  const selectedWorkerManifest = $derived(
+    selectedWorkerId && $manifestQuery.data
+      ? ($manifestQuery.data.find((entry) => entry.instance.workerId === selectedWorkerId) ?? null)
+      : undefined,
   );
 
   const selectedQueue = $derived(
@@ -301,6 +327,12 @@
             {adminGate}
             onDrainDeployment={(name) => openDrainDialog({ kind: 'deployment', name })}
             onResumeDeployment={resumeDeploymentByName}
+            manifestDiagnostics={$manifestQuery.data ?? []}
+            registrationRejections={$rejectionsQuery.data ?? []}
+            manifestLoading={$manifestQuery.isPending || $rejectionsQuery.isPending}
+            manifestRefreshing={($manifestQuery.isFetching && $manifestQuery.data !== undefined) ||
+              ($rejectionsQuery.isFetching && $rejectionsQuery.data !== undefined)}
+            manifestError={$manifestQuery.error ?? $rejectionsQuery.error ?? null}
           />
         {/if}
       </TabPanel>
@@ -327,6 +359,10 @@
             {adminGate}
             onDrain={() => openDrainDialog({ kind: 'worker', id: selectedWorker.id })}
             onResume={() => resumeWorkerById(selectedWorker.id)}
+            manifestDiagnostics={selectedWorkerManifest}
+            manifestLoading={$manifestQuery.isPending}
+            manifestRefreshing={$manifestQuery.isFetching && $manifestQuery.data !== undefined}
+            manifestError={$manifestQuery.error ?? null}
           />
         {:else}
           <WorkerListView workers={$workersQuery.data?.items ?? []} />
