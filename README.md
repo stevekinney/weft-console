@@ -1,5 +1,14 @@
 # Weft Console
 
+> [!WARNING] This repository is archived. Weft Console moved into the
+> [weft monorepo](https://github.com/stevekinney/weft) on 2026-08-30 as
+> [`packages/weft-ui`](https://github.com/stevekinney/weft/tree/main/packages/weft-ui)
+> and was renamed `@lostgradient/weft-ui` (see
+> [stevekinney/weft#926](https://github.com/stevekinney/weft/pull/926)). All
+> development, issues, and releases continue there. This repository preserves
+> the pre-merge history; the package was never published to npm under
+> `@lostgradient/weft-console`.
+
 Operator console for the [Weft](https://github.com/stevekinney/weft) durable-workflow engine —
 Svelte 5 + [Cinder](https://github.com/stevekinney/cinder). See
 [`docs/implementation-plan.md`](docs/implementation-plan.md) for the full plan and
